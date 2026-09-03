@@ -26,6 +26,7 @@ export function validateReleaseRef(options) {
   assertValidDefaultBranch(options.root, options.defaultBranch);
 
   const tagRef = `refs/tags/${options.tag}`;
+  restoreReleaseTag(options.root, tagRef);
   const tagType = tryGit(options.root, ["cat-file", "-t", tagRef]);
   if (tagType?.trim() !== "tag") {
     throw new Error(`release ref 必须是 annotated tag：${options.tag}`);
@@ -58,6 +59,19 @@ function assertValidDefaultBranch(root, branch) {
   } catch {
     throw new Error(`DEFAULT_BRANCH 不是合法分支名：${branch}`);
   }
+}
+
+function restoreReleaseTag(root, tagRef) {
+  if (tryGit(root, ["cat-file", "-t", tagRef])?.trim() === "tag") {
+    return;
+  }
+  tryGit(root, [
+    "fetch",
+    "--force",
+    "--no-tags",
+    "origin",
+    `+${tagRef}:${tagRef}`,
+  ]);
 }
 
 function isAncestor(root, commit, branchRef) {

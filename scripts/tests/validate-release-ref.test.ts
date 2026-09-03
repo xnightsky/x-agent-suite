@@ -54,6 +54,23 @@ test("拒绝 release commit 不可达默认分支", async () => {
   });
 });
 
+test("checkout 覆盖 annotated tag 后从 origin 恢复并通过", async () => {
+  await withRepository(async (root) => {
+    const commit = await commitFile(root, "base.txt", "base\n", "feat: 基线");
+    git(root, ["tag", "-a", "v0.1.0", "-m", "release: v0.1.0"]);
+    const remote = await createBareRemote(root, "v0.1.0");
+    try {
+      git(root, ["update-ref", "refs/tags/v0.1.0", commit]);
+      setRemoteDefault(root, commit);
+      assert.equal(git(root, ["cat-file", "-t", "v0.1.0"]).trim(), "commit");
+      assert.equal(validate(root, "v0.1.0", commit).trim(), "0.1.0");
+      assert.equal(git(root, ["cat-file", "-t", "v0.1.0"]).trim(), "tag");
+    } finally {
+      await rm(remote, { recursive: true, force: true });
+    }
+  });
+});
+
 test("正确 annotated tag 通过并输出版本", async () => {
   await withRepository(async (root) => {
     const commit = await commitFile(root, "base.txt", "base\n", "feat: 基线");
@@ -75,6 +92,14 @@ async function withRepository(
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+}
+
+async function createBareRemote(root: string, tag: string): Promise<string> {
+  const remote = await mkdtemp(join(tmpdir(), "xas-release-remote-"));
+  git(remote, ["init", "--bare", "--quiet"]);
+  git(root, ["remote", "add", "origin", remote]);
+  git(root, ["push", "--quiet", "origin", `refs/tags/${tag}`]);
+  return remote;
 }
 
 async function commitFile(
