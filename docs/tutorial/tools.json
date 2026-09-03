@@ -1,0 +1,428 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    {
+      "id": "contracts",
+      "purpose": "声明消费者与框架之间的类型接缝，不提供运行时工具。",
+      "tools": []
+    },
+    {
+      "id": "driver",
+      "purpose": "提供进程、PTY、分帧、队列和内存驱动原语。",
+      "tools": [
+        {
+          "name": "JsonlProcess",
+          "category": "primitive",
+          "purpose": "运行并按严格 LF 消费 JSONL 子进程。",
+          "risk": "safe",
+          "recipes": ["sandbox-jsonl"]
+        },
+        {
+          "name": "PtyProcess",
+          "category": "advanced",
+          "purpose": "分配真实 PTY 并提供终端交互。",
+          "risk": "conditional",
+          "recipes": ["pty"]
+        },
+        {
+          "name": "createPtyScreen",
+          "category": "primitive",
+          "purpose": "把 PTY 字节流归一为屏幕快照。",
+          "risk": "conditional",
+          "reason": "面向自定义实现的底层原语，按模块手册中的接缝使用。"
+        },
+        {
+          "name": "LfFramer",
+          "category": "primitive",
+          "purpose": "仅按 LF 对字节流分帧。",
+          "risk": "safe",
+          "reason": "面向自定义实现的底层原语，按模块手册中的接缝使用。"
+        },
+        {
+          "name": "AsyncQueue",
+          "category": "primitive",
+          "purpose": "在生产者与异步迭代消费者之间排队。",
+          "risk": "safe",
+          "recipes": ["long-lived"]
+        },
+        {
+          "name": "JsonRpcPeer",
+          "category": "primitive",
+          "purpose": "在 JSONL 子进程上提供协议无关 JSON-RPC 请求配对与反向请求分发。",
+          "risk": "safe",
+          "recipes": ["long-lived-wire"]
+        },
+        {
+          "name": "LongLivedJsonRpcDriver",
+          "category": "primary",
+          "purpose": "用消费者注入的协议 adapter 驱动 JSON-RPC 长驻会话。",
+          "risk": "safe",
+          "recipes": ["long-lived-wire"]
+        },
+        {
+          "name": "MockDriver",
+          "category": "primary",
+          "purpose": "在内存中验证 Driver 生命周期和消费侧编排。",
+          "risk": "safe",
+          "recipes": ["mock-report", "matrix-report"]
+        }
+      ]
+    },
+    {
+      "id": "sandbox",
+      "purpose": "为一次运行创建临时 HOME、cwd 和环境隔离。",
+      "tools": [
+        {
+          "name": "createSandbox",
+          "category": "primary",
+          "purpose": "创建隔离目录和剥离后的子进程环境。",
+          "risk": "safe",
+          "recipes": ["sandbox-jsonl", "headless-fixture", "pty"]
+        },
+        {
+          "name": "cleanupSandbox",
+          "category": "primary",
+          "purpose": "幂等清理单次运行沙箱。",
+          "risk": "safe",
+          "recipes": ["sandbox-jsonl", "headless-fixture", "pty"]
+        }
+      ]
+    },
+    {
+      "id": "llm-fixture",
+      "purpose": "用本地 fake provider 控制模型轮次，或显式接入 live provider。",
+      "tools": [
+        {
+          "name": "FakeProviderBackend",
+          "category": "primary",
+          "purpose": "启动 loopback 假模型端点并按脚本响应。",
+          "risk": "safe",
+          "recipes": [
+            "fixture-backend",
+            "headless-fixture",
+            "pi-pty-integration"
+          ]
+        },
+        {
+          "name": "LiveBackend",
+          "category": "live",
+          "purpose": "调用显式配置的真实模型渠道。",
+          "risk": "high",
+          "reason": "仅用于显式授权的 live 路径，不进入安全离线教程。"
+        },
+        {
+          "name": "LiveNotConfiguredError",
+          "category": "live",
+          "purpose": "表示 live 渠道未配置，供上层降级 skip。",
+          "risk": "safe",
+          "reason": "仅用于显式授权的 live 路径，不进入安全离线教程。"
+        },
+        {
+          "name": "estimateCostUsd",
+          "category": "live",
+          "purpose": "按 usage 和价格配置估算成本。",
+          "risk": "safe",
+          "reason": "仅用于显式授权的 live 路径，不进入安全离线教程。"
+        },
+        {
+          "name": "createLlmBackend",
+          "category": "primary",
+          "purpose": "按 fixture/live 模式创建 backend。",
+          "risk": "conditional",
+          "recipes": ["fixture-backend"]
+        },
+        {
+          "name": "sniffLiveChannel",
+          "category": "live",
+          "purpose": "在 live 运行前验证连通、鉴权和工具调用。",
+          "risk": "high",
+          "recipes": ["live-token-smoke"]
+        },
+        {
+          "name": "loadLiveConfig",
+          "category": "live",
+          "purpose": "按优先级加载 live 配置。",
+          "risk": "conditional",
+          "recipes": ["live-token-smoke"]
+        },
+        {
+          "name": "resolveLiveApiKey",
+          "category": "live",
+          "purpose": "解析字面量或环境变量凭据。",
+          "risk": "high",
+          "reason": "仅用于显式授权的 live 路径，不进入安全离线教程。"
+        },
+        {
+          "name": "resolveLiveChannel",
+          "category": "live",
+          "purpose": "从配置中解析指定 carrier 渠道。",
+          "risk": "conditional",
+          "recipes": ["live-token-smoke"]
+        },
+        {
+          "name": "resolveLiveCredential",
+          "category": "live",
+          "purpose": "按显式配置或借用钩子解析凭据。",
+          "risk": "high",
+          "reason": "仅用于显式授权的 live 路径，不进入安全离线教程。"
+        },
+        {
+          "name": "createSecretRedactor",
+          "category": "advanced",
+          "purpose": "根据已解析秘密创建通用文本脱敏器。",
+          "risk": "safe",
+          "reason": "供 backend、driver 与报告接缝组合，不单独构成教程路径。"
+        },
+        {
+          "name": "redactLiveError",
+          "category": "advanced",
+          "purpose": "递归脱敏异常、cause 与自定义属性。",
+          "risk": "safe",
+          "reason": "由持有 live 凭据的边界用于清洗异常图。"
+        },
+        {
+          "name": "redactLiveSecrets",
+          "category": "live",
+          "purpose": "从诊断文本中脱敏端点和凭据。",
+          "risk": "safe",
+          "recipes": ["live-guard", "live-token-smoke"]
+        },
+        {
+          "name": "redactValue",
+          "category": "advanced",
+          "purpose": "深复制并递归脱敏结构化值。",
+          "risk": "safe",
+          "reason": "供 Observation、事件与报告写盘前的末端防线使用。"
+        },
+        {
+          "name": "LIVE_CONFIG_PATH_ENV",
+          "category": "live",
+          "purpose": "live 配置路径环境变量名。",
+          "risk": "safe",
+          "reason": "仅用于显式授权的 live 路径，不进入安全离线教程。"
+        },
+        {
+          "name": "LIVE_CONFIG_FILE",
+          "category": "live",
+          "purpose": "默认 live 配置文件名。",
+          "risk": "safe",
+          "reason": "仅用于显式授权的 live 路径，不进入安全离线教程。"
+        },
+        {
+          "name": "buildLiveRequest",
+          "category": "advanced",
+          "purpose": "把通用消息构造成具体 wire 请求。",
+          "risk": "conditional",
+          "reason": "依赖消费者 wire 或运行环境，见组合手册的有条件路径。"
+        },
+        {
+          "name": "createFetchTransport",
+          "category": "live",
+          "purpose": "创建真实 HTTP transport。",
+          "risk": "high",
+          "reason": "仅用于显式授权的 live 路径，不进入安全离线教程。"
+        },
+        {
+          "name": "LiveHttpError",
+          "category": "live",
+          "purpose": "保留 live HTTP 状态与响应上下文。",
+          "risk": "safe",
+          "reason": "仅用于显式授权的 live 路径，不进入安全离线教程。"
+        },
+        {
+          "name": "parseLiveResponse",
+          "category": "advanced",
+          "purpose": "把 wire 响应归一为通用 completion。",
+          "risk": "conditional",
+          "reason": "依赖消费者 wire 或运行环境，见组合手册的有条件路径。"
+        }
+      ]
+    },
+    {
+      "id": "harness",
+      "purpose": "用消费者提供的 profile 把真实 Agent CLI 包装成 Driver。",
+      "tools": [
+        {
+          "name": "resolveHarnessChannel",
+          "category": "debt",
+          "purpose": "从已知宿主配置借用渠道；属于迁移债务。",
+          "risk": "high",
+          "reason": "迁移债务，不作为领域中立新接入的推荐接口。"
+        },
+        {
+          "name": "resolveHarnessCredential",
+          "category": "debt",
+          "purpose": "从已知宿主配置借用凭据；属于迁移债务。",
+          "risk": "high",
+          "reason": "迁移债务，不作为领域中立新接入的推荐接口。"
+        },
+        {
+          "name": "createHarnessLiveConfigHooks",
+          "category": "debt",
+          "purpose": "桥接宿主借用逻辑与 live 配置；属于迁移债务。",
+          "risk": "high",
+          "reason": "迁移债务，不作为领域中立新接入的推荐接口。"
+        },
+        {
+          "name": "createHarnessDriver",
+          "category": "primary",
+          "purpose": "创建一次性 headless AgentDriver。",
+          "risk": "conditional",
+          "recipes": ["headless-fixture"]
+        },
+        {
+          "name": "createPtyAgentDriver",
+          "category": "advanced",
+          "purpose": "创建 PTY 长驻驱动，覆盖 TUI 独占交互。",
+          "risk": "high",
+          "recipes": ["pty", "pi-pty-integration"]
+        },
+        {
+          "name": "createPtyScreenWatcher",
+          "category": "primitive",
+          "purpose": "按屏幕、I/O 和可选文件变化判断 idle。",
+          "risk": "conditional",
+          "recipes": ["pty"]
+        },
+        {
+          "name": "buildMcpServerSpec",
+          "category": "primitive",
+          "purpose": "构造写入 profile 配置的 server spawn 描述。",
+          "risk": "safe",
+          "recipes": ["headless-fixture"]
+        },
+        {
+          "name": "writeJsonFile",
+          "category": "primitive",
+          "purpose": "递归建目录并写 JSON 配置。",
+          "risk": "safe",
+          "reason": "面向自定义实现的底层原语，按模块手册中的接缝使用。"
+        },
+        {
+          "name": "tomlString",
+          "category": "primitive",
+          "purpose": "把字符串安全编码为 TOML 字面量。",
+          "risk": "safe",
+          "reason": "面向自定义实现的底层原语，按模块手册中的接缝使用。"
+        },
+        {
+          "name": "installKimiPlugins",
+          "category": "debt",
+          "purpose": "安装迁移遗留的宿主专用插件；不是通用主路径。",
+          "risk": "high",
+          "reason": "迁移债务，不作为领域中立新接入的推荐接口。"
+        },
+        {
+          "name": "resolveHarnessCommand",
+          "category": "primary",
+          "purpose": "把 CLI shim 解析为可 spawn 命令。",
+          "risk": "conditional",
+          "reason": "由模块手册说明直接用法，当前无需独立可执行 recipe。"
+        },
+        {
+          "name": "HarnessUnavailableError",
+          "category": "primary",
+          "purpose": "表示宿主 CLI 不可用，供 matrix 降级 skip。",
+          "risk": "safe",
+          "reason": "由模块手册说明直接用法，当前无需独立可执行 recipe。"
+        },
+        {
+          "name": "cleanupPtyDriverResources",
+          "category": "primitive",
+          "purpose": "按固定顺序聚合清理 PTY 资源。",
+          "risk": "conditional",
+          "recipes": ["pty"]
+        }
+      ]
+    },
+    {
+      "id": "observation",
+      "purpose": "检查结构化观测并生成 Markdown/JSON 报告。",
+      "tools": [
+        {
+          "name": "toolNameMatches",
+          "category": "primitive",
+          "purpose": "按裸名或命名空间末段匹配工具。",
+          "risk": "safe",
+          "recipes": ["mock-report"]
+        },
+        {
+          "name": "toolActionMatches",
+          "category": "primitive",
+          "purpose": "按结构化 input.action 匹配工具动作。",
+          "risk": "safe",
+          "reason": "面向自定义实现的底层原语，按模块手册中的接缝使用。"
+        },
+        {
+          "name": "dryChecks",
+          "category": "primary",
+          "purpose": "验证 Observation 最低结构可信度。",
+          "risk": "safe",
+          "recipes": ["mock-report"]
+        },
+        {
+          "name": "hardChecks",
+          "category": "primary",
+          "purpose": "按工具状态和结构化入参执行硬检查。",
+          "risk": "safe",
+          "reason": "由模块手册说明直接用法，当前无需独立可执行 recipe。"
+        },
+        {
+          "name": "fuzzyChecks",
+          "category": "primary",
+          "purpose": "执行字符串或正则文本兜底检查。",
+          "risk": "safe",
+          "recipes": ["mock-report"]
+        },
+        {
+          "name": "checkListResult",
+          "category": "primary",
+          "purpose": "逐项核对列举结果中的幻觉和遗漏。",
+          "risk": "safe",
+          "reason": "由模块手册说明直接用法，当前无需独立可执行 recipe。"
+        },
+        {
+          "name": "writeScenarioReports",
+          "category": "primary",
+          "purpose": "同时写出 Markdown 结论表和 JSON 明细。",
+          "risk": "safe",
+          "recipes": ["mock-report", "matrix-report"]
+        }
+      ]
+    },
+    {
+      "id": "matrix",
+      "purpose": "编排 scenario × carrier × prompt 变体并汇总报告。",
+      "tools": [
+        {
+          "name": "writeScenarioReports",
+          "category": "primary",
+          "purpose": "转导出统一报告写入器。",
+          "risk": "safe",
+          "recipes": ["matrix-report"]
+        },
+        {
+          "name": "runMatrix",
+          "category": "primary",
+          "purpose": "执行变体串行、carrier 并行的对照矩阵。",
+          "risk": "safe",
+          "recipes": ["matrix-report"]
+        },
+        {
+          "name": "createMatrixRunner",
+          "category": "primary",
+          "purpose": "把固定 MatrixOptions 绑定成可复用 runner。",
+          "risk": "safe",
+          "reason": "由模块手册说明直接用法，当前无需独立可执行 recipe。"
+        },
+        {
+          "name": "toScenarioReportRows",
+          "category": "primary",
+          "purpose": "把成功和 skip 行统一转换为报告行。",
+          "risk": "safe",
+          "recipes": ["matrix-report"]
+        }
+      ]
+    }
+  ]
+}

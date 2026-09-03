@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "status": "library-building-blocks",
+  "toolsFile": "tools.json",
+  "plannedNotImplemented": [
+    "runtime-registry",
+    "scenario-dsl-runner",
+    "unified-cli"
+  ],
+  "recipes": [
+    {
+      "id": "mock-report",
+      "title": "Mock → Observation → Checks → Report",
+      "source": "examples/tutorial/01-mock-report.test.ts",
+      "guide": "docs/tutorial/recipes/mock-report.md",
+      "command": "pnpm tutorial",
+      "modules": ["driver", "observation"],
+      "mode": "offline",
+      "expected": ["JSON summary", "Markdown report", "JSON report"]
+    },
+    {
+      "id": "sandbox-jsonl",
+      "title": "Sandbox → JsonlProcess",
+      "source": "examples/tutorial/02-sandbox-jsonl.test.ts",
+      "guide": "docs/tutorial/recipes/sandbox-jsonl.md",
+      "command": "pnpm tutorial:sandbox",
+      "modules": ["sandbox", "driver"],
+      "mode": "offline",
+      "expected": ["parsed JSONL record", "sandbox cleanup"]
+    },
+    {
+      "id": "fixture-backend",
+      "title": "FakeProviderBackend wire loop",
+      "source": "examples/tutorial/03-fixture-backend.test.ts",
+      "guide": "docs/tutorial/recipes/fixture-backend.md",
+      "command": "pnpm tutorial:fixture",
+      "modules": ["llm-fixture"],
+      "mode": "loopback",
+      "expected": ["tool call response", "final text response"]
+    },
+    {
+      "id": "matrix-report",
+      "title": "Drivers × Variants → Matrix → Report",
+      "source": "examples/tutorial/04-matrix.test.ts",
+      "guide": "docs/tutorial/recipes/matrix-report.md",
+      "command": "pnpm tutorial:matrix",
+      "modules": ["driver", "matrix", "observation"],
+      "mode": "offline",
+      "expected": ["matrix counts", "Markdown report", "JSON report"]
+    },
+    {
+      "id": "headless-fixture",
+      "title": "HarnessProfile + FakeProviderBackend → HarnessDriver",
+      "source": "examples/tutorial/05-headless-fixture.test.ts",
+      "guide": "docs/tutorial/recipes/headless-fixture.md",
+      "command": "pnpm tutorial:headless",
+      "modules": ["contracts", "llm-fixture", "harness"],
+      "mode": "loopback",
+      "expected": ["normalized Observation", "sandbox cleanup"]
+    },
+    {
+      "id": "long-lived",
+      "title": "LongLivedAgentDriver multi-turn and inbound flow",
+      "source": "examples/tutorial/06-long-lived.test.ts",
+      "guide": "docs/tutorial/recipes/long-lived.md",
+      "command": "pnpm tutorial:long-lived",
+      "modules": ["contracts", "driver"],
+      "mode": "offline",
+      "expected": ["two turn observations", "matched inbound event"]
+    },
+    {
+      "id": "long-lived-wire",
+      "title": "JsonRpcPeer + LongLivedJsonRpcDriver over fake peer",
+      "source": "examples/tutorial/06-long-lived-wire.test.ts",
+      "guide": "docs/tutorial/recipes/long-lived-wire.md",
+      "command": "pnpm tutorial:long-lived-wire",
+      "modules": ["contracts", "driver"],
+      "mode": "offline",
+      "expected": [
+        "handshake session",
+        "two turn observations",
+        "matched inbound event",
+        "idempotent close"
+      ]
+    },
+    {
+      "id": "pty",
+      "title": "Generic TUI + PtyAgentDriver",
+      "source": "examples/tutorial/07-pty.test.ts",
+      "guide": "docs/tutorial/recipes/pty.md",
+      "command": "pnpm tutorial:pty",
+      "modules": ["contracts", "driver", "harness"],
+      "mode": "native-pty",
+      "expected": ["ready screen", "submitted prompt", "sandbox cleanup"]
+    },
+    {
+      "id": "live-guard",
+      "title": "Live configuration and explicit authorization gate",
+      "source": "examples/tutorial/08-live-guard.test.ts",
+      "guide": "docs/tutorial/recipes/live-guard.md",
+      "command": "pnpm tutorial:live:guard",
+      "modules": ["llm-fixture"],
+      "mode": "guarded-no-network",
+      "expected": [
+        "blocked status without authorization",
+        "redacted diagnostics"
+      ]
+    },
+    {
+      "id": "pi-pty-integration",
+      "title": "Pi CLI + PtyAgentDriver + FakeProviderBackend",
+      "source": "examples/tutorial/09-pi-pty.ittest.ts",
+      "guide": "docs/tutorial/recipes/pi-pty-integration.md",
+      "command": "pnpm tutorial:pty:pi",
+      "modules": ["llm-fixture", "harness"],
+      "mode": "real-host-loopback",
+      "expected": [
+        "skip unless E2E_PI_PTY=1",
+        "real Pi TUI response",
+        "sandbox cleanup"
+      ]
+    },
+    {
+      "id": "live-token-smoke",
+      "title": "Explicit live provider tool-calling smoke",
+      "source": "examples/tutorial/10-live-smoke.token.ittest.ts",
+      "guide": "docs/tutorial/recipes/live-token-smoke.md",
+      "command": "pnpm itest:token:tutorial",
+      "modules": ["llm-fixture", "sandbox"],
+      "mode": "explicit-live-token",
+      "expected": [
+        "skip without authorization or configuration",
+        "real tool-calling response",
+        "redacted diagnostics"
+      ]
+    }
+  ],
+  "combinations": [
+    {
+      "goal": "验证消费侧编排和评分",
+      "status": "supported",
+      "modules": ["contracts", "driver:MockDriver", "observation"],
+      "recipe": "mock-report"
+    },
+    {
+      "goal": "验证自定义 JSONL CLI 生命周期",
+      "status": "supported",
+      "modules": ["sandbox", "driver:JsonlProcess"],
+      "recipe": "sandbox-jsonl"
+    },
+    {
+      "goal": "验证模型 wire 与工具轮次",
+      "status": "supported",
+      "modules": ["llm-fixture:FakeProviderBackend"],
+      "recipe": "fixture-backend"
+    },
+    {
+      "goal": "比较多个 driver 和 prompt 变体",
+      "status": "supported",
+      "modules": ["driver", "matrix", "observation"],
+      "recipe": "matrix-report"
+    },
+    {
+      "goal": "用 fake provider 驱动真实 headless Agent CLI",
+      "status": "conditional",
+      "modules": ["sandbox", "llm-fixture", "harness:createHarnessDriver"],
+      "requires": [
+        "消费者 HarnessProfile",
+        "消费者 MCP server 入口",
+        "已安装宿主 CLI"
+      ],
+      "recipe": "headless-fixture"
+    },
+    {
+      "goal": "验证同一会话多轮与入站事件",
+      "status": "conditional",
+      "modules": ["contracts:LongLivedAgentDriver"],
+      "requires": ["消费者长驻 driver 实现"],
+      "recipe": "long-lived"
+    },
+    {
+      "goal": "复用 JSON-RPC 长驻 wire 基座并注入协议 adapter",
+      "status": "conditional",
+      "modules": ["driver:JsonRpcPeer", "driver:LongLivedJsonRpcDriver"],
+      "requires": [
+        "消费者 JsonRpcLongLivedAdapter 实现",
+        "宿主 JSON-RPC over stdio 通道"
+      ],
+      "recipe": "long-lived-wire"
+    },
+    {
+      "goal": "覆盖 TUI 审批或交互门槛",
+      "status": "conditional",
+      "modules": ["driver:PtyProcess", "harness:createPtyAgentDriver"],
+      "requires": ["PTY 原生依赖", "消费者 PTY profile", "隔离授权"],
+      "recipe": "pty"
+    },
+    {
+      "goal": "用 Pi 实证真实 PTY 宿主路径且保持零 token",
+      "status": "conditional",
+      "modules": [
+        "llm-fixture:FakeProviderBackend",
+        "harness:createPtyAgentDriver"
+      ],
+      "requires": ["已安装 Pi CLI", "PTY 原生依赖", "E2E_PI_PTY=1"],
+      "recipe": "pi-pty-integration"
+    },
+    {
+      "goal": "验证 live 默认阻断与脱敏",
+      "status": "conditional",
+      "modules": ["llm-fixture:redactLiveSecrets"],
+      "requires": ["无；默认不出网"],
+      "recipe": "live-guard"
+    },
+    {
+      "goal": "对照真实模型渠道的 tool calling",
+      "status": "conditional",
+      "modules": ["llm-fixture:sniffLiveChannel"],
+      "requires": ["显式授权", "专用凭据", "费用和出站限制"],
+      "recipe": "live-token-smoke"
+    },
+    {
+      "goal": "通过统一 Registry/CLI 直接运行 ScenarioSpec",
+      "status": "planned",
+      "modules": ["contracts:Registry", "contracts:ScenarioSpec"],
+      "requires": ["路线图阶段 1 和阶段 2"]
+    }
+  ]
+}

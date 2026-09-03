@@ -1,0 +1,70 @@
+{
+  "name": "x-agent-suite",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Agent 测试套件框架：跨宿主、可插拔 scenario / criterion / driver 的多轮 Agent 行为评估基础设施。",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xnightsky/x-agent-suite.git"
+  },
+  "homepage": "https://github.com/xnightsky/x-agent-suite#readme",
+  "bugs": {
+    "url": "https://github.com/xnightsky/x-agent-suite/issues"
+  },
+  "keywords": [
+    "agent",
+    "testing",
+    "evaluation",
+    "ai",
+    "llm",
+    "framework",
+    "monorepo"
+  ],
+  "author": "xnightsky",
+  "scripts": {
+    "artifacts:pack": "tsx scripts/artifacts-pack.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "tutorial": "tsx --test examples/tutorial/01-mock-report.test.ts",
+    "tutorial:sandbox": "tsx --test examples/tutorial/02-sandbox-jsonl.test.ts",
+    "tutorial:fixture": "tsx --test examples/tutorial/03-fixture-backend.test.ts",
+    "tutorial:matrix": "tsx --test examples/tutorial/04-matrix.test.ts",
+    "tutorial:headless": "tsx --test examples/tutorial/05-headless-fixture.test.ts",
+    "tutorial:long-lived": "tsx --test examples/tutorial/06-long-lived.test.ts",
+    "tutorial:long-lived-wire": "tsx --test examples/tutorial/06-long-lived-wire.test.ts",
+    "tutorial:pty": "tsx --test examples/tutorial/07-pty.test.ts",
+    "tutorial:live:guard": "tsx --test examples/tutorial/08-live-guard.test.ts",
+    "tutorial:pty:pi": "tsx --test examples/tutorial/09-pi-pty.ittest.ts",
+    "itest:token:tutorial": "tsx --test examples/tutorial/10-live-smoke.token.ittest.ts",
+    "tutorial:check": "tsx --test scripts/tests/tutorial.test.ts",
+    "test": "tsx --test \"packages/*/tests/*.test.ts\" \"scripts/tests/*.test.ts\"",
+    "test:watch": "tsx --test --watch \"packages/*/tests/*.test.ts\"",
+    "itest": "tsx scripts/run-itests.ts",
+    "typecheck": "tsc --noEmit",
+    "boundary": "node scripts/check-boundary.mjs",
+    "check": "pnpm boundary && pnpm typecheck && pnpm test && pnpm itest"
+  },
+  "dependencies": {
+    "@x-agent-suite/contracts": "workspace:*",
+    "@x-agent-suite/driver": "workspace:*",
+    "@x-agent-suite/harness": "workspace:*",
+    "@x-agent-suite/llm-fixture": "workspace:*",
+    "@x-agent-suite/matrix": "workspace:*",
+    "@x-agent-suite/observation": "workspace:*",
+    "@x-agent-suite/sandbox": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "esbuild": "0.28.2",
+    "prettier": "^3.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "packageManager": "pnpm@10.33.0"
+}

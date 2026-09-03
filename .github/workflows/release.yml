@@ -1,0 +1,96 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: 构建并发布
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 需要完整历史来推导版本号
+
+      - name: 验证发布引用
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: node scripts/validate-release-ref.mjs
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 运行检查
+        run: pnpm check
+
+      - name: 提取版本号
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: 构建制品
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: pnpm artifacts:pack -- --version "$VERSION"
+
+      - name: 创建 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/${{ steps.version.outputs.version }}/x-agent-suite-${{ steps.version.outputs.version }}.tgz
+            artifacts/${{ steps.version.outputs.version }}/x-agent-suite-pty-driver-${{ steps.version.outputs.version }}.tgz
+            artifacts/${{ steps.version.outputs.version }}/manifest.json
+            artifacts/${{ steps.version.outputs.version }}/SHA256SUMS
+          body: |
+            ## x-agent-suite v${{ steps.version.outputs.version }}
+
+            ### 安装
+
+            ```bash
+            # 使用 pnpm
+            pnpm add -D https://github.com/xnightsky/x-agent-suite/releases/download/v${{ steps.version.outputs.version }}/x-agent-suite-${{ steps.version.outputs.version }}.tgz
+
+            # 使用 npm
+            npm install --save-dev https://github.com/xnightsky/x-agent-suite/releases/download/v${{ steps.version.outputs.version }}/x-agent-suite-${{ steps.version.outputs.version }}.tgz
+
+            # 使用 yarn
+            yarn add -D https://github.com/xnightsky/x-agent-suite/releases/download/v${{ steps.version.outputs.version }}/x-agent-suite-${{ steps.version.outputs.version }}.tgz
+            ```
+
+            如果需要 PTY 交互能力：
+            ```bash
+            pnpm add -D https://github.com/xnightsky/x-agent-suite/releases/download/v${{ steps.version.outputs.version }}/x-agent-suite-pty-driver-${{ steps.version.outputs.version }}.tgz
+            ```
+
+            详见 [安装指南](https://github.com/xnightsky/x-agent-suite/blob/main/docs/INSTALLATION.md)。
+
+            ### ⚠️ 重要提示
+
+            本框架会自动化驱动第三方 AI CLI 工具。使用前请阅读：
+            - [安全策略](https://github.com/xnightsky/x-agent-suite/blob/main/SECURITY.md)
+            - [风险评估](https://github.com/xnightsky/x-agent-suite/blob/main/docs/research/ai-cli-account-session-risk.md)
+
+            **你对使用本框架产生的任何后果（包括账号封禁、费用超支、数据泄露）承担全部责任。**
+          draft: false
+          prerelease: false

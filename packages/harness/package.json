@@ -1,0 +1,30 @@
+{
+  "name": "@x-agent-suite/harness",
+  "version": "0.0.0",
+  "private": true,
+  "description": "x-agent-suite harness 层：HarnessProfile、一次性 driver 与长驻 driver 的通用执行机制。",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test \"tests/*.test.ts\""
+  },
+  "dependencies": {
+    "@x-agent-suite/contracts": "workspace:*",
+    "@x-agent-suite/driver": "workspace:*",
+    "@x-agent-suite/sandbox": "workspace:*",
+    "@x-agent-suite/llm-fixture": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}
