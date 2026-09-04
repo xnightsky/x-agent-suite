@@ -103,10 +103,11 @@ export interface LiveConfigOptions {
   readonly repoRoot?: string;
   /** 用户 home 目录；缺省 os.homedir()。 */
   readonly homeDir?: string;
-  /** 渠道借用钩子；声明 from: harness 时调用，未提供则借用失败。 */
+  /** 渠道借用钩子；声明 from: harness 时调用，未提供则借用失败。options.provider 为借用目标选择器（仅多 provider 宿主消费，单渠道宿主可忽略）。 */
   readonly borrowChannel?: (
     carrier: string,
     homeDir: string,
+    options?: { readonly provider?: string },
   ) => Promise<BorrowedChannelResult>;
   /** 凭证借用钩子；与 borrowChannel 成对提供，声明 credential: harness 时调用。 */
   readonly borrowCredential?: (

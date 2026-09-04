@@ -51,7 +51,13 @@ async function verifyBorrowedChannel(
   if (!borrow)
     return { reason: "未注入 borrowChannel 钩子，无法验证借用凭据端点" };
   const source = channel.harness ?? options.carrier;
-  const borrowed = await borrow(source, options.homeDir ?? homedir());
+  const borrowed = await borrow(
+    source,
+    options.homeDir ?? homedir(),
+    channel.provider !== undefined
+      ? { provider: channel.provider }
+      : undefined,
+  );
   if (borrowed.kind === "missing") return { reason: borrowed.reason };
   const mismatches = BORROWED_CREDENTIAL_ENDPOINT_FIELDS.filter(
     (field) => channel[field] !== borrowed[field],

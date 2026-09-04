@@ -8,7 +8,9 @@
  * - 宿主 C：~/.x-agent-c/settings.json，model + env.ANTHROPIC_BASE_URL
  * - 宿主 D：固定 Google 端点，model 取 settings.json（可缺省）
  * - 宿主 E：~/.x-agent-e/agent/settings.json defaultProvider/defaultModel + models.json providers
- *   （models.json 无对应条目时回退内置 provider 注册表快照，见 PI_BUILTIN_PROVIDERS）
+ *   （models.json 无对应条目时回退内置 provider 注册表快照，见 PI_BUILTIN_PROVIDERS；
+ *   options.provider 可指定借用目标 provider，缺省用 defaultProvider；
+ *   hint 与 defaultProvider 不一致时不带 defaultModel，由调用方显式声明 model）
  * 不变量：
  * - 只读不写；TOML 只做目标字段的有限提取（无 TOML 依赖），提不到 → 显式 missing + 原因，绝不静默猜值；
  * - baseUrl 属私密信息，调用方输出前必须经 redactLiveSecrets 脱敏；
@@ -45,6 +47,8 @@ export type HarnessChannelResult =
 export interface HarnessChannelOptions {
   /** 用户 home 目录；缺省 os.homedir()。 */
   readonly homeDir?: string;
+  /** 借用目标 provider 提示（仅多 provider 宿主生效；缺省用宿主默认 provider）。 */
+  readonly provider?: string;
 }
 
 /** 读文本文件；失败返回 undefined。 */
@@ -393,26 +397,33 @@ const PI_BUILTIN_PROVIDERS: Record<string, { baseUrl: string; api: string }> = {
   },
 };
 
-/** 宿主 E：settings.json defaultProvider/defaultModel + models.json providers.<p>（缺条目回退内置表）。 */
-async function piChannel(home: string): Promise<HarnessChannelResult> {
+/** 宿主 E：settings.json defaultProvider/defaultModel + models.json providers.<p>（缺条目回退内置表）；providerHint 指定借用目标 provider，缺省用 defaultProvider。 */
+async function piChannel(
+  home: string,
+  providerHint?: string,
+): Promise<HarnessChannelResult> {
   // BOUNDARY-DEBT(harness): 宿主 E 专用
   const settingsPath = join(home, ".pi", "agent", "settings.json"); // BOUNDARY-DEBT(harness): 宿主 E 配置路径
   const modelsPath = join(home, ".pi", "agent", "models.json"); // BOUNDARY-DEBT(harness): 宿主 E 配置路径
   const settings = await readJson(settingsPath);
-  const provider =
+  const defaultProvider =
     typeof settings?.defaultProvider === "string"
       ? settings.defaultProvider
       : undefined;
-  const model =
-    typeof settings?.defaultModel === "string"
-      ? settings.defaultModel
-      : undefined;
+  const provider = providerHint ?? defaultProvider;
   if (!provider) {
     return {
       kind: "missing",
       reason: `宿主 E ${settingsPath} 缺 defaultProvider`,
     };
   }
+  // hint 与 defaultProvider 不一致时，defaultModel 不保证属于该 provider，
+  // 不静默猜值——不带 model，由 yaml 显式声明。
+  const model =
+    (providerHint === undefined || providerHint === defaultProvider) &&
+    typeof settings?.defaultModel === "string"
+      ? settings.defaultModel
+      : undefined;
   const models = await readJson(modelsPath);
   const providers = models?.providers as Record<string, unknown> | undefined;
   let entry = providers?.[provider] as Record<string, unknown> | undefined;
@@ -483,7 +494,7 @@ export async function resolveHarnessChannel(
     case "gemini": // BOUNDARY-DEBT(harness): 宿主 D 映射
       return geminiChannel(home);
     case "pi": // BOUNDARY-DEBT(harness): 宿主 E 映射
-      return piChannel(home);
+      return piChannel(home, options.provider);
     default:
       return {
         kind: "missing",

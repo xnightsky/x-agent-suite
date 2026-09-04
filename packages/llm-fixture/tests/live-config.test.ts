@@ -387,6 +387,147 @@ test("裸 from: harness 声明：yaml 不写 wire/baseUrl/model，整体借用�
   }
 });
 
+test("from: harness + provider：provider 作为借用目标选择器透传给 borrowChannel，与借用结果一致即不触发端点覆盖拒绝", async () => {
+  const { root, cleanup } = await makeDirs();
+  try {
+    const repoRoot = join(root, "repo");
+    await writeConfig(join(repoRoot, ".env.e2e.yaml"), {
+      pi: { from: "harness", provider: "kimi-coding", model: "kimi-for-coding" },
+    });
+    let capturedHint: { readonly provider?: string } | undefined;
+    let called = false;
+    const load = await loadLiveConfig({
+      env: {},
+      repoRoot,
+      homeDir: join(root, "home"),
+      borrowChannel: (_carrier, _home, options) => {
+        called = true;
+        capturedHint = options;
+        return Promise.resolve({
+          kind: "resolved" as const,
+          wire: "anthropic-messages" as const,
+          baseUrl: "https://kimi-coding.example.com/coding",
+          provider: options?.provider ?? "default-provider",
+          source: "synthetic",
+        });
+      },
+    });
+    assert.equal(called, true);
+    assert.equal(capturedHint?.provider, "kimi-coding");
+    const result = resolveLiveChannel(load, "pi", {});
+    assert.equal(result.kind, "configured");
+    if (result.kind !== "configured") return;
+    assert.equal(result.channel.provider, "kimi-coding");
+    assert.equal(result.channel.baseUrl, "https://kimi-coding.example.com/coding");
+    assert.equal(result.channel.wire, "anthropic-messages");
+    assert.equal(result.channel.model, "kimi-for-coding");
+    assert.equal(result.channel.credential, "harness");
+  } finally {
+    await cleanup();
+  }
+});
+
+test("from: harness + provider 但借用结果无 model 且 yaml 未声明 model → invalid 并说明须显式声明 model", async () => {
+  const { root, cleanup } = await makeDirs();
+  try {
+    const repoRoot = join(root, "repo");
+    await writeConfig(join(repoRoot, ".env.e2e.yaml"), {
+      pi: { from: "harness", provider: "kimi-coding" },
+    });
+    const load = await loadLiveConfig({
+      env: {},
+      repoRoot,
+      homeDir: join(root, "home"),
+      borrowChannel: (_carrier, _home, options) =>
+        Promise.resolve({
+          kind: "resolved" as const,
+          wire: "anthropic-messages" as const,
+          baseUrl: "https://kimi-coding.example.com/coding",
+          provider: options?.provider ?? "default-provider",
+          source: "synthetic",
+        }),
+    });
+    const result = resolveLiveChannel(load, "pi", {});
+    assert.equal(result.kind, "not-configured");
+    if (result.kind !== "not-configured") return;
+    assert.match(result.reason, /kimi-coding/);
+    assert.match(result.reason, /显式声明 model/);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("裸 from: harness 不传 provider hint（borrowChannel 第三参为 undefined）", async () => {
+  const { root, cleanup } = await makeDirs();
+  try {
+    const repoRoot = join(root, "repo");
+    await writeConfig(join(repoRoot, ".env.e2e.yaml"), {
+      "default-host": { from: "harness" },
+    });
+    let capturedHint: unknown = "unset";
+    const load = await loadLiveConfig({
+      env: {},
+      repoRoot,
+      homeDir: join(root, "home"),
+      borrowChannel: (_carrier, _home, options) => {
+        capturedHint = options;
+        return Promise.resolve({
+          kind: "resolved" as const,
+          wire: "openai-chat" as const,
+          baseUrl: "https://host-default.example.com/v1",
+          model: "host-default-model",
+          source: "synthetic",
+        });
+      },
+    });
+    assert.equal(capturedHint, undefined);
+    assert.equal(resolveLiveChannel(load, "default-host", {}).kind, "configured");
+  } finally {
+    await cleanup();
+  }
+});
+
+test("resolveLiveCredential：渠道验证与凭据借用锚定同一 provider（hint 透传 borrowChannel）", async () => {
+  const hints: ({ readonly provider?: string } | undefined)[] = [];
+  let credentialProvider: string | undefined;
+  const channel: LiveChannel = {
+    wire: "anthropic-messages",
+    baseUrl: "https://kimi-coding.example.com/coding",
+    model: "kimi-for-coding",
+    provider: "kimi-coding",
+    from: "harness",
+    credential: "harness",
+  };
+  const result = await resolveLiveCredential(channel, {
+    carrier: "pi",
+    env: {},
+    homeDir: "/nonexistent",
+    now: 0,
+    borrowChannel: (_carrier, _home, options) => {
+      hints.push(options);
+      return Promise.resolve({
+        kind: "resolved" as const,
+        wire: "anthropic-messages" as const,
+        baseUrl: "https://kimi-coding.example.com/coding",
+        provider: options?.provider,
+        source: "synthetic",
+      });
+    },
+    borrowCredential: (_carrier, options) => {
+      credentialProvider = options.provider;
+      return Promise.resolve({
+        kind: "resolved" as const,
+        apiKey: "synthetic-borrowed-secret",
+        source: "synthetic",
+      });
+    },
+  });
+  assert.equal(result.kind, "resolved");
+  assert.equal(hints.length, 1);
+  assert.equal(hints[0]?.provider, "kimi-coding");
+  assert.equal(credentialProvider, "kimi-coding");
+});
+
 test("resolveLiveApiKey：apiKey 字面量优先，其次 apiKeyEnv 指向的环境变量", async () => {
   const literal: LiveChannel = {
     wire: "openai-chat",

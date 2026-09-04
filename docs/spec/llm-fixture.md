@@ -76,7 +76,7 @@ live 渠道按以下固定顺序解析（高优先级在前）：
 3. **repo 级**：仓库根 `.env.e2e.yaml`（被 .gitignore 的 `.env*` 规则覆盖；`source: repo-local`）；
 4. **home 级**：`~/.env.e2e.yaml`（跨仓库共享的用户级声明；`source: home-dot`）；
 5. **历史 home 路径**：`~/.config/x-agent-suite/.env.e2e.yaml`（`source: user-home`）；
-6. **宿主默认渠道**：文件内 `from: harness` 声明在 load 阶段经 `borrowChannel` 借用宿主 CLI 自己的 settings（默认 provider/model）；宿主 CLI 的内置 provider（不落盘用户 models 配置的那部分）由 harness 包内的内置注册表快照兜底，`models` 配置中的同名条目恒优先于快照。裸 `from: harness`（不写 wire/baseUrl/model/provider）语义即「整体使用宿主默认渠道」；yaml 显式字段覆盖借用值，未给显式凭据时隐含 `credential: harness`；
+6. **宿主默认渠道**：文件内 `from: harness` 声明在 load 阶段经 `borrowChannel` 借用宿主 CLI 自己的 settings（默认 provider/model）；宿主 CLI 的内置 provider（不落盘用户 models 配置的那部分）由 harness 包内的内置注册表快照兜底，`models` 配置中的同名条目恒优先于快照。裸 `from: harness`（不写 wire/baseUrl/model/provider）语义即「整体使用宿主默认渠道」；yaml 显式字段覆盖借用值，未给显式凭据时隐含 `credential: harness`。多 provider 宿主可用 `provider` 字段指定借用目标（选择器语义：借该 provider 的渠道与凭据，不再是禁止覆盖的端点字段）；此时宿主默认 model 不保证属于该 provider，借用结果不带 model 时须显式声明 `model`，hint 不存在于宿主配置与内置表时显式 missing、不回退默认 provider。借用的 baseUrl 归一为本框架约定（含版本前缀，如 anthropic-messages 渠道缺 /v1 时补上），宿主原值经 `harnessBaseUrl` 保留，供回写宿主配置（如沙盒 models.json）使用；
 7. **代码显式指定**：`new LiveBackend({ channel })` 直接传入完整 `LiveChannel`，构造期旁路上述全部文件/借用解析，适用于极少数需要场景级定点渠道的用例。
 
 1–5 是 `loadLiveConfig` / `resolveLiveChannel` 的文件发现与覆盖链（命中即停）；6 发生在文件声明内部；7 不经过文件链。缺文件、缺 carrier 或借用失败均返回显式「未配置」结果（不抛异常），live 用例据此 skip，不判红。

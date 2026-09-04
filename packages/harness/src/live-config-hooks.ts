@@ -25,10 +25,16 @@ export function createHarnessLiveConfigHooks(
     borrowChannel: async (
       carrier: string,
       home: string,
+      options?: { readonly provider?: string },
     ): Promise<BorrowedChannelResult> => {
       const result: HarnessChannelResult = await resolveHarnessChannel(
         carrier,
-        { homeDir: homeDir ?? home },
+        {
+          homeDir: homeDir ?? home,
+          ...(options?.provider !== undefined
+            ? { provider: options.provider }
+            : {}),
+        },
       );
       if (result.kind !== "resolved") {
         return { kind: "missing", reason: result.reason };

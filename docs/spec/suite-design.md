@@ -113,7 +113,7 @@ carriers:
     apiKeyEnv: MY_API_KEY # 或 apiKey 字面量
 ```
 
-`from: harness` 表示借用宿主 CLI 登录态；显式字段覆盖借用值。只写 `from: harness` 的裸声明（省 wire/baseUrl/model）语义为整体使用宿主默认渠道（读宿主 settings 的默认 provider/model；宿主内置 provider 由框架内置表兜底）。token 过期或缺失 → 显式 missing，不抛异常。
+`from: harness` 表示借用宿主 CLI 登录态；显式字段覆盖借用值。只写 `from: harness` 的裸声明（省 wire/baseUrl/model）语义为整体使用宿主默认渠道（读宿主 settings 的默认 provider/model；宿主内置 provider 由框架内置表兜底）。多 provider 宿主可声明 `provider` 选择借用目标（此时须显式声明 `model`，除非借用目标恰为宿主默认 provider）。token 过期或缺失 → 显式 missing，不抛异常。
 
 加载顺序：env 字段覆盖 > `E2E_LIVE_CONFIG_PATH` 显式文件 > repo 内 `.env.e2e.yaml` > `~/.env.e2e.yaml`（home 级，跨仓库共享）> `~/.config/x-agent-suite/.env.e2e.yaml`（历史路径）。缺文件/缺 carrier 时 live 用例按「未配置」skip，不判红。
 

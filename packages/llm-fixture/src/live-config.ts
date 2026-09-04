@@ -238,12 +238,20 @@ async function validateCarriers(
         typeof record.harness === "string" && record.harness !== ""
           ? record.harness
           : carrier;
+      const providerHint =
+        typeof record.provider === "string" && record.provider !== ""
+          ? record.provider
+          : undefined;
       if (!options.borrowChannel) {
         invalid[carrier] =
           "from: harness 需要 borrowChannel 钩子；当前未注入借用能力";
         continue;
       }
-      const borrowed = await options.borrowChannel(borrowFrom, options.homeDir);
+      const borrowed = await options.borrowChannel(
+        borrowFrom,
+        options.homeDir,
+        providerHint !== undefined ? { provider: providerHint } : undefined,
+      );
       if (borrowed.kind !== "resolved") {
         invalid[carrier] = `from: harness 借用失败：${borrowed.reason}`;
         continue;
@@ -252,6 +260,15 @@ async function validateCarriers(
       if (endpointOverrides.length > 0) {
         invalid[carrier] =
           `借用凭据时不能覆盖借用端点字段：${endpointOverrides.join(", ")}`;
+        continue;
+      }
+      if (
+        providerHint !== undefined &&
+        record.model === undefined &&
+        borrowed.model === undefined
+      ) {
+        invalid[carrier] =
+          `provider 借用目标 "${providerHint}" 无宿主默认 model 可借（默认 model 属于默认 provider），须显式声明 model`;
         continue;
       }
       merged = {

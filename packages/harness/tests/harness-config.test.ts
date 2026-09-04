@@ -340,23 +340,119 @@ test("宿主 E：provider 既不在 models.json 也不在内置表 → missing �
   }
 });
 
-test("宿主 E：anthropic-messages 内置 provider 的 baseUrl 归一补 /v1，原值入 harnessBaseUrl", async () => {
+test("宿主 E：provider hint 命中 models.json 自定义 provider，hint ≠ defaultProvider 时不带 model", async () => {
   const { home, cleanup } = await makeHome();
   try {
     await write(
       home,
       ".pi/agent/settings.json",
       JSON.stringify({
-        defaultProvider: "anthropic",
-        defaultModel: "claude-opus-5",
+        defaultProvider: "deepseek",
+        defaultModel: "deepseek-v4-flash",
+      }),
+    );
+    await write(
+      home,
+      ".pi/agent/models.json",
+      JSON.stringify({
+        providers: {
+          "custom-relay": {
+            baseUrl: "https://relay.example.com/v1",
+            api: "openai-completions",
+            models: [],
+          },
+        },
+      }),
+    );
+    const r = await resolveHarnessChannel("pi", {
+      homeDir: home,
+      provider: "custom-relay",
+    });
+    assert.equal(r.kind, "resolved");
+    if (r.kind !== "resolved") return;
+    assert.equal(r.channel.provider, "custom-relay");
+    assert.equal(r.channel.baseUrl, "https://relay.example.com/v1");
+    assert.equal(r.channel.wire, "openai-chat");
+    assert.equal(r.channel.model, undefined);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("宿主 E：provider hint 命中内置表；hint === defaultProvider 时沿用 defaultModel", async () => {
+  const { home, cleanup } = await makeHome();
+  try {
+    await write(
+      home,
+      ".pi/agent/settings.json",
+      JSON.stringify({
+        defaultProvider: "kimi-coding",
+        defaultModel: "kimi-for-coding",
+      }),
+    );
+    const hinted = await resolveHarnessChannel("pi", {
+      homeDir: home,
+      provider: "kimi-coding",
+    });
+    assert.equal(hinted.kind, "resolved");
+    if (hinted.kind !== "resolved") return;
+    assert.equal(hinted.channel.provider, "kimi-coding");
+    assert.equal(hinted.channel.baseUrl, "https://api.kimi.com/coding/v1");
+    assert.equal(hinted.channel.harnessBaseUrl, "https://api.kimi.com/coding");
+    assert.equal(hinted.channel.wire, "anthropic-messages");
+    assert.equal(hinted.channel.model, "kimi-for-coding");
+    assert.match(hinted.channel.source, /内置/);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("宿主 E：provider hint 不存在 → missing，不回退 defaultProvider", async () => {
+  const { home, cleanup } = await makeHome();
+  try {
+    await write(
+      home,
+      ".pi/agent/settings.json",
+      JSON.stringify({
+        defaultProvider: "deepseek",
+        defaultModel: "deepseek-v4-flash",
+      }),
+    );
+    await write(
+      home,
+      ".pi/agent/models.json",
+      JSON.stringify({ providers: {} }),
+    );
+    const r = await resolveHarnessChannel("pi", {
+      homeDir: home,
+      provider: "mystery-provider",
+    });
+    assert.equal(r.kind, "missing");
+    if (r.kind !== "missing") return;
+    assert.match(r.reason, /mystery-provider/);
+    assert.match(r.reason, /内置/);
+    assert.doesNotMatch(r.reason, /deepseek/);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("宿主 E：未给 provider hint 时行为不变（锚定 defaultProvider/defaultModel）", async () => {
+  const { home, cleanup } = await makeHome();
+  try {
+    await write(
+      home,
+      ".pi/agent/settings.json",
+      JSON.stringify({
+        defaultProvider: "deepseek",
+        defaultModel: "deepseek-v4-flash",
       }),
     );
     const r = await resolveHarnessChannel("pi", { homeDir: home });
     assert.equal(r.kind, "resolved");
     if (r.kind !== "resolved") return;
-    assert.equal(r.channel.wire, "anthropic-messages");
-    assert.equal(r.channel.baseUrl, "https://api.anthropic.com/v1");
-    assert.equal(r.channel.harnessBaseUrl, "https://api.anthropic.com");
+    assert.equal(r.channel.provider, "deepseek");
+    assert.equal(r.channel.model, "deepseek-v4-flash");
   } finally {
     await cleanup();
   }
@@ -404,6 +500,44 @@ test("from: harness：load 时借用渠道+model，yaml 显式字段覆盖借用
     assert.equal(r.channel.baseUrl, "https://api.kimi.com/coding/v1");
     assert.equal(r.channel.wire, "openai-chat");
     assert.equal(r.channel.model, "k3-override");
+    assert.equal(r.channel.credential, "harness");
+  } finally {
+    await cleanup();
+  }
+});
+
+test("from: harness + provider：借用宿主 E 非默认 provider 的渠道（内置表命中），model 显式声明", async () => {
+  const { home, cleanup } = await makeHome();
+  try {
+    await write(
+      home,
+      ".pi/agent/settings.json",
+      JSON.stringify({
+        defaultProvider: "deepseek",
+        defaultModel: "deepseek-v4-flash",
+      }),
+    );
+    const repo = join(home, "repo");
+    await write(
+      repo,
+      ".env.e2e.yaml",
+      "carriers:\n  pi:\n    from: harness\n    provider: kimi-coding\n    model: kimi-for-coding\n",
+    );
+    const load = await loadLiveConfig({
+      env: {},
+      repoRoot: repo,
+      homeDir: home,
+      ...createHarnessLiveConfigHooks(home),
+    });
+    assert.equal(load.kind, "loaded");
+    const r = resolveLiveChannel(load, "pi", {});
+    assert.equal(r.kind, "configured");
+    if (r.kind !== "configured") return;
+    assert.equal(r.channel.provider, "kimi-coding");
+    assert.equal(r.channel.baseUrl, "https://api.kimi.com/coding/v1");
+    assert.equal(r.channel.harnessBaseUrl, "https://api.kimi.com/coding");
+    assert.equal(r.channel.wire, "anthropic-messages");
+    assert.equal(r.channel.model, "kimi-for-coding");
     assert.equal(r.channel.credential, "harness");
   } finally {
     await cleanup();
