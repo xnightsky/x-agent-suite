@@ -26,6 +26,11 @@ jobs:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: node scripts/validate-release-ref.mjs
 
+      - name: 生成 Release 正文
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/release-notes.mjs "${RELEASE_TAG#v}" release-body.md
+
       - name: 安装 pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -62,35 +67,6 @@ jobs:
             artifacts/${{ steps.version.outputs.version }}/x-agent-suite-pty-driver-${{ steps.version.outputs.version }}.tgz
             artifacts/${{ steps.version.outputs.version }}/manifest.json
             artifacts/${{ steps.version.outputs.version }}/SHA256SUMS
-          body: |
-            ## x-agent-suite v${{ steps.version.outputs.version }}
-
-            ### 安装
-
-            ```bash
-            # 使用 pnpm
-            pnpm add -D https://github.com/xnightsky/x-agent-suite/releases/download/v${{ steps.version.outputs.version }}/x-agent-suite-${{ steps.version.outputs.version }}.tgz
-
-            # 使用 npm
-            npm install --save-dev https://github.com/xnightsky/x-agent-suite/releases/download/v${{ steps.version.outputs.version }}/x-agent-suite-${{ steps.version.outputs.version }}.tgz
-
-            # 使用 yarn
-            yarn add -D https://github.com/xnightsky/x-agent-suite/releases/download/v${{ steps.version.outputs.version }}/x-agent-suite-${{ steps.version.outputs.version }}.tgz
-            ```
-
-            如果需要 PTY 交互能力：
-            ```bash
-            pnpm add -D https://github.com/xnightsky/x-agent-suite/releases/download/v${{ steps.version.outputs.version }}/x-agent-suite-pty-driver-${{ steps.version.outputs.version }}.tgz
-            ```
-
-            详见 [安装指南](https://github.com/xnightsky/x-agent-suite/blob/main/docs/INSTALLATION.md)。
-
-            ### ⚠️ 重要提示
-
-            本框架会自动化驱动第三方 AI CLI 工具。使用前请阅读：
-            - [安全策略](https://github.com/xnightsky/x-agent-suite/blob/main/SECURITY.md)
-            - [风险评估](https://github.com/xnightsky/x-agent-suite/blob/main/docs/research/ai-cli-account-session-risk.md)
-
-            **你对使用本框架产生的任何后果（包括账号封禁、费用超支、数据泄露）承担全部责任。**
+          body_path: release-body.md
           draft: false
           prerelease: false

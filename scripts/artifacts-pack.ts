@@ -2,8 +2,12 @@
 /**
  * @module scripts/artifacts-pack
  * 统一制品 CLI：由 Git history 推导版本，构建并验收制品，成功后补 annotated tag。
+ *
+ * 不变量：稳定发布前 CHANGELOG.md 必须已含对应版本章节（Release 正文来源），
+ * 缺章节时拒绝构建，避免先打 tag 后由 CI 失败回收。
  */
-import { resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 
 import { buildArtifactSet, rollbackArtifactSet } from "./artifacts-build.ts";
 import {
@@ -11,6 +15,7 @@ import {
   createVersionTag,
   planArtifactVersion,
 } from "./artifacts-git.ts";
+import { extractChangelogSection } from "./release-notes.mjs";
 
 interface CliOptions {
   readonly expectedVersion?: string;
@@ -27,6 +32,12 @@ async function main(): Promise<void> {
     expectedVersion: options.expectedVersion,
     snapshot: options.snapshot,
   });
+  if (!plan.snapshot) {
+    extractChangelogSection(
+      readFileSync(join(root, "CHANGELOG.md"), "utf8"),
+      plan.version,
+    );
+  }
   const outputDir = resolve(
     root,
     options.output ?? `artifacts/${plan.version}`,

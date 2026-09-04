@@ -2,9 +2,13 @@
 
 ## 🚀 快速发布（推荐）
 
-**只需打 tag，GitHub Actions 自动完成所有工作**：
+**先写 CHANGELOG，再打 tag，GitHub Actions 自动完成剩余工作**：
 
 ```bash
+# 0. 把 CHANGELOG.md 的 Unreleased 条目归入 `## X.Y.Z - YYYY-MM-DD` 章节
+#    （Release 正文的变更摘要来源；缺章节时 artifacts:pack 与 Release 均拒绝）
+$EDITOR CHANGELOG.md
+
 # 1. 确保测试通过
 pnpm check
 
@@ -17,9 +21,10 @@ git push origin v0.1.3
 
 **GitHub Actions 会自动**：
 
+- ✅ 校验 CHANGELOG.md 含对应版本章节（缺失则在安装依赖前失败）
 - ✅ 运行完整测试（pnpm check）
 - ✅ 构建制品（pnpm artifacts:pack）
-- ✅ 创建 GitHub Release
+- ✅ 创建 GitHub Release，正文携带该版本的 changelog 章节
 - ✅ 上传所有 tarball 和校验文件
 
 查看进度：https://github.com/xnightsky/x-agent-suite/actions
@@ -67,6 +72,8 @@ pnpm check
 # 确认工作区干净
 git status
 ```
+
+把 `CHANGELOG.md` 的 `Unreleased` 条目归入 `## X.Y.Z - YYYY-MM-DD` 章节并提交（`X.Y.Z` 为 `pnpm artifacts:pack -- --snapshot` 推导的下一个稳定版本）。稳定打包与 Release 正文都消费该章节：`artifacts:pack` 稳定模式缺章节直接拒绝，Release workflow 用 `scripts/release-notes.mjs` 提取章节合成正文（变更在前、安装与安全提示在后）。
 
 ### 3. 打 tag 并推送
 
