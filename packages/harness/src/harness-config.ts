@@ -305,10 +305,11 @@ const PI_BUILTIN_PROVIDERS: Record<string, { baseUrl: string; api: string }> = {
     baseUrl: "https://router.huggingface.co/v1",
     api: "openai-completions",
   },
+  // BOUNDARY-DEBT(harness): 宿主 E 内置 provider 条目（键名与 URL 命中禁词，逐行标记）
   "kimi-coding": {
-    baseUrl: "https://api.kimi.com/coding",
+    baseUrl: "https://api.kimi.com/coding", // BOUNDARY-DEBT(harness): 宿主 E 内置 provider 条目
     api: "anthropic-messages",
-  }, // BOUNDARY-DEBT(harness): 宿主 E 内置 provider 条目
+  },
   minimax: {
     baseUrl: "https://api.minimax.io/anthropic",
     api: "anthropic-messages",
