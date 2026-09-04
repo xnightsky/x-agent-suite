@@ -10,7 +10,7 @@ pnpm itest:token:tutorial
 
 1. `XAS_TUTORIAL_LIVE_AUTHORIZATION=I_ACCEPT_LIVE_COST_AND_DATA_EGRESS` 单次授权值；
 2. `XAS_TUTORIAL_LIVE_CARRIER=<carrier>` 选择渠道；
-3. 仓库根 `.env.e2e.yaml` 中该 carrier 的 wire、base URL、model 和凭据声明。
+3. `.env.e2e.yaml`（repo 根或 home 级 `~/`）中该 carrier 的 wire、base URL、model 和凭据声明。
 
 示意配置只引用环境变量，不把 key 写进源码：
 

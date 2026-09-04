@@ -38,7 +38,7 @@ PTY、headless、sandbox 是机制，smoke 是抽样范围，contract 是验证�
 
 token 测试必须同时满足：
 
-1. live 配置只从仓库根 `.env.e2e.yaml` 读取；该文件由 `.env*` 规则忽略，禁止提交。
+1. live 配置经 `.env.e2e.yaml` 发现链读取（repo 根 > `~/` > `~/.config/x-agent-suite/`，见 [llm-fixture 规范](./llm-fixture.md)）；repo 内文件由 `.env*` 规则忽略，禁止提交。
 2. 命令必须显式运行，测试本身还要检查单次授权开关；缺配置、缺凭据或缺宿主时显式 skip。
 3. 使用专用 API key、企业凭据或专用测试账号，限制费用、token、并发、速率和总超时。
 4. 创建最小权限、可丢弃的 sandbox，并在成功、失败和 skip 路径清理现场。

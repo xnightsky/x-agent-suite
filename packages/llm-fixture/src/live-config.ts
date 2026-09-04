@@ -6,7 +6,8 @@
  *    （carrier 名大写化、非字母数字转下划线；字段级覆盖，叠加在文件声明之上）；
  * 2. `E2E_LIVE_CONFIG_PATH` 指向的显式配置文件；
  * 3. 仓库内 `.env.e2e.yaml`（被 .gitignore 的 `.env*` 规则覆盖）；
- * 4. `~/.config/x-agent-suite/.env.e2e.yaml`（历史路径名，便于记忆与拷贝）。
+ * 4. `~/.env.e2e.yaml`（home 级点文件，跨仓库共享）；
+ * 5. `~/.config/x-agent-suite/.env.e2e.yaml`（历史路径名，便于记忆与拷贝）。
  * 不变量：
  * - 凭证两种方式：本区显式配置（apiKey / apiKeyEnv）或通过 borrowCredential 钩子借用宿主 CLI 登录态
  *   （不复制 key 进本仓，借来的 token 兼容性由 sniff 门禁仲裁）；
@@ -55,7 +56,7 @@ export type {
 /** 显式配置文件路径的环境变量名。 */
 export const LIVE_CONFIG_PATH_ENV = "E2E_LIVE_CONFIG_PATH";
 
-/** 私密配置文件名：repo 根与 ~/.config/x-agent-suite/ 下同名（被 .gitignore 的 `.env*` 规则覆盖）。 */
+/** 私密配置文件名：repo 根、~/ 与 ~/.config/x-agent-suite/ 下同名（被 .gitignore 的 `.env*` 规则覆盖）。 */
 export const LIVE_CONFIG_FILE = ".env.e2e.yaml";
 
 /** 合法 wire 取值（历史名称；消费者可扩展，框架只负责校验已知值）。 */
@@ -281,7 +282,7 @@ async function validateCarriers(
 
 /**
  * 加载私密配置区文件（不叠加 env 覆盖；env 在 resolveLiveChannel 阶段按字段叠加）。
- * 查找顺序：E2E_LIVE_CONFIG_PATH > repo .env.e2e.yaml > ~/.config/x-agent-suite/.env.e2e.yaml。
+ * 查找顺序：E2E_LIVE_CONFIG_PATH > repo .env.e2e.yaml > ~/.env.e2e.yaml > ~/.config/x-agent-suite/.env.e2e.yaml。
  */
 export async function loadLiveConfig(
   options: LiveConfigOptions = {},
@@ -300,6 +301,7 @@ export async function loadLiveConfig(
     ? [{ source: "explicit-path", path: explicit }]
     : [
         { source: "repo-local", path: join(repoRoot, LIVE_CONFIG_FILE) },
+        { source: "home-dot", path: join(homeDir, LIVE_CONFIG_FILE) },
         {
           source: "user-home",
           path: join(homeDir, ".config", "x-agent-suite", LIVE_CONFIG_FILE),
@@ -336,7 +338,7 @@ export async function loadLiveConfig(
     kind: "not-configured",
     reason: explicit
       ? `${LIVE_CONFIG_PATH_ENV} 指向的文件不存在（${explicit}）`
-      : `未找到 ${LIVE_CONFIG_FILE}（repo 根或 ~/.config/x-agent-suite/）`,
+      : `未找到 ${LIVE_CONFIG_FILE}（repo 根、~/ 或 ~/.config/x-agent-suite/）`,
   };
 }
 

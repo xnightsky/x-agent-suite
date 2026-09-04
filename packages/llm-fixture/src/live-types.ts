@@ -4,9 +4,9 @@
  */
 import type { WireProtocol } from "@x-agent-suite/contracts";
 
-/** 渠道声明的来源。 */
+/** 渠道声明的来源（"home-dot" 为 ~/.env.e2e.yaml，"user-home" 为历史路径 ~/.config/x-agent-suite/.env.e2e.yaml）。 */
 export type LiveConfigSource =
-  "env" | "explicit-path" | "repo-local" | "user-home";
+  "env" | "explicit-path" | "repo-local" | "home-dot" | "user-home";
 
 /** 成本估算单价（美元 / 百万 token）；缺省时 costUsd 不估算。 */
 export interface LiveChannelPricing {

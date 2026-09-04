@@ -90,7 +90,30 @@ test("home 配置文件命中：~/.config/x-agent-suite/.env.e2e.yaml", async ()
   }
 });
 
-test("加载顺序：env 字段覆盖 > E2E_LIVE_CONFIG_PATH > repo .env.e2e.yaml > home", async () => {
+test("home 级配置命中：~/.env.e2e.yaml（source 为 home-dot）", async () => {
+  const { root, cleanup } = await makeDirs();
+  try {
+    const homeDir = join(root, "home");
+    await writeConfig(join(homeDir, ".env.e2e.yaml"), { kimi: KIMI_CHANNEL });
+    const load = await loadLiveConfig({
+      env: {},
+      repoRoot: join(root, "repo"),
+      homeDir,
+    });
+    assert.equal(load.kind, "loaded");
+    if (load.kind !== "loaded") return;
+    assert.equal(load.source, "home-dot");
+    const result = resolveLiveChannel(load, "kimi", {});
+    assert.equal(result.kind, "configured");
+    if (result.kind !== "configured") return;
+    assert.equal(result.channel.model, "kimi-k2");
+    assert.equal(result.source, "home-dot");
+  } finally {
+    await cleanup();
+  }
+});
+
+test("加载顺序：env 字段覆盖 > E2E_LIVE_CONFIG_PATH > repo .env.e2e.yaml > ~/.env.e2e.yaml > 历史 home 路径", async () => {
   const { root, cleanup } = await makeDirs();
   try {
     const repoRoot = join(root, "repo");
@@ -99,22 +122,43 @@ test("加载顺序：env 字段覆盖 > E2E_LIVE_CONFIG_PATH > repo .env.e2e.yam
     await writeConfig(
       join(homeDir, ".config", "x-agent-suite", ".env.e2e.yaml"),
       {
-        kimi: { ...KIMI_CHANNEL, model: "home-model" },
+        kimi: { ...KIMI_CHANNEL, model: "legacy-home-model" },
       },
     );
+
+    const legacyOnly = await loadLiveConfig({
+      env: {},
+      repoRoot: join(root, "empty-repo"),
+      homeDir,
+    });
+    if (legacyOnly.kind !== "loaded") assert.fail("历史 home 路径应命中");
+    assert.equal(legacyOnly.source, "user-home");
+    const legacyResult = resolveLiveChannel(legacyOnly, "kimi", {});
+    if (legacyResult.kind !== "configured")
+      assert.fail("历史 home 路径 carrier 应已配置");
+    assert.equal(legacyResult.channel.model, "legacy-home-model");
+
+    await writeConfig(join(homeDir, ".env.e2e.yaml"), {
+      kimi: { ...KIMI_CHANNEL, model: "home-dot-model" },
+    });
+    const homeDot = await loadLiveConfig({
+      env: {},
+      repoRoot: join(root, "empty-repo"),
+      homeDir,
+    });
+    if (homeDot.kind !== "loaded") assert.fail("home 级配置应命中");
+    assert.equal(homeDot.source, "home-dot");
+    const homeDotResult = resolveLiveChannel(homeDot, "kimi", {});
+    if (homeDotResult.kind !== "configured")
+      assert.fail("home 级 carrier 应已配置");
+    assert.equal(homeDotResult.channel.model, "home-dot-model");
+
     await writeConfig(join(repoRoot, ".env.e2e.yaml"), {
       kimi: { ...KIMI_CHANNEL, model: "repo-model" },
     });
     await writeConfig(explicitPath, {
       kimi: { ...KIMI_CHANNEL, model: "explicit-model" },
     });
-
-    const homeOnly = await loadLiveConfig({
-      env: {},
-      repoRoot: join(root, "empty-repo"),
-      homeDir,
-    });
-    assert.equal(resolveLiveChannel(homeOnly, "kimi", {}).kind, "configured");
 
     const repo = await loadLiveConfig({ env: {}, repoRoot, homeDir });
     if (repo.kind !== "loaded") assert.fail("repo 配置应命中");
@@ -303,6 +347,41 @@ test("借用凭据不能由环境变量重定向端点或 wire", async () => {
         assert.match(result.reason, /借用凭据|显式凭据/);
       }
     }
+  } finally {
+    await cleanup();
+  }
+});
+
+test("裸 from: harness 声明：yaml 不写 wire/baseUrl/model，整体借用宿主默认渠道", async () => {
+  const { root, cleanup } = await makeDirs();
+  try {
+    const repoRoot = join(root, "repo");
+    await writeConfig(join(repoRoot, ".env.e2e.yaml"), {
+      "default-host": { from: "harness" },
+    });
+    const load = await loadLiveConfig({
+      env: {},
+      repoRoot,
+      homeDir: join(root, "home"),
+      borrowChannel: async () => ({
+        kind: "resolved",
+        wire: "openai-chat",
+        baseUrl: "https://host-default.example.com/v1",
+        model: "host-default-model",
+        provider: "host-default-provider",
+        source: "synthetic",
+      }),
+    });
+    assert.equal(load.kind, "loaded");
+    const result = resolveLiveChannel(load, "default-host", {});
+    assert.equal(result.kind, "configured");
+    if (result.kind !== "configured") return;
+    assert.equal(result.channel.wire, "openai-chat");
+    assert.equal(result.channel.baseUrl, "https://host-default.example.com/v1");
+    assert.equal(result.channel.model, "host-default-model");
+    assert.equal(result.channel.provider, "host-default-provider");
+    assert.equal(result.channel.from, "harness");
+    assert.equal(result.channel.credential, "harness");
   } finally {
     await cleanup();
   }

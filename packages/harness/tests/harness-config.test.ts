@@ -229,6 +229,90 @@ test("宿主 E：defaultProvider/defaultModel + models.json 的 baseUrl 与 api 
   }
 });
 
+test("宿主 E：models.json 无内置 provider 条目时回退内置表（裸 from: harness 可解析宿主默认渠道）", async () => {
+  const { home, cleanup } = await makeHome();
+  try {
+    await write(
+      home,
+      ".pi/agent/settings.json",
+      JSON.stringify({
+        defaultProvider: "deepseek",
+        defaultModel: "deepseek-v4-flash",
+      }),
+    );
+    await write(
+      home,
+      ".pi/agent/models.json",
+      JSON.stringify({ providers: {} }),
+    );
+    const r = await resolveHarnessChannel("pi", { homeDir: home });
+    assert.equal(r.kind, "resolved");
+    if (r.kind !== "resolved") return;
+    assert.equal(r.channel.wire, "openai-chat");
+    assert.equal(r.channel.baseUrl, "https://api.deepseek.com");
+    assert.equal(r.channel.model, "deepseek-v4-flash");
+    assert.equal(r.channel.provider, "deepseek");
+    assert.match(r.channel.source, /内置/);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("宿主 E：models.json 条目优先于内置表（用户覆盖内置渠道仍生效）", async () => {
+  const { home, cleanup } = await makeHome();
+  try {
+    await write(
+      home,
+      ".pi/agent/settings.json",
+      JSON.stringify({
+        defaultProvider: "deepseek",
+        defaultModel: "deepseek-v4-flash",
+      }),
+    );
+    await write(
+      home,
+      ".pi/agent/models.json",
+      JSON.stringify({
+        providers: {
+          deepseek: {
+            baseUrl: "https://relay.example.com/v1",
+            api: "openai-completions",
+            models: [],
+          },
+        },
+      }),
+    );
+    const r = await resolveHarnessChannel("pi", { homeDir: home });
+    assert.equal(r.kind, "resolved");
+    if (r.kind !== "resolved") return;
+    assert.equal(r.channel.baseUrl, "https://relay.example.com/v1");
+    assert.doesNotMatch(r.channel.source, /内置/);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("宿主 E：provider 既不在 models.json 也不在内置表 → missing 且提及内置表", async () => {
+  const { home, cleanup } = await makeHome();
+  try {
+    await write(
+      home,
+      ".pi/agent/settings.json",
+      JSON.stringify({
+        defaultProvider: "mystery-provider",
+        defaultModel: "mystery-model",
+      }),
+    );
+    const r = await resolveHarnessChannel("pi", { homeDir: home });
+    assert.equal(r.kind, "missing");
+    if (r.kind !== "missing") return;
+    assert.match(r.reason, /mystery-provider/);
+    assert.match(r.reason, /内置/);
+  } finally {
+    await cleanup();
+  }
+});
+
 test("未知 carrier 的渠道借用 → missing 并说明不支持", async () => {
   const r = await resolveHarnessChannel("unknown-cli", {
     homeDir: "/nonexistent",

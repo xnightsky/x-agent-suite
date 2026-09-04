@@ -25,7 +25,7 @@ packages/<consumer-boundary>/tests/<scenario>.token.ittest.ts
 如果同一边界已有大量 token 用例，也可以按需放进 `tests/token/`，但这只是可选分组。无论位置如何，都要同时新增精确指向该文件或明确集合的 `itest:token:*` 脚本。用例顺序必须是：
 
 1. 检查单次授权开关；缺失则 skip。
-2. 从仓库根 `.env.e2e.yaml` 加载渠道，不从源码读取字面量密钥。
+2. 经 `.env.e2e.yaml` 发现链（repo 根 > home 级 `~/`）加载渠道，不从源码读取字面量密钥。
 3. 创建最小权限 sandbox，并限制费用、token、并发、速率和总超时。
 4. `sniffLiveChannel` 验证连通、鉴权和 tool calling；失败结构化 skip。
 5. 才创建 `LiveBackend` 或启动真实宿主 live 路径。

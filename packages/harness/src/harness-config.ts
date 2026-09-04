@@ -8,6 +8,7 @@
  * - 宿主 C：~/.x-agent-c/settings.json，model + env.ANTHROPIC_BASE_URL
  * - 宿主 D：固定 Google 端点，model 取 settings.json（可缺省）
  * - 宿主 E：~/.x-agent-e/agent/settings.json defaultProvider/defaultModel + models.json providers
+ *   （models.json 无对应条目时回退内置 provider 注册表快照，见 PI_BUILTIN_PROVIDERS）
  * 不变量：
  * - 只读不写；TOML 只做目标字段的有限提取（无 TOML 依赖），提不到 → 显式 missing + 原因，绝不静默猜值；
  * - baseUrl 属私密信息，调用方输出前必须经 redactLiveSecrets 脱敏；
@@ -260,7 +261,138 @@ async function geminiChannel(home: string): Promise<HarnessChannelResult> {
   };
 }
 
-/** 宿主 E：settings.json defaultProvider/defaultModel + models.json providers.<p>。 */
+// BOUNDARY-DEBT(harness): 宿主 E 内置 provider 注册表快照（pi-ai 0.84.4 providers/data）；
+// 仅收录 baseUrl 具体（非模板/非空）且 api 可映射框架 wire 的条目；models.json 条目恒优先；
+// 宿主 E 若改为把内置 provider 落盘 models.json，本表即可整体回收。
+const PI_BUILTIN_PROVIDERS: Record<string, { baseUrl: string; api: string }> = {
+  anthropic: {
+    baseUrl: "https://api.anthropic.com",
+    api: "anthropic-messages",
+  },
+  "ant-ling": {
+    baseUrl: "https://api.ant-ling.com/v1",
+    api: "openai-completions",
+  },
+  baseten: {
+    baseUrl: "https://inference.baseten.co/v1",
+    api: "openai-completions",
+  },
+  cerebras: {
+    baseUrl: "https://api.cerebras.ai/v1",
+    api: "openai-completions",
+  },
+  deepseek: {
+    baseUrl: "https://api.deepseek.com",
+    api: "openai-completions",
+  },
+  fireworks: {
+    baseUrl: "https://api.fireworks.ai/inference",
+    api: "anthropic-messages",
+  },
+  "github-copilot": {
+    baseUrl: "https://api.individual.githubcopilot.com",
+    api: "anthropic-messages",
+  },
+  google: {
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+    api: "google-generative-ai",
+  },
+  groq: {
+    baseUrl: "https://api.groq.com/openai/v1",
+    api: "openai-completions",
+  },
+  huggingface: {
+    baseUrl: "https://router.huggingface.co/v1",
+    api: "openai-completions",
+  },
+  "kimi-coding": {
+    baseUrl: "https://api.kimi.com/coding",
+    api: "anthropic-messages",
+  }, // BOUNDARY-DEBT(harness): 宿主 E 内置 provider 条目
+  minimax: {
+    baseUrl: "https://api.minimax.io/anthropic",
+    api: "anthropic-messages",
+  },
+  "minimax-cn": {
+    baseUrl: "https://api.minimaxi.com/anthropic",
+    api: "anthropic-messages",
+  },
+  moonshotai: {
+    baseUrl: "https://api.moonshot.ai/v1",
+    api: "openai-completions",
+  },
+  "moonshotai-cn": {
+    baseUrl: "https://api.moonshot.cn/v1",
+    api: "openai-completions",
+  },
+  nvidia: {
+    baseUrl: "https://integrate.api.nvidia.com/v1",
+    api: "openai-completions",
+  },
+  openai: { baseUrl: "https://api.openai.com/v1", api: "openai-responses" },
+  opencode: {
+    baseUrl: "https://opencode.ai/zen",
+    api: "anthropic-messages",
+  },
+  "opencode-go": {
+    baseUrl: "https://opencode.ai/zen/go",
+    api: "anthropic-messages",
+  },
+  openrouter: {
+    baseUrl: "https://openrouter.ai/api/v1",
+    api: "openai-completions",
+  },
+  "qwen-token-plan": {
+    baseUrl:
+      "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+    api: "openai-completions",
+  },
+  "qwen-token-plan-cn": {
+    baseUrl:
+      "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+    api: "openai-completions",
+  },
+  "qwen-token-plan-individual": {
+    baseUrl:
+      "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+    api: "openai-completions",
+  },
+  together: {
+    baseUrl: "https://api.together.ai/v1",
+    api: "openai-completions",
+  },
+  "vercel-ai-gateway": {
+    baseUrl: "https://ai-gateway.vercel.sh",
+    api: "anthropic-messages",
+  },
+  xai: { baseUrl: "https://api.x.ai/v1", api: "openai-responses" },
+  xiaomi: {
+    baseUrl: "https://api.xiaomimimo.com/v1",
+    api: "openai-completions",
+  },
+  "xiaomi-token-plan-ams": {
+    baseUrl: "https://token-plan-ams.xiaomimimo.com/v1",
+    api: "openai-completions",
+  },
+  "xiaomi-token-plan-cn": {
+    baseUrl: "https://token-plan-cn.xiaomimimo.com/v1",
+    api: "openai-completions",
+  },
+  "xiaomi-token-plan-sgp": {
+    baseUrl: "https://token-plan-sgp.xiaomimimo.com/v1",
+    api: "openai-completions",
+  },
+  zai: {
+    baseUrl: "https://api.z.ai/api/coding/paas/v4",
+    api: "openai-completions",
+  },
+  "zai-coding-cn": {
+    baseUrl: "https://open.bigmodel.cn/api/coding/paas/v4",
+    api: "openai-completions",
+  },
+};
+
+/** 宿主 E：settings.json defaultProvider/defaultModel + models.json providers.<p>（缺条目回退内置表）。 */
 async function piChannel(home: string): Promise<HarnessChannelResult> {
   // BOUNDARY-DEBT(harness): 宿主 E 专用
   const settingsPath = join(home, ".pi", "agent", "settings.json"); // BOUNDARY-DEBT(harness): 宿主 E 配置路径
@@ -282,12 +414,18 @@ async function piChannel(home: string): Promise<HarnessChannelResult> {
   }
   const models = await readJson(modelsPath);
   const providers = models?.providers as Record<string, unknown> | undefined;
-  const entry = providers?.[provider] as Record<string, unknown> | undefined;
+  let entry = providers?.[provider] as Record<string, unknown> | undefined;
+  let fromBuiltin = false;
   if (!entry || typeof entry.baseUrl !== "string" || entry.baseUrl === "") {
-    return {
-      kind: "missing",
-      reason: `宿主 E ${modelsPath} 无 provider "${provider}" 或缺 baseUrl`,
-    };
+    const builtin = PI_BUILTIN_PROVIDERS[provider];
+    if (!builtin) {
+      return {
+        kind: "missing",
+        reason: `宿主 E ${modelsPath} 无 provider "${provider}" 或缺 baseUrl，内置 provider 表亦无此条目`,
+      };
+    }
+    entry = builtin;
+    fromBuiltin = true;
   }
   const wire = wireOf(typeof entry.api === "string" ? entry.api : undefined);
   if (!wire) {
@@ -300,10 +438,12 @@ async function piChannel(home: string): Promise<HarnessChannelResult> {
     kind: "resolved",
     channel: {
       wire,
-      baseUrl: entry.baseUrl,
+      baseUrl: entry.baseUrl as string,
       provider,
       ...(model ? { model } : {}),
-      source: `harness:e ${settingsPath} + ${modelsPath}`,
+      source: fromBuiltin
+        ? `harness:e ${settingsPath} + 内置 provider 表`
+        : `harness:e ${settingsPath} + ${modelsPath}`,
     },
   };
 }
