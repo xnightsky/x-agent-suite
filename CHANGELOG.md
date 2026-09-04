@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Added
+
+- 教程新增 Pi live PTY token 用例（`examples/tutorial/11-pi-live-pty.token.ittest.ts`，精确入口 `pnpm itest:token:pi-pty`）：PtyAgentDriver live 分支把 `from: harness` 借用的指定 provider 渠道与凭据注入沙盒，驱动真实 Pi TUI 打真实端点；catalog/组合/工具表同步登记该能力。
+
 ## 0.2.0 - 2026-09-04
 
 ### Added

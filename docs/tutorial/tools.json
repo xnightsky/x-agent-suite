@@ -275,7 +275,7 @@
           "category": "advanced",
           "purpose": "创建 PTY 长驻驱动，覆盖 TUI 独占交互。",
           "risk": "high",
-          "recipes": ["pty", "pi-pty-integration"]
+          "recipes": ["pty", "pi-pty-integration", "pi-live-pty"]
         },
         {
           "name": "createPtyScreenWatcher",

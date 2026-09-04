@@ -121,6 +121,20 @@
       ]
     },
     {
+      "id": "pi-live-pty",
+      "title": "Pi CLI + PtyAgentDriver live 分支（借用宿主指定 provider 渠道与凭据）",
+      "source": "examples/tutorial/11-pi-live-pty.token.ittest.ts",
+      "guide": "docs/tutorial/recipes/pi-live-pty.md",
+      "command": "pnpm itest:token:pi-pty",
+      "modules": ["llm-fixture", "harness"],
+      "mode": "explicit-live-token",
+      "expected": [
+        "skip without authorization or configuration",
+        "real Pi TUI response over borrowed provider channel",
+        "sandbox cleanup"
+      ]
+    },
+    {
       "id": "live-token-smoke",
       "title": "Explicit live provider tool-calling smoke",
       "source": "examples/tutorial/10-live-smoke.token.ittest.ts",
@@ -218,6 +232,21 @@
       "modules": ["llm-fixture:sniffLiveChannel"],
       "requires": ["显式授权", "专用凭据", "费用和出站限制"],
       "recipe": "live-token-smoke"
+    },
+    {
+      "goal": "用借用的指定 provider/model 渠道驱动真实 Pi PTY（真实 token）",
+      "status": "conditional",
+      "modules": [
+        "harness:createPtyAgentDriver",
+        "llm-fixture:LiveBackend"
+      ],
+      "requires": [
+        "已安装 Pi CLI",
+        "宿主登录态与 ~/.env.e2e.yaml carriers.pi 声明（from: harness，可选 provider 选择器）",
+        "显式授权",
+        "费用和出站限制"
+      ],
+      "recipe": "pi-live-pty"
     },
     {
       "goal": "通过统一 Registry/CLI 直接运行 ScenarioSpec",

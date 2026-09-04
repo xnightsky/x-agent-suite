@@ -52,6 +52,7 @@ HarnessProfile + LlmBackend + Sandbox
 | 覆盖 TUI 审批/交互             | [PTY / TUI](./recipes/pty.md)                         | 合成示例安全；真实宿主需隔离         |
 | 使用真实模型渠道               | [Live Guard](./recipes/live-guard.md)                 | guard 安全；token 用例高风险         |
 | 用 Pi 验证真实 PTY 路径        | [Pi PTY Integration](./recipes/pi-pty-integration.md) | 真实宿主；fake provider；默认 skip   |
+| 用 Pi PTY 打真实 provider/model | [Pi Live PTY](./recipes/pi-live-pty.md)               | 真实宿主+借用渠道；真实 token；仅显式运行 |
 | 对照真实 provider tool calling | [Live Token Smoke](./recipes/live-token-smoke.md)     | 真实 token/费用/出站；仅显式运行     |
 
 完整工具表见[模块手册](./modules.md)，支持/有条件/尚未实现的组合见[组合手册](./combinations.md)。AI 或自动检查先读 [`catalog.json`](./catalog.json)，需要逐符号覆盖时按其中 `toolsFile` 加载 [`tools.json`](./tools.json)，不应从路线图反推当前 API。
@@ -99,6 +100,7 @@ pnpm tutorial:check
 ```bash
 pnpm tutorial:pty:pi       # 默认 skip；E2E_PI_PTY=1 才启动真实 Pi，仍为零 token
 pnpm itest:token:tutorial  # 默认 skip；还需单次授权、carrier 与私密配置
+pnpm itest:token:pi-pty    # 默认 skip；还需单次授权、carriers.pi 借用声明与宿主登录态
 ```
 
 真实宿主走 `*.ittest.ts`，真实 provider 走只能显式运行的 `*.token.ittest.ts`。PTY、headless、smoke 只是文件 stem/catalog 标签，不再增加终止后缀；完整规则见[测试分层规范](../spec/testing.md)，决策证据见[后缀调研](../research/test-file-naming-taxonomy.md)。

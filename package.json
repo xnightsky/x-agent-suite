@@ -38,6 +38,7 @@
     "tutorial:live:guard": "tsx --test examples/tutorial/08-live-guard.test.ts",
     "tutorial:pty:pi": "tsx --test examples/tutorial/09-pi-pty.ittest.ts",
     "itest:token:tutorial": "tsx --test examples/tutorial/10-live-smoke.token.ittest.ts",
+    "itest:token:pi-pty": "tsx --test examples/tutorial/11-pi-live-pty.token.ittest.ts",
     "tutorial:check": "tsx --test scripts/tests/tutorial.test.ts",
     "test": "tsx --test \"packages/*/tests/*.test.ts\" \"scripts/tests/*.test.ts\"",
     "test:watch": "tsx --test --watch \"packages/*/tests/*.test.ts\"",

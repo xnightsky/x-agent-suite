@@ -27,6 +27,7 @@ Backend 不属于 `MockDriver` 或底层 `JsonlProcess` 本身；Scenario DSL ru
 | JSON-RPC 长驻 wire          | JsonRpcPeer + LongLivedJsonRpcDriver + 消费者 adapter | 有条件         | [long-lived-wire](./recipes/long-lived-wire.md)；假 peer 链可直接运行      |
 | TUI 审批                    | PTY profile + PtyAgentDriver                          | 有条件、高风险 | [pty](./recipes/pty.md)；含合成单测与真实宿主 itest 分层                   |
 | Pi 真实 PTY                 | Pi profile + fake backend + PTY                       | 有条件         | [pi-pty-integration](./recipes/pi-pty-integration.md)；默认 skip，零 token |
+| Pi 真实 PTY 打真实 provider/model | Pi profile + LiveBackend + 借用渠道注入           | 有条件、高风险 | [pi-live-pty](./recipes/pi-live-pty.md)；仅显式 token 入口                 |
 | live 默认安全门             | authorization + redact                                | 支持           | [live-guard](./recipes/live-guard.md)；默认零网络                          |
 | 真实模型最小对照            | live config + sniff                                   | 有条件、高风险 | [live-token-smoke](./recipes/live-token-smoke.md)；仅显式 token 入口       |
 | `x-agent-suite run`         | Runtime Registry + DSL runner + CLI                   | 尚未实现       | 路线图阶段 1/2                                                             |

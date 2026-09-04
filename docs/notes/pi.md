@@ -97,6 +97,10 @@ E2E_PI_PTY=1 pnpm tutorial:pty:pi
 
 该测试强制触发 trust 对话框，完成一轮 fake provider 文本响应，验证真实用户 skills 未进入 Observation，并确认关闭后沙箱 home/cwd 已删除。它不验证 pi-mcp-adapter、工具审批、Ctrl-C 或 resize；这些仍分别由 RPC/adapter 测试与后续 PTY 专项覆盖。
 
+### 9.2 真实渠道 PTY（live 分支）
+
+PtyAgentDriver 的 backend 传 `LiveBackend` 即进入 live 分支：沙盒 `models.json` 按借用渠道生成（baseUrl 取 `harnessBaseUrl` 宿主原值，apiKey 为借用 token），真实 TUI 按声明的 provider/model 打真实端点。渠道声明来自真实 home 的 `~/.env.e2e.yaml`（`carriers.pi` + `from: harness`，多 provider 宿主可用 `provider` 选择借用目标）。0.84.4 + kimi-coding OAuth 实测通过（footer 显示声明模型，一轮约 6s）。入口为 token 级精确脚本 `pnpm itest:token:pi-pty`，见[教程](../../docs/tutorial/recipes/pi-live-pty.md)。
+
 ## 10. Project Trust（信任对话框）出口
 
 Project Trust 是输入加载门卫，不是沙盒：防仓库在用户批准前静默改写 pi 的设置/扩展。触发条件（0.84.4 实测）：交互式启动 + cwd 含需信任的项目本地资源（`.pi/settings.json`、项目 packages、项目 `.agents/skills` 等；裸 `.pi` 目录不算）+ `~/.pi/agent/trust.json` 无该目录或父目录的保存决定 → 按全局 `defaultProjectTrust`（默认 `"ask"`）弹问。**空 cwd 不触发**——harness 沙盒 cwd 自控内容，本就不在弹窗路径上。
