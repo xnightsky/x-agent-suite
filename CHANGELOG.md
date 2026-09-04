@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 0.1.3 - 2026-09-04
+
 ### Added
 
 - `from: harness` 渠道借用支持 `provider` 选择器（多 provider 宿主）：yaml 声明 `provider` 即借用该 provider 的渠道与凭据，不声明则维持宿主默认 provider 行为；`provider` 字段从「借用凭据时不可覆盖的端点字段」改为借用目标选择器。hint 与宿主默认 provider 不一致时不带宿主默认 model，须显式声明 `model`；hint 不存在于宿主配置与内置表时显式 missing，不回退默认 provider。`borrowChannel` 钩子签名增加可选第三参 `options.provider`，向后兼容。
