@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 0.1.2 - 2026-09-04
+
 ### Added
 
 - live 私密配置区新增 home 级发现位 `~/.env.e2e.yaml`：位于 repo 级与历史路径 `~/.config/x-agent-suite/` 之间，跨仓库共享；`LiveConfigSource` 新增 `"home-dot"` 成员（对穷举该联合类型的消费方属 additive 类型变更）。
