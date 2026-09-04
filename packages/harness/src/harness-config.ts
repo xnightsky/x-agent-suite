@@ -417,12 +417,19 @@ async function piChannel(home: string): Promise<HarnessChannelResult> {
   const providers = models?.providers as Record<string, unknown> | undefined;
   let entry = providers?.[provider] as Record<string, unknown> | undefined;
   let fromBuiltin = false;
-  if (!entry || typeof entry.baseUrl !== "string" || entry.baseUrl === "") {
+  if (entry && (typeof entry.baseUrl !== "string" || entry.baseUrl === "")) {
+    // 用户自定义条目写坏了要显式报，不能被内置表掩盖（流量可能去了非预期端点）
+    return {
+      kind: "missing",
+      reason: `宿主 E ${modelsPath} 的自定义 provider "${provider}" 缺 baseUrl`,
+    };
+  }
+  if (!entry) {
     const builtin = PI_BUILTIN_PROVIDERS[provider];
     if (!builtin) {
       return {
         kind: "missing",
-        reason: `宿主 E ${modelsPath} 无 provider "${provider}" 或缺 baseUrl，内置 provider 表亦无此条目`,
+        reason: `宿主 E ${modelsPath} 无 provider "${provider}"，内置 provider 表亦无此条目`,
       };
     }
     entry = builtin;

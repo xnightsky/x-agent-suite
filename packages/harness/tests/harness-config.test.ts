@@ -292,6 +292,33 @@ test("宿主 E：models.json 条目优先于内置表（用户覆盖内置渠道
   }
 });
 
+test("宿主 E：models.json 自定义条目缺 baseUrl → 显式 missing，不回退内置表掩盖配置错误", async () => {
+  const { home, cleanup } = await makeHome();
+  try {
+    await write(
+      home,
+      ".pi/agent/settings.json",
+      JSON.stringify({
+        defaultProvider: "deepseek",
+        defaultModel: "deepseek-v4-flash",
+      }),
+    );
+    await write(
+      home,
+      ".pi/agent/models.json",
+      JSON.stringify({
+        providers: { deepseek: { api: "openai-completions", models: [] } },
+      }),
+    );
+    const r = await resolveHarnessChannel("pi", { homeDir: home });
+    assert.equal(r.kind, "missing");
+    if (r.kind !== "missing") return;
+    assert.match(r.reason, /自定义 provider "deepseek" 缺 baseUrl/);
+  } finally {
+    await cleanup();
+  }
+});
+
 test("宿主 E：provider 既不在 models.json 也不在内置表 → missing 且提及内置表", async () => {
   const { home, cleanup } = await makeHome();
   try {
