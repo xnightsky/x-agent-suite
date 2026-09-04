@@ -340,6 +340,28 @@ test("宿主 E：provider 既不在 models.json 也不在内置表 → missing �
   }
 });
 
+test("宿主 E：anthropic-messages 内置 provider 的 baseUrl 归一补 /v1，原值入 harnessBaseUrl", async () => {
+  const { home, cleanup } = await makeHome();
+  try {
+    await write(
+      home,
+      ".pi/agent/settings.json",
+      JSON.stringify({
+        defaultProvider: "anthropic",
+        defaultModel: "claude-opus-5",
+      }),
+    );
+    const r = await resolveHarnessChannel("pi", { homeDir: home });
+    assert.equal(r.kind, "resolved");
+    if (r.kind !== "resolved") return;
+    assert.equal(r.channel.wire, "anthropic-messages");
+    assert.equal(r.channel.baseUrl, "https://api.anthropic.com/v1");
+    assert.equal(r.channel.harnessBaseUrl, "https://api.anthropic.com");
+  } finally {
+    await cleanup();
+  }
+});
+
 test("未知 carrier 的渠道借用 → missing 并说明不支持", async () => {
   const r = await resolveHarnessChannel("unknown-cli", {
     homeDir: "/nonexistent",

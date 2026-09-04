@@ -442,12 +442,20 @@ async function piChannel(home: string): Promise<HarnessChannelResult> {
       reason: `宿主 E provider "${provider}" 的 api "${String(entry.api)}" 无 wire 映射`,
     };
   }
+  // anthropic-messages：宿主 E 的 baseUrl 约定不带 /v1（宿主运行时自己拼 /v1/messages），
+  // 本框架约定 baseUrl 含版本前缀——归一补 /v1，原值留在 harnessBaseUrl（同宿主 C 模式）。
+  const rawBaseUrl = (entry.baseUrl as string).replace(/\/+$/, "");
+  const needsVersionPrefix =
+    wire === "anthropic-messages" && !rawBaseUrl.endsWith("/v1");
   return {
     kind: "resolved",
     channel: {
       wire,
-      baseUrl: entry.baseUrl as string,
+      baseUrl: needsVersionPrefix
+        ? ensureVersionPrefix(rawBaseUrl, "/v1")
+        : rawBaseUrl,
       provider,
+      ...(needsVersionPrefix ? { harnessBaseUrl: rawBaseUrl } : {}),
       ...(model ? { model } : {}),
       source: fromBuiltin
         ? `harness:e ${settingsPath} + 内置 provider 表`

@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- 宿主 E anthropic-messages 借用渠道 baseUrl 归一补 `/v1`：内置表与 models 配置的 anthropic-messages 条目按宿主约定不带版本前缀（宿主运行时自拼 `/v1/messages`），与本框架「baseUrl 含版本前缀」约定不一致，实调会 404；归一后原值经 `harnessBaseUrl` 保留，供回写宿主配置使用。
+
 ## 0.1.2 - 2026-09-04
 
 ### Added
