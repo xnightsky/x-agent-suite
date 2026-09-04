@@ -33,5 +33,5 @@ profile 位于 `packages/harness/tests/fixtures/profiles/pi.ts`，属于测试/�
 ## 仍然存在的风险
 
 - fake provider 降低账号/费用风险，但不是 OS 级网络封锁。
-- Pi CLI 版本升级可能改变启动横幅、信任对话框或按键时序。
+- Pi CLI 版本升级可能改变启动横幅、信任对话框或按键时序（信任对话框的触发条件与 `--approve` 等参数出口见 [notes/pi.md](../../notes/pi.md) §10）。
 - 显式闸门只代表本次运行责任人的授权，不代表第三方条款许可。
