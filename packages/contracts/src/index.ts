@@ -39,6 +39,7 @@ export type { SandboxContext, CreateSandboxOptions } from "./sandbox.ts";
 export type {
   LlmBackendMode,
   LlmBackend,
+  LlmLiveChannel,
   WireProtocol,
   FixtureToolCall,
   FixtureTurn,

@@ -121,7 +121,7 @@ tarball 只包含运行所需的 `dist/`、类型声明、README、LICENSE 与�
 
 ### 当前状态
 
-仓库已经提供根级统一入口 `artifacts:pack`。它从 Git history 自动推导版本，在隔离临时目录构建核心聚合包和 PTY 包，生成 manifest 与 SHA-256，并在仓库外临时 consumer 中完成运行时导入和 TypeScript 类型冒烟。当前实现把七个内部 workspace 模块汇入两个外部分发包：核心包将 `yaml` 声明为外部纯 JS 运行时依赖，不再把其实现或 sourcemap 源码内联进 bundle；PTY 包单独承载原生依赖。严格离线安装仍须预热包含 `yaml` 的 pnpm store，或使用可达的内部 registry。稳定制品全部成功后，命令为当前 HEAD 自动补 annotated SemVer tag。
+仓库已经提供根级统一入口 `artifacts:pack`。它从 Git history 自动推导版本，在隔离临时目录构建核心聚合包和 PTY 包，生成 manifest 与 SHA-256，并在仓库外临时 consumer 中完成运行时导入和 TypeScript 类型冒烟。当前实现把七个内部 workspace 模块汇入两个外部分发包：核心包将 `yaml` 声明为外部纯 JS 运行时依赖，不再把其实现或 sourcemap 源码内联进 bundle；PTY 包单独承载原生依赖，构建期校验其 bundle 不得内联 `LiveBackend` 类实现（跨制品 live 判定只走契约品牌字段 `LlmBackend.liveChannel`），PTY 冒烟 consumer 刻意混装核心制品，按行为断言消费者侧 `LiveBackend` 实例经 PTY 制品驱动路径时 live 分支真实生效。严格离线安装仍须预热包含 `yaml` 的 pnpm store，或使用可达的内部 registry。稳定制品全部成功后，命令为当前 HEAD 自动补 annotated SemVer tag。
 
 源码 workspace 的 `0.0.0` 继续作为私有仓库占位值；可安装版本仅写入 staged package manifest，不修改源码 package。直接对单个 workspace 执行 `pnpm pack` 仍然不是合法交付流程。
 

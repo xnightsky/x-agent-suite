@@ -382,3 +382,17 @@ test("createLlmBackend 工厂：live 需 carrier，返回 LiveBackend；fixture 
   });
   assert.ok(fixture instanceof FakeProviderBackend);
 });
+
+test("liveChannel 品牌字段：start 前为 undefined，start 后暴露已解析渠道", async () => {
+  const channel: LiveChannel = {
+    wire: "openai-chat",
+    baseUrl: "https://x.example.com/v1",
+    model: "m",
+    apiKey: "k",
+  };
+  const backend = new LiveBackend({ carrier: "kimi", channel });
+  assert.equal(backend.liveChannel, undefined);
+  await backend.start();
+  assert.deepEqual(backend.liveChannel, channel);
+  await backend.stop();
+});

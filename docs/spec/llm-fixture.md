@@ -20,10 +20,14 @@
 ```ts
 export interface LlmBackend {
   readonly mode: "fixture" | "live";
+  /** live 模式已解析渠道的结构化品牌：start() 成功后可读，此前为 undefined。 */
+  readonly liveChannel?: LlmLiveChannel;
   start(): Promise<{ baseUrl: string; apiKey: string }>;
   stop(): Promise<void>;
 }
 ```
+
+`liveChannel` 是跨制品身份判定的唯一合法接缝：制品化分发（bundle 内联、双包安装、peer 重复）下同一进程可能存在多个 `LiveBackend` 类对象，`instanceof` 不保证唯一，harness 的 live 分支只读品牌字段，不做类身份判定。
 
 ## FakeProviderBackend
 

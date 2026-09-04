@@ -1,9 +1,11 @@
 /**
  * @module @x-agent-suite/harness/backend-context
  * backend 启动后写入 harness sandbox 的共享上下文构造。
+ *
+ * 不变量：live 判定只依赖契约品牌字段（mode + liveChannel），不做类身份判定——
+ * 制品化分发下跨包 instanceof 不保证唯一（bundle 内联、双包安装）。
  */
 import type { HarnessProfile, LlmBackend } from "@x-agent-suite/contracts";
-import { LiveBackend } from "@x-agent-suite/llm-fixture";
 import type { HarnessLiveChannel } from "./types";
 
 /** backend 启动后供 sandbox 与宿主配置使用的上下文。 */
@@ -25,10 +27,9 @@ export async function startHarnessBackend(
 ): Promise<StartedHarnessBackend> {
   const live = backend.mode === "live";
   const { baseUrl, apiKey } = await backend.start();
-  const liveChannel =
-    live && backend instanceof LiveBackend
-      ? (backend.channel as HarnessLiveChannel)
-      : undefined;
+  const liveChannel: HarnessLiveChannel | undefined = live
+    ? backend.liveChannel
+    : undefined;
   const env: Record<string, string> = live ? {} : { ...profile.extraEnv };
   if (!live) {
     if (profile.baseUrlEnv) env[profile.baseUrlEnv] = baseUrl;

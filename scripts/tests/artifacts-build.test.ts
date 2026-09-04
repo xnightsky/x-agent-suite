@@ -1,6 +1,6 @@
 /**
  * @module scripts/tests/artifacts-build
- * 核心制品暂存区完整性回归。
+ * 核心与 PTY 制品暂存区完整性回归。
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -124,9 +124,10 @@ test("允许 YAML 裸导入且暂存区不携带 YAML 源码", async () => {
   }
 });
 
-test("core-only 与 PTY smoke consumer 不互相混装", async () => {
+test("core consumer 独立安装，PTY consumer 刻意混装核心制品以验证跨制品协同", async () => {
   const manifests: Array<{ devDependencies: Record<string, string> }> = [];
   let coreSmoke = "";
+  let ptySmoke = "";
   await smokeInstall(
     tmpdir(),
     process.cwd(),
@@ -144,6 +145,9 @@ test("core-only 与 PTY smoke consumer 不互相混装", async () => {
       if (command === "node" && manifest.name.includes("core")) {
         coreSmoke = readFileSync(join(cwd, "smoke.mjs"), "utf8");
       }
+      if (command === "node" && manifest.name.includes("pty")) {
+        ptySmoke = readFileSync(join(cwd, "smoke.mjs"), "utf8");
+      }
     },
   );
   assert.equal(manifests.length, 2);
@@ -157,8 +161,42 @@ test("core-only 与 PTY smoke consumer 不互相混装", async () => {
   assert.deepEqual(Object.keys(ptyManifest.devDependencies).sort(), [
     "@types/node",
     "@x-agent-suite/pty-driver",
+    "x-agent-suite",
   ]);
   assert.match(coreSmoke, /buildMcpServerSpec/);
   assert.match(coreSmoke, /resolve\("tsx\/esm"\)/);
   assert.match(coreSmoke, /fileURLToPath/);
+  // PTY 冒烟必须按行为断言跨制品 live 判定（liveEnv 被调用、渠道透传）。
+  assert.match(ptySmoke, /new LiveBackend/);
+  assert.match(ptySmoke, /startHarnessBackend/);
+  assert.match(ptySmoke, /liveEnv/);
+});
+
+test("PTY 制品完整性：拒绝内联 LiveBackend 类实现的暂存区", async () => {
+  const module = await import("../artifacts-build.ts");
+  const assertion = Reflect.get(module, "assertPtyPackageIntegrity") as (
+    stage: string,
+  ) => Promise<void>;
+  assert.equal(typeof assertion, "function");
+
+  const dirty = await mkdtemp(join(tmpdir(), "xas-pty-integrity-dirty-"));
+  await mkdir(join(dirty, "dist"));
+  await writeFile(
+    join(dirty, "dist", "index.js"),
+    "class LiveBackend {}\nexport {};",
+  );
+  try {
+    await assert.rejects(assertion(dirty), /内联了 LiveBackend/);
+  } finally {
+    await rm(dirty, { recursive: true, force: true });
+  }
+
+  const clean = await mkdtemp(join(tmpdir(), "xas-pty-integrity-clean-"));
+  await mkdir(join(clean, "dist"));
+  await writeFile(join(clean, "dist", "index.js"), "export {};\n");
+  try {
+    await assertion(clean);
+  } finally {
+    await rm(clean, { recursive: true, force: true });
+  }
 });

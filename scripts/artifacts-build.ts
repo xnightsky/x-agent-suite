@@ -111,6 +111,7 @@ async function buildCandidate(
     ),
   ]);
   await assertCorePackageIntegrity(coreStage);
+  await assertPtyPackageIntegrity(ptyStage);
   await packPackage(coreStage, candidateDir);
   await packPackage(ptyStage, candidateDir);
   const artifacts = await collectTarballHashes(candidateDir);
@@ -229,6 +230,22 @@ function assertNoExternalImplementation(
     if (normalized.includes(`/node_modules/${dependency}/`)) {
       throw new Error(
         `核心制品完整性失败：${toPosix(relative(stage, file))} 包含 external 依赖 ${dependency} 的 node_modules 实现路径`,
+      );
+    }
+  }
+}
+
+/**
+ * 校验 PTY 暂存包未内联 LiveBackend 类实现。
+ * 跨制品 live 判定已改为契约品牌字段（LlmBackend.liveChannel）；PTY 制品
+ * 再携带该类即重新引入双类对象风险（bundle 内联曾致 instanceof 恒 false）。
+ */
+export async function assertPtyPackageIntegrity(stage: string): Promise<void> {
+  for (const file of await walkFiles(join(stage, "dist"))) {
+    const content = await readFile(file, "utf8");
+    if (content.includes("LiveBackend")) {
+      throw new Error(
+        `PTY 制品完整性失败：${toPosix(relative(stage, file))} 内联了 LiveBackend；live 判定必须只依赖契约品牌字段`,
       );
     }
   }

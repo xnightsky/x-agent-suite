@@ -26,3 +26,7 @@ export {
   cleanupPtyDriverResources,
   type PtyCleanupOptions,
 } from "../../packages/harness/src/pty-cleanup.ts";
+export {
+  startHarnessBackend,
+  type StartedHarnessBackend,
+} from "../../packages/harness/src/backend-context.ts";

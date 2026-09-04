@@ -8,7 +8,11 @@
  * - 无本地资源（不起 server），stop 幂等 no-op；
  * - 错误显式抛出（LiveHttpError / 解析错误），不静默吞掉。
  */
-import type { LlmBackend, Redactor } from "@x-agent-suite/contracts";
+import type {
+  LlmBackend,
+  LlmLiveChannel,
+  Redactor,
+} from "@x-agent-suite/contracts";
 import {
   loadLiveConfig,
   resolveLiveChannel,
@@ -170,6 +174,14 @@ export class LiveBackend implements LlmBackend {
       throw new Error("LiveBackend.channel 必须先 start()");
     }
     return this.channelValue;
+  }
+
+  /**
+   * 契约品牌字段：start 后返回已解析渠道，start 前为 undefined。
+   * 与 channel getter 的抛错语义刻意区分——可选字段必须安全可判空。
+   */
+  get liveChannel(): LlmLiveChannel | undefined {
+    return this.channelValue ?? undefined;
   }
 
   /** 发一轮补全，返回归一结果（含 usage 与模型标识）；必须先 start。 */

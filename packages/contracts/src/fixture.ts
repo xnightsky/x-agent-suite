@@ -12,10 +12,33 @@ import type { Redactor } from "./redaction.ts";
 /** backend 模式：fixture（自研假端点）或 live（真实 provider）。 */
 export type LlmBackendMode = "fixture" | "live";
 
+/**
+ * live 渠道的最小结构形状：harness live 分支与 profile.liveEnv/writeConfig 消费。
+ * 实现方可携带更多字段（如凭据与成本声明），此处只约束 harness 必需的键。
+ */
+export interface LlmLiveChannel {
+  /** wire 协议标识。 */
+  readonly wire: string;
+  /** 模型标识。 */
+  readonly model: string;
+  /** 归一 baseUrl（含版本前缀）。 */
+  readonly baseUrl: string;
+  /** 宿主 CLI 期望的 baseUrl 原值形态。 */
+  readonly harnessBaseUrl?: string;
+  /** 凭证模式；"harness" 表示 OAuth 等特殊借用路径。 */
+  readonly credential?: string;
+}
+
 /** LLM backend 抽象：harness 统一经 start() 拿 base URL 与 dummy API key。 */
 export interface LlmBackend {
   /** backend 模式。 */
   readonly mode: LlmBackendMode;
+  /**
+   * live 模式已解析渠道的结构化品牌：start() 成功后可读，此前为 undefined。
+   * 制品化分发下跨包 instanceof 不保证类身份唯一，harness 只经此字段判定 live 渠道；
+   * fixture 实现不得声明。
+   */
+  readonly liveChannel?: LlmLiveChannel;
   /** 可选输出脱敏器；driver 必须在暴露诊断和观测前应用。 */
   readonly redactor?: Redactor;
   /** 启动 backend，返回 harness 应使用的 base URL 与 dummy API key。 */

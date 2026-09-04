@@ -2,7 +2,11 @@
  * @module scripts/artifacts-smoke
  * 在仓库外分别验证核心包与 PTY 包的独立安装、运行时导入和类型声明。
  *
- * 不变量：两个临时 consumer 不互相声明对方制品，避免依赖泄漏掩盖缺包。
+ * 不变量：
+ * - 核心 consumer 只声明核心制品，验证核心包可独立安装；
+ * - PTY consumer 刻意同时声明核心制品：跨制品类身份协同（消费者侧 LiveBackend
+ *   传入 PTY 制品的驱动路径）正是它要验证的场景——PTY 制品曾内联 LiveBackend
+ *   导致 instanceof 恒 false、live 分支静默失效，此处按行为断言防回归。
  */
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -33,7 +37,11 @@ export async function smokeInstall(
     writeCoreSmokeProject(directory, join(candidateDir, core.file)),
   );
   await smokeConsumer(root, "xas-pty-consumer-", run, (directory) =>
-    writePtySmokeProject(directory, join(candidateDir, pty.file)),
+    writePtySmokeProject(
+      directory,
+      join(candidateDir, pty.file),
+      join(candidateDir, core.file),
+    ),
   );
 }
 
@@ -82,15 +90,17 @@ async function writeCoreSmokeProject(
 async function writePtySmokeProject(
   directory: string,
   ptyTarball: string,
+  coreTarball: string,
 ): Promise<void> {
   await writeSmokeFiles(
     directory,
     "x-agent-suite-pty-artifact-smoke",
     {
       "@x-agent-suite/pty-driver": `file:${ptyTarball}`,
+      "x-agent-suite": `file:${coreTarball}`,
       "@types/node": "^25.6.0",
     },
-    'await import("@x-agent-suite/pty-driver");\n',
+    `${createPtyRuntimeSmoke()}\n`,
     'type PtySmoke = typeof import("@x-agent-suite/pty-driver");\nexport type { PtySmoke };\n',
   );
 }
@@ -169,4 +179,42 @@ async function findYamlPackage(start) {
     directory = parent;
   }
 }`;
+}
+
+/**
+ * PTY 制品的运行时冒烟：导入之外，按行为断言跨制品 live 判定——
+ * 消费者从核心制品 new LiveBackend，经 PTY 制品的 startHarnessBackend 后
+ * live 分支必须真的生效（liveEnv 被调用、渠道透传）。
+ */
+function createPtyRuntimeSmoke(): string {
+  return `import assert from "node:assert/strict";
+
+const pty = await import("@x-agent-suite/pty-driver");
+const { LiveBackend } = await import("x-agent-suite/llm-fixture");
+
+// 跨制品身份场景：LiveBackend 实例来自核心制品，live 判定发生在 PTY 制品的 bundle 内。
+const channel = {
+  wire: "smoke-wire",
+  baseUrl: "https://smoke.invalid/v1",
+  model: "smoke-model",
+  apiKey: "smoke-key",
+};
+const backend = new LiveBackend({ carrier: "smoke", channel });
+assert.equal(backend.mode, "live");
+assert.equal(backend.liveChannel, undefined);
+
+const liveEnvCalls = [];
+const started = await pty.startHarnessBackend(backend, {
+  name: "smoke",
+  liveEnv: (context) => {
+    liveEnvCalls.push(context);
+    return { SMOKE_LIVE: "1" };
+  },
+});
+assert.equal(liveEnvCalls.length, 1, "PTY 制品内的 live 分支必须调用 profile.liveEnv");
+assert.equal(liveEnvCalls[0].channel.baseUrl, channel.baseUrl);
+assert.equal(liveEnvCalls[0].apiKey, "smoke-key");
+assert.equal(started.env.SMOKE_LIVE, "1");
+assert.equal(started.liveChannel?.baseUrl, channel.baseUrl);
+await backend.stop();`;
 }
