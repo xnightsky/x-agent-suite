@@ -30,7 +30,7 @@ pnpm itest  # 集成测试：真实宿主 + 假端点，仍为零 token
 pnpm check  # boundary + typecheck + test + itest
 ```
 
-`*.token.ittest.ts` 不进 `pnpm test`、`pnpm itest`、`pnpm check` 任何默认回归。`pnpm itest` 通过 `scripts/run-itests.ts` 按完整后缀排除 token 文件，安全性不依赖目录形状。每个 token 集合必须增加精确指向单文件或明确 allowlist 的 `itest:token:*` 脚本；当前教程入口为 `pnpm itest:token:tutorial`。
+`*.token.ittest.ts` 不进 `pnpm test`、`pnpm itest`、`pnpm check` 任何默认回归。`pnpm itest` 通过 `scripts/run-itests.ts` 按完整后缀排除 token 文件，安全性不依赖目录形状。每个 token 集合必须增加精确指向单文件或明确 allowlist 的 `itest:token:*` 脚本；当前教程入口为 `pnpm itest:token:tutorial` 与 `pnpm itest:token:pi-pty`（均精确指向单个 token 文件）。
 
 PTY、headless、sandbox 是机制，smoke 是抽样范围，contract 是验证目的：这些词可以出现在文件 stem、测试标题和 catalog，但不形成新的终止后缀。为何不继续细分，见[测试文件命名调研](../research/test-file-naming-taxonomy.md)。
 
