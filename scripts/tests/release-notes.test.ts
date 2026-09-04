@@ -102,3 +102,24 @@ test("writeReleaseBody 从仓库 CHANGELOG 读章节并写正文文件", async (
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("release 工作流：正文生成必须排在制品构建之后（artifacts:pack 拒绝脏工作区）", () => {
+  const workflow = readFileSync(
+    join(
+      import.meta.dirname,
+      "..",
+      "..",
+      ".github",
+      "workflows",
+      "release.yml",
+    ),
+    "utf8",
+  );
+  const pack = workflow.indexOf("pnpm artifacts:pack");
+  const body = workflow.indexOf("release-notes.mjs");
+  assert.ok(pack > 0 && body > 0, "release.yml 应包含制品构建与正文生成步骤");
+  assert.ok(
+    body > pack,
+    "正文生成必须在制品构建之后，否则 release-body.md 弄脏工作区",
+  );
+});

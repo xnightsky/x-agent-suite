@@ -26,11 +26,6 @@ jobs:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: node scripts/validate-release-ref.mjs
 
-      - name: 生成 Release 正文
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: node scripts/release-notes.mjs "${RELEASE_TAG#v}" release-body.md
-
       - name: 安装 pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -58,6 +53,12 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: pnpm artifacts:pack -- --version "$VERSION"
+
+      # 必须在制品构建之后：artifacts:pack 要求工作区干净，release-body.md 会弄脏它
+      - name: 生成 Release 正文
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/release-notes.mjs "${RELEASE_TAG#v}" release-body.md
 
       - name: 创建 Release
         uses: softprops/action-gh-release@v2
