@@ -2,6 +2,18 @@
 
 本文件记录影响消费者接口、行为、安装、配置、协议或报告格式的变化。版本遵循 [Semantic Versioning 2.0.0](https://semver.org/)；源码 workspace 的 `0.0.0` 是不可发布占位值，制品版本由 Git history 与稳定 tag 管理。历史章节与本仓稳定 tag 一一对应，不记录未发布的版本号。
 
+## 0.3.2 - 2026-09-07
+
+### Fixed
+
+- 回退 0.3.1 的 win32 `taskkill` 拆卸改写：该路径复刻 node-pty 内部清理，但 @lydell fork 的原生 `kill` 签名不同（无 `useConptyDll` 参数），消费者侧全部 PTY 用例被 `Usage: pty.kill(id)` 打挂。`AttachConsole failed` 噪音的正确修法是消费者仓 pnpm patch `@lydell/node-pty`（对齐上游 1.2.0 已合入的 try/catch），框架不改写拆卸路径。
+
+## 0.3.1 - 2026-09-07
+
+### Fixed
+
+- ~~win32 下 `PtyProcess.close()` 改走 `taskkill /T /F`~~（**已召回**：在 @lydell fork 上回归，0.3.2 回退；请勿使用 0.3.1 的 pty-driver 制品）。
+
 ## 0.3.0 - 2026-09-07
 
 ### Added
