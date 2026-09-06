@@ -320,6 +320,69 @@
           "reason": "由模块手册说明直接用法，当前无需独立可执行 recipe。"
         },
         {
+          "name": "resolveLocalBinCommand",
+          "category": "primary",
+          "purpose": "win32 下从调用方本地包解析 bin 入口（全局前缀推导失效时的兜底）。",
+          "risk": "conditional",
+          "reason": "由模块手册说明直接用法，当前无需独立可执行 recipe。"
+        },
+        {
+          "name": "ensureJsonEntry",
+          "category": "primitive",
+          "purpose": "共享 JSON 配置的读-校验-跳过播种：一致跳过、缺失合并写、不一致显式报错。",
+          "risk": "safe",
+          "reason": "面向自定义实现的底层原语，按模块手册中的接缝使用。"
+        },
+        {
+          "name": "attachScreenMirror",
+          "category": "advanced",
+          "purpose": "订阅多端 PTY 屏幕变化，节流后脱敏重绘为一帧到 stderr（verbose 诊断）。",
+          "risk": "conditional",
+          "reason": "诊断件，仅建议 verbose 排查时挂载，当前无需独立可执行 recipe。"
+        },
+        {
+          "name": "composeMirrorFrame",
+          "category": "primitive",
+          "purpose": "把多个分屏按终端宽高排版为一帧（网格或纵向堆叠）。",
+          "risk": "safe",
+          "reason": "面向自定义实现的底层原语，按模块手册中的接缝使用。"
+        },
+        {
+          "name": "computeMirrorLayout",
+          "category": "primitive",
+          "purpose": "按终端宽高计算镜像分屏网格布局，不可读时返回 null。",
+          "risk": "safe",
+          "reason": "面向自定义实现的底层原语，按模块手册中的接缝使用。"
+        },
+        {
+          "name": "displayWidth",
+          "category": "primitive",
+          "purpose": "计算文本的终端显示宽度（全角计 2 列）。",
+          "risk": "safe",
+          "reason": "面向自定义实现的底层原语，按模块手册中的接缝使用。"
+        },
+        {
+          "name": "fitToWidth",
+          "category": "primitive",
+          "purpose": "把文本适配到精确显示宽度（不截半全角字符）。",
+          "risk": "safe",
+          "reason": "面向自定义实现的底层原语，按模块手册中的接缝使用。"
+        },
+        {
+          "name": "parseSttySize",
+          "category": "primitive",
+          "purpose": "解析 stty size 输出为终端行列数。",
+          "risk": "safe",
+          "reason": "面向自定义实现的底层原语，按模块手册中的接缝使用。"
+        },
+        {
+          "name": "detectTerminalSize",
+          "category": "primitive",
+          "purpose": "探测宿主终端尺寸（TTY 流 → stty → 环境变量 → 80x24），带缓存。",
+          "risk": "safe",
+          "reason": "面向自定义实现的底层原语，按模块手册中的接缝使用。"
+        },
+        {
           "name": "HarnessUnavailableError",
           "category": "primary",
           "purpose": "表示宿主 CLI 不可用，供 matrix 降级 skip。",

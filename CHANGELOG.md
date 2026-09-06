@@ -6,6 +6,9 @@
 
 ### Added
 
+- harness 新增 `resolveLocalBinCommand`：win32 下包管理器把仓库本地 `.bin` 置于 PATH 首位、全局前缀布局推导失效时的兜底座——沿 `node_modules` 定位调用方本地包并读其 `bin` 声明，用当前 node 拉起；不可用时抛 `HarnessUnavailableError` 供 preflight 降级 skip。
+- harness 新增 `ensureJsonEntry`：共享 JSON 配置的「读-校验-跳过」播种原语——条目一致则跳过不写、缺失则合并写入（保留兄弟键）、不一致显式报错，消灭多端并发读-改-写的丢失更新与半截文件窗口。
+- harness 新增 PTY 屏幕镜像件：`attachScreenMirror` 订阅多端屏幕变化、节流后脱敏重绘分屏帧到 stderr（verbose 诊断），配套纯函数 `composeMirrorFrame` / `computeMirrorLayout` / `displayWidth` / `fitToWidth` / `parseSttySize` / `detectTerminalSize`；`PtyAgentDriver` 新增诊断访问器 `screenSource()` 返回屏幕只读视图（PTY 未拉起时为 null），消费者不再需要探 driver 内部句柄。以上同时从 `x-agent-suite/harness` 与 `@x-agent-suite/pty-driver` 制品导出。
 - 教程新增 Pi live PTY token 用例（`examples/tutorial/11-pi-live-pty.token.ittest.ts`，精确入口 `pnpm itest:token:pi-pty`）：PtyAgentDriver live 分支把 `from: harness` 借用的指定 provider 渠道与凭据注入沙盒，驱动真实 Pi TUI 打真实端点；catalog/组合/工具表同步登记该能力。
 
 ## 0.2.0 - 2026-09-04

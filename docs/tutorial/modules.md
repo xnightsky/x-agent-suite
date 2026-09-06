@@ -87,12 +87,16 @@ Harness Driver 已经组合 sandbox；只有直接使用 `JsonlProcess`/`PtyProc
 | ------------------------------ | -------- | ---------------------------------------- |
 | `createHarnessDriver`          | 主路径   | 用消费者 profile 驱动一次性 headless CLI |
 | `resolveHarnessCommand`        | 主路径   | 解析 CLI shim 或平台入口                 |
+| `resolveLocalBinCommand`       | 主路径   | win32 全局前缀推导失效时改解析本地包 bin |
 | `HarnessUnavailableError`      | 主路径   | 把 CLI 缺失变成可诊断 skip               |
 | `createPtyAgentDriver`         | 高级     | 覆盖 TUI 独占交互和长驻输入              |
+| `attachScreenMirror`           | 高级     | verbose 多端屏幕镜像诊断                 |
 | `createPtyScreenWatcher`       | 底层原语 | 自定义屏幕/I/O/FS idle 条件              |
 | `cleanupPtyDriverResources`    | 底层原语 | 聚合清理 PTY、backend、sandbox           |
 | `buildMcpServerSpec`           | 底层原语 | 构造交给 profile 的 server 描述          |
 | `writeJsonFile` / `tomlString` | 底层原语 | 实现 profile.writeConfig                 |
+| `ensureJsonEntry`              | 底层原语 | 共享 JSON 配置的读-校验-跳过播种         |
+| `composeMirrorFrame` 等        | 底层原语 | 镜像排版/宽度/终端尺寸纯函数             |
 
 ### 已登记迁移债务
 
