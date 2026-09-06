@@ -42,6 +42,7 @@ export {
   type LocalBinSpec,
   type ResolvedCommand,
 } from "./resolve-command.ts";
+export { ensureJsonEntry } from "./json-seed.ts";
 export {
   cleanupPtyDriverResources,
   type PtyCleanupOptions,

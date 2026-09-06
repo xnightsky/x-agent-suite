@@ -36,3 +36,4 @@ export {
   type LocalBinSpec,
   type ResolvedCommand,
 } from "../../packages/harness/src/resolve-command.ts";
+export { ensureJsonEntry } from "../../packages/harness/src/json-seed.ts";
