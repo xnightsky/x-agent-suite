@@ -90,12 +90,17 @@ export interface PtyAgentDriverOptions {
   readonly commandOverride?: ResolvedCommand;
 }
 
+/** PTY 屏幕只读视图：屏幕快照与变化订阅，供屏幕镜像等诊断件使用。 */
+export type PtyScreenView = Pick<PtyProcess, "screen" | "onScreenChange">;
+
 /** PTY 长驻 driver：额外暴露 sandbox 与 screenTail 供诊断。 */
 export interface PtyAgentDriver extends LongLivedAgentDriver {
   /** 本 driver 的隔离沙箱（start 后可用）。 */
   readonly sandbox: SandboxContext;
   /** 当前 PTY 屏幕尾部；PTY 已关闭时回退最近一轮快照。 */
   screenTail(): string;
+  /** 诊断用屏幕视图（内部 PTY 句柄的只读子集）；PTY 未拉起时为 null。 */
+  screenSource(): PtyScreenView | null;
 }
 
 const DEFAULT_READY_TIMEOUT_MS = 60_000;
@@ -364,6 +369,11 @@ class PtyAgentDriverImpl implements PtyAgentDriver {
   screenTail(): string {
     const screen = this.pty?.screen() || this.lastScreen;
     return this.redact(screen.slice(-2_000));
+  }
+
+  /** 诊断用屏幕视图：PTY 未拉起时返回 null。 */
+  screenSource(): PtyScreenView | null {
+    return this.pty;
   }
 
   /** 幂等关闭：关 PTY → sandboxTeardown → 停 backend → 清 sandbox。 */

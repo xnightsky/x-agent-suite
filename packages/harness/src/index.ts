@@ -44,6 +44,19 @@ export {
 } from "./resolve-command.ts";
 export { ensureJsonEntry } from "./json-seed.ts";
 export {
+  attachScreenMirror,
+  composeMirrorFrame,
+  computeMirrorLayout,
+  detectTerminalSize,
+  displayWidth,
+  fitToWidth,
+  parseSttySize,
+  type MirrorLayout,
+  type MirrorPane,
+  type ScreenMirrorSource,
+  type ScreenMirrorTarget,
+} from "./pty-mirror.ts";
+export {
   cleanupPtyDriverResources,
   type PtyCleanupOptions,
 } from "./pty-cleanup.ts";

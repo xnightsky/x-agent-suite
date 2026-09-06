@@ -16,7 +16,21 @@ export {
   createPtyAgentDriver,
   type PtyAgentDriver,
   type PtyAgentDriverOptions,
+  type PtyScreenView,
 } from "../../packages/harness/src/pty-driver.ts";
+export {
+  attachScreenMirror,
+  composeMirrorFrame,
+  computeMirrorLayout,
+  detectTerminalSize,
+  displayWidth,
+  fitToWidth,
+  parseSttySize,
+  type MirrorLayout,
+  type MirrorPane,
+  type ScreenMirrorSource,
+  type ScreenMirrorTarget,
+} from "../../packages/harness/src/pty-mirror.ts";
 export {
   createPtyScreenWatcher,
   type PtyScreenWatcherOptions,
