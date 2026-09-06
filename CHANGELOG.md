@@ -2,7 +2,7 @@
 
 本文件记录影响消费者接口、行为、安装、配置、协议或报告格式的变化。版本遵循 [Semantic Versioning 2.0.0](https://semver.org/)；源码 workspace 的 `0.0.0` 是不可发布占位值，制品版本由 Git history 与稳定 tag 管理。历史章节与本仓稳定 tag 一一对应，不记录未发布的版本号。
 
-## Unreleased
+## 0.3.0 - 2026-09-07
 
 ### Added
 
