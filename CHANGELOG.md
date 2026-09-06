@@ -2,6 +2,12 @@
 
 本文件记录影响消费者接口、行为、安装、配置、协议或报告格式的变化。版本遵循 [Semantic Versioning 2.0.0](https://semver.org/)；源码 workspace 的 `0.0.0` 是不可发布占位值，制品版本由 Git history 与稳定 tag 管理。历史章节与本仓稳定 tag 一一对应，不记录未发布的版本号。
 
+## 0.3.1 - 2026-09-07
+
+### Fixed
+
+- win32 下 `PtyProcess.close()` 改走 `taskkill /T /F` 终止整棵进程树：原 `pty.kill()` 路径会 fork `conpty_console_list_agent` 枚举控制台进程，真实控制台会话下 agent 已继承父控制台导致 `AttachConsole failed` 崩溃（消费者装的未打补丁 fork 无安静回退），异常经继承的 stderr 泄漏且拖 5s 兜底。新路径复刻 node-pty 拆卸清理（管道置不可读、conout worker dispose、原生句柄释放），仅把控制台枚举替换为 taskkill；拆卸期管道 EOF 后 push 噪音经拆卸期监听器压住，不影响会话期错误显式性。
+
 ## 0.3.0 - 2026-09-07
 
 ### Added

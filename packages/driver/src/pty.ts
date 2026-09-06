@@ -1,12 +1,14 @@
 /**
  * @module @x-agent-suite/driver/pty
  * PTY 子进程句柄：分配 TTY 拉起宿主，提供屏幕快照与 waitForScreen。
- * 不变量：start/close 幂等；write 不自动追加换行；关闭时先 SIGTERM 超时后 SIGKILL；
+ * 不变量：start/close 幂等；write 不自动追加换行；posix 关闭先 SIGTERM 超时后 SIGKILL，
+ * win32 经 taskkill /T /F 终止整棵进程树（不走 node-pty 的控制台枚举 kill）；
  * pty 模块优先加载 node-pty，失败回退 @lydell/node-pty；TTY 尺寸在 profile 中固定。
  * Windows 下保留系统 ConPTY；node-pty 枚举助手无法附着控制台时安静回退 shell PID，
  * 避免清理阶段向宿主 stderr 泄漏辅助进程异常。
  */
 import type { IDisposable, IPty } from "node-pty";
+import { spawnSync } from "node:child_process";
 import {
   createPtyScreen,
   type CursorPosition,
@@ -17,6 +19,60 @@ const DEFAULT_COLS = 80;
 const DEFAULT_ROWS = 24;
 const DEFAULT_TERM = "xterm-256color";
 const DEFAULT_KILL_GRACE_MS = 2_000;
+
+/** node-pty WindowsPtyAgent 的内部形状（仅清理所需字段；node-pty 与其 fork 布局一致）。 */
+interface WindowsPtyAgentInternals {
+  _inSocket: { readable: boolean };
+  _outSocket: { readable: boolean };
+  _conoutSocketWorker: { dispose(): void };
+  _ptyNative: { kill(pty: unknown, useConptyDll: boolean): void };
+  _pty: unknown;
+  _useConptyDll: boolean;
+}
+
+/**
+ * win32 终止整棵进程树并释放 PTY 资源：复刻 windowsPtyAgent.kill() 的清理
+ * （管道置不可读、conout worker dispose、原生句柄 kill），但把「fork 控制台枚举
+ * agent 再逐 pid process.kill」换成 taskkill /T /F——真实控制台会话下枚举 agent
+ * 已继承父控制台，AttachConsole 必崩（未打补丁的 fork 无回退，异常还会经继承的
+ * stderr 泄漏并拖 5s 兜底）。取不到 agent 内部结构时回退 pty.kill()。
+ */
+function forceKillWindowsPty(pty: IPty): void {
+  const agent = (pty as unknown as { _agent?: WindowsPtyAgentInternals })
+    ._agent;
+  if (!agent) {
+    pty.kill();
+    return;
+  }
+  agent._inSocket.readable = false;
+  agent._outSocket.readable = false;
+  // 保持与原生 kill() 相同的异步次序（dispose 后才落 native kill），
+  // 避免濒死输出在管道 EOF 后 push 触发 ERR_STREAM_PUSH_AFTER_EOF。
+  void Promise.resolve().then(() => {
+    killProcessTreeWindows(pty.pid);
+    agent._ptyNative.kill(agent._pty, agent._useConptyDll);
+  });
+  agent._conoutSocketWorker.dispose();
+}
+
+/**
+ * win32 终止整棵进程树：taskkill /T /F。
+ * 进程已退出（taskkill 退出码 128 或 255）视为已终止；taskkill 自身不可用
+ * 或其他失败显式抛错（清理阶段禁止假绿）。
+ */
+function killProcessTreeWindows(pid: number): void {
+  const result = spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
+    stdio: "pipe",
+  });
+  if (result.error) {
+    throw new Error(`taskkill 不可用：${result.error.message}`);
+  }
+  if (result.status !== 0 && result.status !== 128 && result.status !== 255) {
+    throw new Error(
+      `taskkill /PID ${pid} /T /F 失败（退出码 ${result.status}）：${result.stderr?.toString().trim()}`,
+    );
+  }
+}
 
 /** 可加载的 PTY 模块形状（node-pty 与 @lydell/node-pty API 一致）。 */
 interface PtyModule {
@@ -218,8 +274,16 @@ export class PtyProcess implements PtyProcess {
 
     const grace = this.options.killGraceMs ?? DEFAULT_KILL_GRACE_MS;
     if (process.platform === "win32") {
-      // Windows 不支持 POSIX 信号语义，直接 kill。
-      pty.kill();
+      // Windows 不支持 POSIX 信号语义，直接终止整棵进程树并释放 PTY 资源。
+      // 拆卸期间 node-pty 可能在管道 EOF 后再 push（ERR_STREAM_PUSH_AFTER_EOF），
+      // 其 error 处理器在监听者不足 2 个时 rethrow；挂拆卸期安静监听器压住，
+      // 仅作用于关闭路径，不影响会话期的错误显式性。
+      (
+        pty as unknown as {
+          _socket?: { on(event: string, listener: (e: unknown) => void): void };
+        }
+      )._socket?.on("error", () => {});
+      forceKillWindowsPty(pty);
       await this.waitExit(grace);
     } else {
       pty.kill("SIGTERM");

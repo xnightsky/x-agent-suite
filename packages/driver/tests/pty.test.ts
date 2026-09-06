@@ -99,6 +99,49 @@ test("PtyProcess：等待超时显式抛错并附最后一屏", async () => {
   }
 });
 
+/** 进程是否存活（ESRCH 视为已退出）。 */
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+test(
+  "PtyProcess：win32 close 终止整棵进程树（taskkill /T，不走控制台枚举）",
+  { skip: process.platform !== "win32" },
+  async () => {
+    // 子进程再拉一个常驻孙进程并打印其 pid；close 后孙进程也必须不存在。
+    // node-pty 的 kill 在真实控制台会话下会 fork 控制台枚举 agent 而崩；
+    // taskkill /T 杀整树，绕开该路径。
+    const proc = new PtyProcess({
+      command: process.execPath,
+      args: [
+        "-e",
+        [
+          "const { spawn } = require('node:child_process');",
+          "const g = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });",
+          "console.log('grandchild=' + g.pid);",
+          "setInterval(() => {}, 1000);",
+        ].join(" "),
+      ],
+    });
+    await proc.start();
+    await proc.waitForScreen(/grandchild=\d+/, 5_000);
+    const grandchildPid = Number(proc.screen().match(/grandchild=(\d+)/)![1]);
+    assert.ok(isAlive(grandchildPid));
+    await proc.close();
+    // taskkill 杀树是异步生效的，轮询至孙进程消失。
+    const deadline = Date.now() + 3_000;
+    while (Date.now() < deadline && isAlive(grandchildPid)) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    assert.ok(!isAlive(grandchildPid), `孙进程 ${grandchildPid} 未被终止`);
+  },
+);
+
 test(
   "PtyProcess：Windows ConPTY 辅助进程失败时安静回退 shell PID",
   { skip: process.platform !== "win32", timeout: 10_000 },
