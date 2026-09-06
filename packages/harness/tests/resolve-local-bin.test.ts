@@ -14,7 +14,10 @@ import {
 } from "../src/resolve-command.ts";
 
 /** 在临时目录搭一个带 bin 的假包，返回解析基准目录与包内入口路径。 */
-async function makeLocalPackage(): Promise<{ baseDir: string; binEntry: string }> {
+async function makeLocalPackage(): Promise<{
+  baseDir: string;
+  binEntry: string;
+}> {
   const root = await mkdtemp(join(tmpdir(), "xas-local-bin-"));
   const pkgDir = join(root, "node_modules", "@xas-fixture", "fake-cli");
   await mkdir(join(pkgDir, "bin"), { recursive: true });

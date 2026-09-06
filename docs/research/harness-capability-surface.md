@@ -47,18 +47,18 @@
 
 ## 本仓现有面 vs 缺口
 
-| 能力面 | 业界代表 | 本仓现状 | 判定 |
-| --- | --- | --- | --- |
-| 进程/PTY 驱动 | node-pty、tmux broker | driver + harness/pty-* | 已有 |
-| 命令解析（含 win32） | cross-spawn 等 | resolveHarnessCommand + resolveLocalBinCommand（本次收编） | 已有（刚补齐） |
-| 配置/状态播种 | testcontainers init、fixture factory | ensureJsonEntry（本次收编） | 已有（刚补齐） |
-| live 诊断观察 | tui-test control、tmux capture | attachScreenMirror（本次收编） | 已有（刚补齐） |
-| **诊断工件持久化** | Playwright trace/video、asciinema | 只有 live 流与 screenTail 尾部快照，无时间线工件 | **缺面** |
-| **屏幕快照断言** | teatest golden、vttest 快照 | 无（只有正则 waitForScreen） | **缺面** |
-| **流量 record/replay** | VCR / Polly | llm-fixture 为手写脚本 fake，不能从 live 录制 | **缺面** |
-| flake 治理 | retry / quarantine | 无 | 缺面（优先级低） |
-| 容器级隔离 | Harbor Docker | sandbox 包（临时 HOME/cwd/env） | 已有（够用，见决策） |
-| 编排与报告 | matrix、Inspect scorer | matrix + observation | 已有 |
+| 能力面                 | 业界代表                             | 本仓现状                                                   | 判定                 |
+| ---------------------- | ------------------------------------ | ---------------------------------------------------------- | -------------------- |
+| 进程/PTY 驱动          | node-pty、tmux broker                | driver + harness/pty-*                                     | 已有                 |
+| 命令解析（含 win32）   | cross-spawn 等                       | resolveHarnessCommand + resolveLocalBinCommand（本次收编） | 已有（刚补齐）       |
+| 配置/状态播种          | testcontainers init、fixture factory | ensureJsonEntry（本次收编）                                | 已有（刚补齐）       |
+| live 诊断观察          | tui-test control、tmux capture       | attachScreenMirror（本次收编）                             | 已有（刚补齐）       |
+| **诊断工件持久化**     | Playwright trace/video、asciinema    | 只有 live 流与 screenTail 尾部快照，无时间线工件           | **缺面**             |
+| **屏幕快照断言**       | teatest golden、vttest 快照          | 无（只有正则 waitForScreen）                               | **缺面**             |
+| **流量 record/replay** | VCR / Polly                          | llm-fixture 为手写脚本 fake，不能从 live 录制              | **缺面**             |
+| flake 治理             | retry / quarantine                   | 无                                                         | 缺面（优先级低）     |
+| 容器级隔离             | Harbor Docker                        | sandbox 包（临时 HOME/cwd/env）                            | 已有（够用，见决策） |
+| 编排与报告             | matrix、Inspect scorer               | matrix + observation                                       | 已有                 |
 
 ## 决策建议（按消费者证据排序）
 

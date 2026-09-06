@@ -115,12 +115,20 @@ export function computeMirrorLayout(
 /** 取屏幕尾部 bodyRows 行并底对齐（上方补空行），TUI 尾部信息最相关。 */
 function tailLines(screen: string, bodyRows: number): string[] {
   const lines = screen.split("\n").slice(-bodyRows);
-  return [...Array<string>(Math.max(bodyRows - lines.length, 0)).fill(""), ...lines];
+  return [
+    ...Array<string>(Math.max(bodyRows - lines.length, 0)).fill(""),
+    ...lines,
+  ];
 }
 
 /** 拼一行分屏：不满列的末行补空格窗格，保证每行宽度精确等于终端列数。 */
 function joinRow(cells: string[], columns: number, paneWidth: number): string {
-  const padded = [...cells, ...Array<string>(Math.max(columns - cells.length, 0)).fill(" ".repeat(paneWidth))];
+  const padded = [
+    ...cells,
+    ...Array<string>(Math.max(columns - cells.length, 0)).fill(
+      " ".repeat(paneWidth),
+    ),
+  ];
   return padded.join("│");
 }
 
@@ -136,7 +144,9 @@ export function composeMirrorFrame(
 ): string {
   const layout = computeMirrorLayout(panes.length, cols, rows);
   if (!layout) {
-    return panes.map((pane) => `──── ${pane.label} ────\n${pane.screen}`).join("\n");
+    return panes
+      .map((pane) => `──── ${pane.label} ────\n${pane.screen}`)
+      .join("\n");
   }
   const { columns, paneWidth, paneHeight } = layout;
   const blank = "";
@@ -147,7 +157,13 @@ export function composeMirrorFrame(
     frameLines.push(joinRow(cells, columns, paneWidth));
     const bodies = group.map((pane) => tailLines(pane.screen, paneHeight));
     for (let row = 0; row < paneHeight; row++) {
-      frameLines.push(joinRow(bodies.map((lines) => fitToWidth(lines[row] ?? blank, paneWidth)), columns, paneWidth));
+      frameLines.push(
+        joinRow(
+          bodies.map((lines) => fitToWidth(lines[row] ?? blank, paneWidth)),
+          columns,
+          paneWidth,
+        ),
+      );
     }
   }
   return frameLines.join("\n");
@@ -165,7 +181,9 @@ export function attachScreenMirror(
 ): () => void {
   const sources = targets
     .map((target) => ({ label: target.label, source: target.source }))
-    .filter((entry): entry is { label: string; source: ScreenMirrorSource } => Boolean(entry.source));
+    .filter((entry): entry is { label: string; source: ScreenMirrorSource } =>
+      Boolean(entry.source),
+    );
   if (sources.length === 0) {
     return () => undefined;
   }
@@ -175,9 +193,14 @@ export function attachScreenMirror(
     lastPaint = Date.now();
     pending = null;
     const { cols, rows } = detectTerminalSize();
-    const panes = sources.map((entry) => ({ label: entry.label, screen: redact(entry.source.screen()) }));
+    const panes = sources.map((entry) => ({
+      label: entry.label,
+      screen: redact(entry.source.screen()),
+    }));
     const frame = composeMirrorFrame(panes, cols, rows - 1);
-    process.stderr.write(`\x1b[2J\x1b[H[screen-mirror ${new Date().toISOString()} ${cols}x${rows}]\n${frame}\n`);
+    process.stderr.write(
+      `\x1b[2J\x1b[H[screen-mirror ${new Date().toISOString()} ${cols}x${rows}]\n${frame}\n`,
+    );
   };
   const onChange = (): void => {
     if (pending) {
@@ -191,7 +214,9 @@ export function attachScreenMirror(
     pending = setTimeout(paint, wait);
     pending.unref?.();
   };
-  const unsubscribes = sources.map((entry) => entry.source.onScreenChange(onChange));
+  const unsubscribes = sources.map((entry) =>
+    entry.source.onScreenChange(onChange),
+  );
   paint();
   return () => {
     if (pending) {
@@ -210,7 +235,9 @@ const TERMINAL_SIZE_CACHE_MS = 2000;
 let terminalSizeCache: { cols: number; rows: number; at: number } | null = null;
 
 /** 解析 `stty size` 输出（"rows cols"）；零值、空串、乱码一律返回 null。 */
-export function parseSttySize(text: string): { cols: number; rows: number } | null {
+export function parseSttySize(
+  text: string,
+): { cols: number; rows: number } | null {
   const match = text.trim().match(/^(\d+)\s+(\d+)$/);
   if (!match) {
     return null;
@@ -227,7 +254,10 @@ export function parseSttySize(text: string): { cols: number; rows: number } | nu
  */
 export function detectTerminalSize(): { cols: number; rows: number } {
   const now = Date.now();
-  if (terminalSizeCache && now - terminalSizeCache.at < TERMINAL_SIZE_CACHE_MS) {
+  if (
+    terminalSizeCache &&
+    now - terminalSizeCache.at < TERMINAL_SIZE_CACHE_MS
+  ) {
     return terminalSizeCache;
   }
   const size = probeTerminalSize();
@@ -259,8 +289,13 @@ function probeTtySizeViaStty(): { cols: number; rows: number } | null {
   try {
     const fd = openSync("/dev/tty", "r");
     try {
-      const result = spawnSync("stty", ["size"], { stdio: [fd, "pipe", "ignore"], timeout: 1000 });
-      return result.status === 0 ? parseSttySize(result.stdout?.toString() ?? "") : null;
+      const result = spawnSync("stty", ["size"], {
+        stdio: [fd, "pipe", "ignore"],
+        timeout: 1000,
+      });
+      return result.status === 0
+        ? parseSttySize(result.stdout?.toString() ?? "")
+        : null;
     } finally {
       closeSync(fd);
     }

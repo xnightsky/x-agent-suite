@@ -50,11 +50,14 @@ test("ensureJsonEntry：条目存在但不一致时显式报错，不静默覆�
   const dir = await makeTmpDir();
   const file = join(dir, "config.json");
   await writeFile(file, JSON.stringify({ a: { v: 1 } }), "utf8");
-  await assert.rejects(ensureJsonEntry(file, ["a"], { v: 2 }), (error: unknown) => {
-    assert.match((error as Error).message, /config\.json/);
-    assert.match((error as Error).message, /不一致/);
-    return true;
-  });
+  await assert.rejects(
+    ensureJsonEntry(file, ["a"], { v: 2 }),
+    (error: unknown) => {
+      assert.match((error as Error).message, /config\.json/);
+      assert.match((error as Error).message, /不一致/);
+      return true;
+    },
+  );
   // 文件内容未被改动
   assert.deepEqual(JSON.parse(await readFile(file, "utf8")), { a: { v: 1 } });
 });

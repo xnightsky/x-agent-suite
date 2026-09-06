@@ -22,7 +22,11 @@ async function readJsonObject(file: string): Promise<Record<string, unknown>> {
   }
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+    if (
+      parsed !== null &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed)
+    ) {
       return parsed as Record<string, unknown>;
     }
   } catch (error) {
@@ -70,9 +74,7 @@ export async function ensureJsonEntry(
     if (jsonValueEqual(current, expected)) {
       return;
     }
-    throw new Error(
-      `"${file}" 的条目 ${keyPath.join(".")} 与期望不一致`,
-    );
+    throw new Error(`"${file}" 的条目 ${keyPath.join(".")} 与期望不一致`);
   }
   // 自顶向下逐层复制，仅替换键路径沿线，保留全部兄弟键。
   const merge = (

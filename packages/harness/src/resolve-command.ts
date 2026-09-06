@@ -191,7 +191,9 @@ export async function resolveLocalBinCommand(
   }
   const entry = join(packageRoot, binRel);
   if (!existsSync(entry)) {
-    throw new HarnessUnavailableError(`${spec.packageName} 的 bin 入口不存在：${entry}`);
+    throw new HarnessUnavailableError(
+      `${spec.packageName} 的 bin 入口不存在：${entry}`,
+    );
   }
   if (entry.endsWith(".exe")) {
     return { command: entry, argsPrefix: [] };
