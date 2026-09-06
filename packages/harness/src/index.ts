@@ -36,8 +36,10 @@ export {
 } from "./plugin-install.ts";
 export {
   resolveHarnessCommand,
+  resolveLocalBinCommand,
   HarnessUnavailableError,
   type HarnessCommandSpec,
+  type LocalBinSpec,
   type ResolvedCommand,
 } from "./resolve-command.ts";
 export {
