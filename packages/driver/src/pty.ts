@@ -219,6 +219,11 @@ export class PtyProcess implements PtyProcess {
     const grace = this.options.killGraceMs ?? DEFAULT_KILL_GRACE_MS;
     if (process.platform === "win32") {
       // Windows 不支持 POSIX 信号语义，直接 kill。
+      // 警告：勿绕过 pty.kill() 自行终止进程（如 taskkill）。kill() 会 fork
+      // conpty_console_list_agent 枚举控制台进程，真实控制台会话下未修复的
+      // node-pty 会崩 AttachConsole——正确修法是升级 node-pty ≥1.2.0 或
+      // 消费者侧 pnpm patch；改写拆卸路径曾因 fork 原生签名差异全线回归
+      // （见 0.3.1 召回记录）。
       pty.kill();
       await this.waitExit(grace);
     } else {
