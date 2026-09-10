@@ -60,12 +60,25 @@ export interface FixtureToolCall {
   readonly args: unknown;
 }
 
-/** 一轮脚本：工具调用轮或纯文本收尾轮，二者恰居其一。 */
+/**
+ * 一轮脚本：工具调用轮或纯文本收尾轮，二者恰居其一。
+ *
+ * delayMs 与 whenText 是两个正交的可选修饰：前者推迟响应，后者让本轮
+ * 以请求体内容命中（先于轮次计数）。二者不携带任何被测系统语义。
+ */
 export interface FixtureTurn {
   /** 该轮要下发的工具调用；缺省表示纯文本收尾。 */
   readonly toolCall?: FixtureToolCall;
   /** 纯文本轮的文本内容。 */
   readonly text?: string;
+  /** 响应前延迟亳秒数；缺省立即响应。用于制造“宿主运行中”窗口等时序场景。 */
+  readonly delayMs?: number;
+  /**
+   * 可选内容命中：请求体原文包含该字符串时优先使用本轮（先于轮次计数匹配）。
+   * 多轮对话里不同轮次可能携带相同数量的 tool result，仅靠计数无法区分；
+   * whenText 提供领域中立的内容寻址出口。不声明时退化为纯轮次计数。
+   */
+  readonly whenText?: string;
 }
 
 /** Fixture backend 构造选项。 */

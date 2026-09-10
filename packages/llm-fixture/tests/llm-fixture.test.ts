@@ -478,6 +478,43 @@ test("脚本耗尽与未知路径显式报错", async () => {
   }
 });
 
+test("whenText 内容命中优先于轮次计数；不声明时计数行为不变", async () => {
+  const { backend, baseUrl } = await startBackend("openai-chat", [
+    { text: "首轮" },
+    { text: "计数续轮" },
+    { whenText: "MARKER-BUSY", text: "内容命中轮", delayMs: 50 },
+  ]);
+  try {
+    // 同为 1 轮 tool result：带标记的请求命中 whenText，不带标记的走计数
+    const toolMessage = { role: "tool", tool_call_id: "call_1", content: "x" };
+    const startedAt = Date.now();
+    const byText = await postJson(`${baseUrl}/v1/chat/completions`, {
+      model: "fake",
+      messages: [{ role: "user", content: "请处理 MARKER-BUSY" }, toolMessage],
+    });
+    const elapsed = Date.now() - startedAt;
+    assert.equal(byText.status, 200, byText.text);
+    assert.ok(byText.text.includes("内容命中轮"), byText.text);
+    assert.ok(elapsed >= 50, `delayMs 应推迟响应（实际 ${elapsed}ms）`);
+
+    const byCount = await postJson(`${baseUrl}/v1/chat/completions`, {
+      model: "fake",
+      messages: [{ role: "user", content: "普通续轮" }, toolMessage],
+    });
+    assert.equal(byCount.status, 200, byCount.text);
+    assert.ok(byCount.text.includes("计数续轮"), byCount.text);
+
+    // 首轮（无 tool result）仍走计数槽位
+    const first = await postJson(`${baseUrl}/v1/chat/completions`, {
+      model: "fake",
+      messages: [{ role: "user", content: "开场" }],
+    });
+    assert.ok(first.text.includes("首轮"), first.text);
+  } finally {
+    await backend.stop();
+  }
+});
+
 test("createLlmBackend：fixture 返回 FakeProviderBackend，未知模式显式抛错", () => {
   const backend = createLlmBackend("fixture", {
     wire: "openai-chat",

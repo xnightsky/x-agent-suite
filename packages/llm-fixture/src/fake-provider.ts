@@ -6,6 +6,9 @@
  *   （openai-chat: messages 含 role:"tool"；openai-responses: input 含
  *   function_call_output；anthropic-messages: body 含 tool_result；
  *   google-generate: body 含 functionResponse）；
+ * - whenText 内容命中优先于轮次计数：脚本中首个 whenText 被请求体原文包含的
+ *   轮次直接命中；无命中时退化为轮次计数，既有脚本行为不变；
+ * - delayMs 在选定轮次后、分发 wire 前统一推迟响应，与 wire 种类无关；
  * - 请求体全量落盘（dumpPath 给定时 append JSONL，不截断）；
  * - 脚本耗尽、非法脚本轮、namespace 缺失等显式 400；未知路径 404。
  */
@@ -230,7 +233,7 @@ export class FakeProviderBackend implements LlmBackend {
     }
 
     const turnIndex = countToolResults(this.options.wire, body);
-    const turn = this.options.script[turnIndex];
+    const turn = this.selectTurn(raw, turnIndex);
     if (!turn) {
       respondError(
         res,
@@ -244,7 +247,21 @@ export class FakeProviderBackend implements LlmBackend {
       respondError(res, 400, invalid);
       return;
     }
+    if (turn.delayMs !== undefined && turn.delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, turn.delayMs));
+    }
     this.dispatch(url, turn, req, res);
+  }
+
+  /**
+   * 选定本轮脚本：whenText 内容命中优先（脚本序），否则按轮次计数。
+   * 两者都未命中返回 undefined（调用方走脚本耗尽 400）。
+   */
+  private selectTurn(raw: string, turnIndex: number): FixtureTurn | undefined {
+    const byText = this.options.script.find(
+      (turn) => turn.whenText !== undefined && raw.includes(turn.whenText),
+    );
+    return byText ?? this.options.script[turnIndex];
   }
 
   /** 按 wire 分发到对应 handler。 */

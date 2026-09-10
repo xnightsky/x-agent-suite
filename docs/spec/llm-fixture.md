@@ -40,6 +40,10 @@ export type WireProtocol =
 export interface FixtureTurn {
   readonly toolCall?: { name: string; namespace?: string; args: unknown };
   readonly text?: string;
+  /** 响应前延迟亳秒数；缺省立即响应。用于制造“宿主运行中”窗口等时序场景。 */
+  readonly delayMs?: number;
+  /** 内容命中：请求体原文包含该字符串时优先使用本轮（先于轮次计数）。 */
+  readonly whenText?: string;
 }
 
 export interface FixtureProviderOptions {
@@ -57,6 +61,10 @@ export interface FixtureProviderOptions {
 - `anthropic-messages`：body 中是否含 `tool_result`；
 - `openai-chat`：`messages` 中是否含 `role: "tool"`；
 - `gemini-generate`：body 中是否含 `functionResponse`。
+
+### 多轮区分与延迟：whenText / delayMs
+
+轮次计数在「多轮对话但后续轮不再新增 tool result」时无法区分轮次（它们携带相同的累计计数）。`whenText` 提供领域中立的内容寻址出口：脚本中首个 `whenText` 被请求体原文包含的轮次优先命中，无命中时退化为轮次计数——不声明 `whenText` 的既有脚本行为完全不变。`delayMs` 在选定轮次后、分发 wire 前统一推迟响应，用于制造「宿主运行中」窗口等时序场景，与 wire 种类无关。两者均为可选修饰，不改变 toolCall/text 恰居其一的校验。
 
 ### 端口与网络
 
