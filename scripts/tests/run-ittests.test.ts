@@ -1,5 +1,5 @@
 /**
- * @module scripts/tests/run-itests
+ * @module scripts/tests/run-ittests
  * 默认 itest 文件发现契约：位置可以打平，但 token 用例永不进入默认集合。
  */
 import assert from "node:assert/strict";
@@ -7,10 +7,10 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { discoverItestFiles } from "../run-itests.ts";
+import { discoverIttestFiles } from "../run-ittests.ts";
 
 test("默认 itest 发现包与教程中的普通用例并排除 token 用例", async () => {
-  const root = await mkdtemp(join(tmpdir(), "xas-itest-discovery-"));
+  const root = await mkdtemp(join(tmpdir(), "xas-ittest-discovery-"));
   const testsDir = join(root, "packages", "demo", "tests");
   const tutorialDir = join(root, "examples", "tutorial");
   try {
@@ -25,7 +25,7 @@ test("默认 itest 发现包与教程中的普通用例并排除 token 用例", 
       writeFile(join(tutorialDir, "10-live.token.ittest.ts"), ""),
     ]);
 
-    assert.deepEqual(await discoverItestFiles(root), [
+    assert.deepEqual(await discoverIttestFiles(root), [
       join("examples", "tutorial", "09-host.ittest.ts"),
       join("packages", "demo", "tests", "ordinary.ittest.ts"),
     ]);

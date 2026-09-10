@@ -9,8 +9,8 @@
 | 层级           | 判定标准                                                                  | 文件名              | 默认命令        | 进入 `pnpm check` |
 | -------------- | ------------------------------------------------------------------------- | ------------------- | --------------- | ----------------- |
 | 单元测试       | 纯 fake、进程内组件、loopback 假端点、通用测试子进程；不拉真实宿主 CLI    | `*.test.ts`         | `pnpm test`     | 是                |
-| 集成测试       | 拉起真实宿主 CLI，以 sandbox + 假端点验证 harness/真实宿主路径，零 token  | `*.ittest.ts`       | `pnpm itest`    | 是                |
-| token 风险车道 | live 模式访问真实 provider，产生真实 token、费用或账号风险；是 itest 子集 | `*.token.ittest.ts` | `itest:token:*` | 否                |
+| 集成测试       | 拉起真实宿主 CLI，以 sandbox + 假端点验证 harness/真实宿主路径，零 token  | `*.ittest.ts`       | `pnpm ittest`    | 是                |
+| token 风险车道 | live 模式访问真实 provider，产生真实 token、费用或账号风险；是 ittest 子集 | `*.token.ittest.ts` | `ittest:token:*` | 否                |
 
 “起子进程”不是升级集成测试的条件。例如 `JsonlProcess`、通用 Node 测试 CLI、loopback HTTP server 和合成 TUI/PTY 都可以是 `*.test.ts`；只有替换为消费者注册的真实宿主 CLI 后，才成为 `*.ittest.ts`。
 
@@ -19,18 +19,18 @@
 - 包单元测试：`packages/<package>/tests/*.test.ts`。
 - 仓库脚本契约测试：`scripts/tests/*.test.ts`。
 - 真实宿主集成测试：`packages/<package>/tests/*.ittest.ts` 或 `examples/tutorial/*.ittest.ts`；默认 runner 打平发现各包 tests 与教程目录顶层文件。
-- token 测试默认可以与普通 itest 平铺为 `packages/<package>/tests/<name>.token.ittest.ts`，便于按包和文件名全局观察。用例较多或需要权限/责任分组时，可选用 `tests/token/` 子目录；目录不是安全边界。
+- token 测试默认可以与普通 ittest 平铺为 `packages/<package>/tests/<name>.token.ittest.ts`，便于按包和文件名全局观察。用例较多或需要权限/责任分组时，可选用 `tests/token/` 子目录；目录不是安全边界。
 - 教程可执行验证：仍按同一判定表命名；token 例可平铺在 `examples/tutorial/`，辅助模块可以使用普通 `*.ts`。
 
 ## 命令与默认回归
 
 ```bash
 pnpm test   # 单元测试：纯 fake / loopback / 通用测试进程
-pnpm itest  # 集成测试：真实宿主 + 假端点，仍为零 token
-pnpm check  # boundary + typecheck + test + itest
+pnpm ittest  # 集成测试：真实宿主 + 假端点，仍为零 token
+pnpm check  # boundary + typecheck + test + ittest
 ```
 
-`*.token.ittest.ts` 不进 `pnpm test`、`pnpm itest`、`pnpm check` 任何默认回归。`pnpm itest` 通过 `scripts/run-itests.ts` 按完整后缀排除 token 文件，安全性不依赖目录形状。每个 token 集合必须增加精确指向单文件或明确 allowlist 的 `itest:token:*` 脚本；当前教程入口为 `pnpm itest:token:tutorial` 与 `pnpm itest:token:pi-pty`（均精确指向单个 token 文件）。
+`*.token.ittest.ts` 不进 `pnpm test`、`pnpm ittest`、`pnpm check` 任何默认回归。`pnpm ittest` 通过 `scripts/run-ittests.ts` 按完整后缀排除 token 文件，安全性不依赖目录形状。每个 token 集合必须增加精确指向单文件或明确 allowlist 的 `ittest:token:*` 脚本；当前教程入口为 `pnpm ittest:token:tutorial` 与 `pnpm ittest:token:pi-pty`（均精确指向单个 token 文件）。
 
 PTY、headless、sandbox 是机制，smoke 是抽样范围，contract 是验证目的：这些词可以出现在文件 stem、测试标题和 catalog，但不形成新的终止后缀。为何不继续细分，见[测试文件命名调研](../research/test-file-naming-taxonomy.md)。
 

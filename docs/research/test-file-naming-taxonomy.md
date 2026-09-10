@@ -13,10 +13,10 @@
 | 维度     | 语法                | 语义                                                                    | 默认入口                 |
 | -------- | ------------------- | ----------------------------------------------------------------------- | ------------------------ |
 | 验证层级 | `*.test.ts`         | 不拉起真实宿主 CLI，纯 fake/loopback/通用测试进程，零 token             | `pnpm test`              |
-| 验证层级 | `*.ittest.ts`       | 拉起真实宿主 CLI，以 fake endpoint 验证真实宿主路径，零 token           | `pnpm itest`             |
-| 风险修饰 | `*.token.ittest.ts` | 集成测试的子集；访问真实 provider，存在 token、费用、凭据和数据出站风险 | 仅精确的 `itest:token:*` |
+| 验证层级 | `*.ittest.ts`       | 拉起真实宿主 CLI，以 fake endpoint 验证真实宿主路径，零 token           | `pnpm ittest`             |
+| 风险修饰 | `*.token.ittest.ts` | 集成测试的子集；访问真实 provider，存在 token、费用、凭据和数据出站风险 | 仅精确的 `ittest:token:*` |
 
-PTY、headless、sandbox 是运行机制；smoke 是抽样范围；contract 是验证目的；live 是环境/风险描述。它们能彼此组合，也都不能单独决定一个测试该进入 `pnpm test`、`pnpm itest` 还是显式 token 入口，因此不应成为新的保留终止后缀。
+PTY、headless、sandbox 是运行机制；smoke 是抽样范围；contract 是验证目的；live 是环境/风险描述。它们能彼此组合，也都不能单独决定一个测试该进入 `pnpm test`、`pnpm ittest` 还是显式 token 入口，因此不应成为新的保留终止后缀。
 
 推荐语法为：
 
@@ -88,8 +88,8 @@ Jest 没有要求用文件终止后缀编码每一种环境或能力；发现、
 
 ### 本仓与公开样本证据
 
-- 本仓默认测试脚本以精确 glob 收录 `*.test.ts`，集成入口由独立发现器执行，见 [`package.json`](../../package.json) 与 [`scripts/run-itests.ts`](../../scripts/run-itests.ts)。
-- `discoverItestFiles()` 以 `endsWith(".ittest.ts")` 收录普通集成测试，再以完整 `endsWith(".token.ittest.ts")` 排除 token 文件；位置不承担安全语义。对应契约测试见 [`scripts/tests/run-itests.test.ts`](../../scripts/tests/run-itests.test.ts)。
+- 本仓默认测试脚本以精确 glob 收录 `*.test.ts`，集成入口由独立发现器执行，见 [`package.json`](../../package.json) 与 [`scripts/run-ittests.ts`](../../scripts/run-ittests.ts)。
+- `discoverIttestFiles()` 以 `endsWith(".ittest.ts")` 收录普通集成测试，再以完整 `endsWith(".token.ittest.ts")` 排除 token 文件；位置不承担安全语义。对应契约测试见 [`scripts/tests/run-ittests.test.ts`](../../scripts/tests/run-ittests.test.ts)。
 - 当前规范已把合成 PTY/headless 归入 `.test.ts`，把真实宿主 + fake 归入 `.ittest.ts`；因此 PTY/headless 本身不构成层级。见 [`docs/spec/testing.md`](../spec/testing.md)。
 - 早期来源实现的普通 `*.ittest.ts` glob 会吞掉同目录下的 `*.token.ittest.ts`，因此只能用 `tests/token/` 物理隔离。x-agent-suite 使用完整后缀负过滤后，可以平铺观察而不继承这一目录限制。
 - Kimi Code 的真实 LLM 冒烟文件名为 [`real-llm-smoke.e2e.test.ts`](https://github.com/MoonshotAI/kimi-code/blob/0999454bdcb5ddd98f39bffee434dcf0a810f394/apps/kimi-code/test/e2e/real-llm-smoke.e2e.test.ts)，通过 [`apps/kimi-code/package.json`](https://github.com/MoonshotAI/kimi-code/blob/0999454bdcb5ddd98f39bffee434dcf0a810f394/apps/kimi-code/package.json) 中精确的 `e2e:real` 脚本和 env gate 运行。它说明 `smoke/e2e` 可以作为描述性 stem，真正的防误跑仍由精确入口和闸门负责。
@@ -99,9 +99,9 @@ Jest 没有要求用文件终止后缀编码每一种环境或能力；发现、
 
 | 候选             | 实际维度              | 是否决定默认执行车道                                       | 建议                                                      |
 | ---------------- | --------------------- | ---------------------------------------------------------- | --------------------------------------------------------- |
-| `pty`            | 交互/传输机制         | 否；合成 PTY 是 unit，真实宿主 PTY 是 itest                | 只放 stem、标题、catalog                                  |
+| `pty`            | 交互/传输机制         | 否；合成 PTY 是 unit，真实宿主 PTY 是 ittest                | 只放 stem、标题、catalog                                  |
 | `headless`       | 宿主运行形态          | 否；fake profile 与真实宿主分属不同层                      | 只放 stem、标题、catalog                                  |
-| `sandbox`        | 隔离机制              | 否；unit 与 itest 都可使用                                 | 只放 stem、标题                                           |
+| `sandbox`        | 隔离机制              | 否；unit 与 ittest 都可使用                                 | 只放 stem、标题                                           |
 | `smoke`          | 用例集合大小/抽样策略 | 否；三条车道都可能有 smoke                                 | 只放 stem、标题或显式脚本                                 |
 | `contract`       | 验证目的              | 否；纯 schema contract 与真实 provider contract 风险不同   | 只放 stem、标题                                           |
 | `live`           | 环境描述，语义易歧义  | 否；live guard 可以零网络，真实 live provider 则属于 token | 禁止作为安全后缀；真实 provider 一律用 `.token.ittest.ts` |

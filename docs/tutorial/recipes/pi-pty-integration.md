@@ -28,7 +28,7 @@ profile 位于 `packages/harness/tests/fixtures/profiles/pi.ts`，属于测试/�
 
 判断依据是“是否启动真实宿主 CLI”，不是“是否使用 PTY”。`07-pty.test.ts` 启动合成 TUI，所以是单元层；本文件启动真实 Pi，所以是集成层。两者都使用 fake provider，均为零 token。
 
-`pnpm itest` 会发现本文件；缺少 `E2E_PI_PTY=1` 时记录 skip，不会启动 Pi。若要同时使用真实 provider，必须另建 `*.token.ittest.ts` 并使用精确显式入口。
+`pnpm ittest` 会发现本文件；缺少 `E2E_PI_PTY=1` 时记录 skip，不会启动 Pi。若要同时使用真实 provider，必须另建 `*.token.ittest.ts` 并使用精确显式入口。
 
 ## 仍然存在的风险
 

@@ -42,7 +42,7 @@ FakeProviderBackend.start
 3. `createParser`：把真实宿主 JSONL/流事件归一成 `ParsedEvent`。
 4. `serverEntry`：消费者自己的 MCP/server 绝对路径；不得硬编码本机目录。
 
-并删除教程的 `commandOverride`。一旦启动真实宿主 CLI，用例必须移到 `*.ittest.ts` 并由 `pnpm itest` 运行；fixture 仍保持零 token。
+并删除教程的 `commandOverride`。一旦启动真实宿主 CLI，用例必须移到 `*.ittest.ts` 并由 `pnpm ittest` 运行；fixture 仍保持零 token。
 
 ## 断言优先级
 

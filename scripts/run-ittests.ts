@@ -1,5 +1,5 @@
 /**
- * @module scripts/run-itests
+ * @module scripts/run-ittests
  * 默认集成测试入口：打平发现包与教程 itest，并按完整后缀排除 token 用例。
  * 不变量：文件位置不承担安全职责；任何 `*.token.ittest.ts` 都不进入默认回归。
  */
@@ -32,7 +32,7 @@ async function discoverFlatItests(root: string, directory: string) {
  * @param root 仓库根目录。
  * @returns 相对仓库根目录排序后的测试路径。
  */
-export async function discoverItestFiles(root: string): Promise<string[]> {
+export async function discoverIttestFiles(root: string): Promise<string[]> {
   const packagesDir = join(root, "packages");
   const packages = await readdir(packagesDir, { withFileTypes: true });
   const directories = packages
@@ -48,7 +48,7 @@ export async function discoverItestFiles(root: string): Promise<string[]> {
 
 /** 运行发现出的默认 itest，并透传退出状态。 */
 async function main(): Promise<void> {
-  const files = await discoverItestFiles(ROOT);
+  const files = await discoverIttestFiles(ROOT);
   if (files.length === 0) {
     console.log("未发现默认 itest（token 用例不会进入本命令）");
     return;

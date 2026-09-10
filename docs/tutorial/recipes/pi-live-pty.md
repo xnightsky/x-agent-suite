@@ -5,7 +5,7 @@
 源码：[`examples/tutorial/11-pi-live-pty.token.ittest.ts`](../../../examples/tutorial/11-pi-live-pty.token.ittest.ts)。唯一入口：
 
 ```bash
-pnpm itest:token:pi-pty
+pnpm ittest:token:pi-pty
 ```
 
 直接运行仍会 skip。测试必须同时获得：
@@ -18,7 +18,7 @@ pnpm itest:token:pi-pty
 
 ```bash
 XAS_TUTORIAL_LIVE_AUTHORIZATION=I_ACCEPT_LIVE_COST_AND_DATA_EGRESS \
-pnpm itest:token:pi-pty
+pnpm ittest:token:pi-pty
 ```
 
 ## 执行链

@@ -19,7 +19,7 @@
 
 ## 检查清单
 
-- [ ] 代码通过 `pnpm check`（boundary + typecheck + test + itest）
+- [ ] 代码通过 `pnpm check`（boundary + typecheck + test + ittest）
 - [ ] 新功能有对应测试
 - [ ] 文档已更新（如影响 API 或使用方式）
 - [ ] Commit 遵循 Conventional Commits 规范

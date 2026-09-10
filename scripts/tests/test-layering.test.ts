@@ -24,7 +24,7 @@ test("测试分层规则覆盖 unit、integration 与 token integration", async 
   assert.match(spec, /平铺/);
   assert.match(spec, /可选.*tests\/token|tests\/token.*可选/);
   assert.doesNotMatch(spec, /必须.*tests\/token|tests\/token.*必须/);
-  assert.match(spec, /不进.*pnpm test.*pnpm itest.*pnpm check/s);
+  assert.match(spec, /不进.*pnpm test.*pnpm ittest.*pnpm check/s);
 });
 
 test("默认回归包含零 token 集成测试且 token 只有精确入口", async () => {
@@ -34,19 +34,19 @@ test("默认回归包含零 token 集成测试且 token 只有精确入口", asy
 
   const checkScript = packageJson.scripts.check;
   const testScript = packageJson.scripts.test;
-  const itestRunner = await readFile(
-    resolve(ROOT, "scripts/run-itests.ts"),
+  const ittestRunner = await readFile(
+    resolve(ROOT, "scripts/run-ittests.ts"),
     "utf8",
   );
-  assert.equal(packageJson.scripts.itest, "tsx scripts/run-itests.ts");
+  assert.equal(packageJson.scripts.ittest, "tsx scripts/run-ittests.ts");
   assert.ok(checkScript);
   assert.ok(testScript);
-  assert.match(checkScript, /pnpm itest/);
+  assert.match(checkScript, /pnpm ittest/);
   assert.doesNotMatch(testScript, /ittest/);
-  assert.match(itestRunner, /!entry\.name\.endsWith\("\.token\.ittest\.ts"\)/);
-  assert.equal("itest:token" in packageJson.scripts, false);
+  assert.match(ittestRunner, /!entry\.name\.endsWith\("\.token\.ittest\.ts"\)/);
+  assert.equal("ittest:token" in packageJson.scripts, false);
   assert.equal(
-    packageJson.scripts["itest:token:tutorial"],
+    packageJson.scripts["ittest:token:tutorial"],
     "tsx --test examples/tutorial/10-live-smoke.token.ittest.ts",
   );
 });

@@ -29,8 +29,8 @@ packages/
 ```bash
 pnpm install
 pnpm test    # 纯 fake / loopback / 通用子进程，零 token
-pnpm itest   # 真实宿主 CLI + 假端点，零 token
-pnpm check   # boundary + typecheck + test + itest；不含 token 级
+pnpm ittest   # 真实宿主 CLI + 假端点，零 token
+pnpm check   # boundary + typecheck + test + ittest；不含 token 级
 
 # 从 Git history 自动推导版本，生成本地 tarball 并补稳定 tag
 pnpm artifacts:pack
@@ -48,7 +48,7 @@ pnpm tutorial:check  # 全部安全离线教程
 pnpm tutorial:pty:pi # 真实 Pi + fake provider；默认 skip，零 token
 ```
 
-真实 provider 对照文件为 `examples/tutorial/10-live-smoke.token.ittest.ts`，只允许通过精确的 `pnpm itest:token:tutorial` 显式运行，且测试内部仍要求单次授权值。
+真实 provider 对照文件为 `examples/tutorial/10-live-smoke.token.ittest.ts`，只允许通过精确的 `pnpm ittest:token:tutorial` 显式运行，且测试内部仍要求单次授权值。
 
 当前是库级组合入口；运行时 Registry、Scenario DSL runner 和统一 CLI 仍在路线图阶段。
 
@@ -69,9 +69,9 @@ fake 是减少对真实环境访问的降噪机制，不是验收终点；最终
 | 组合（后端 × 隔离 × 载具）  | 什么时候用                                                             | 怎么用                                                                                      | 风险                                            | 闸门与分层                                                   |
 | --------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------ |
 | fake × 沙箱 × harness       | 默认回归主链：协议、工具轮、Observation 归一                           | `pnpm test`；[headless-fixture](docs/tutorial/recipes/headless-fixture.md)                  | 无真实外访                                      | 默认允许                                                     |
-| fake × 沙箱 × PTY           | TUI 交互门槛回归：审批框、首次信任、独占输入                           | `pnpm tutorial:pty`；真实宿主走 [pi-pty itest](docs/tutorial/recipes/pi-pty-integration.md) | PTY 原生依赖编译；屏幕时序漂移                  | `*.ittest.ts` 分层，前置缺失显式 skip，零 token              |
+| fake × 沙箱 × PTY           | TUI 交互门槛回归：审批框、首次信任、独占输入                           | `pnpm tutorial:pty`；真实宿主走 [pi-pty ittest](docs/tutorial/recipes/pi-pty-integration.md) | PTY 原生依赖编译；屏幕时序漂移                  | `*.ittest.ts` 分层，前置缺失显式 skip，零 token              |
 | fake × 非沙箱 × harness/PTY | 调试 driver 机制本身（对着真实安装的宿主，不碰真 provider）            | 手工临时运行，无默认入口                                                                    | 副作用直达真实 HOME 与配置                      | **当前无显式闸门**，仅限本地调试，不得进共享回归             |
-| live × 沙箱 × harness       | 真实模型最小对照：wire 保真、限额、脱敏链路                            | `itest:token:*` 显式入口；[live-token-smoke](docs/tutorial/recipes/live-token-smoke.md)     | token 与费用；凭证泄漏                          | token 后缀排除 + 显式授权 + `redactLiveSecrets` + 限额       |
+| live × 沙箱 × harness       | 真实模型最小对照：wire 保真、限额、脱敏链路                            | `ittest:token:*` 显式入口；[live-token-smoke](docs/tutorial/recipes/live-token-smoke.md)     | token 与费用；凭证泄漏                          | token 后缀排除 + 显式授权 + `redactLiveSecrets` + 限额       |
 | live × 沙箱 × PTY           | **最终验收面**：真实 TUI + 真实端点，环境仍隔离                        | token 显式入口（按宿主落地时添加精确脚本）                                                  | 同上，叠加 PTY 时序与原生依赖                   | 同 live 闸门，叠加 PTY 前提（ptyArgs、ready/prompt pattern） |
 | live × 非沙箱 × 任意        | 仅当验收目标就是宿主与真实配置的交互（如真实插件安装、真实登录态刷新） | 手工、逐次授权                                                                              | **最高**：真凭证 × 真环境，误操作可损坏本机配置 | 建议后端与隔离双显式武装；定位为调试/专项，非常态回归        |
 

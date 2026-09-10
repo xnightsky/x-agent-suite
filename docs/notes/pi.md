@@ -99,7 +99,7 @@ E2E_PI_PTY=1 pnpm tutorial:pty:pi
 
 ### 9.2 真实渠道 PTY（live 分支）
 
-PtyAgentDriver 的 backend 传 `LiveBackend` 即进入 live 分支：沙盒 `models.json` 按借用渠道生成（baseUrl 取 `harnessBaseUrl` 宿主原值，apiKey 为借用 token），真实 TUI 按声明的 provider/model 打真实端点。渠道声明来自真实 home 的 `~/.env.e2e.yaml`（`carriers.pi` + `from: harness`，多 provider 宿主可用 `provider` 选择借用目标）。0.84.4 + kimi-coding OAuth 实测通过（footer 显示声明模型，一轮约 6s）。入口为 token 级精确脚本 `pnpm itest:token:pi-pty`，见[教程](../../docs/tutorial/recipes/pi-live-pty.md)。
+PtyAgentDriver 的 backend 传 `LiveBackend` 即进入 live 分支：沙盒 `models.json` 按借用渠道生成（baseUrl 取 `harnessBaseUrl` 宿主原值，apiKey 为借用 token），真实 TUI 按声明的 provider/model 打真实端点。渠道声明来自真实 home 的 `~/.env.e2e.yaml`（`carriers.pi` + `from: harness`，多 provider 宿主可用 `provider` 选择借用目标）。0.84.4 + kimi-coding OAuth 实测通过（footer 显示声明模型，一轮约 6s）。入口为 token 级精确脚本 `pnpm ittest:token:pi-pty`，见[教程](../../docs/tutorial/recipes/pi-live-pty.md)。
 
 ## 10. Project Trust（信任对话框）出口
 

@@ -99,8 +99,8 @@ pnpm tutorial:check
 
 ```bash
 pnpm tutorial:pty:pi       # 默认 skip；E2E_PI_PTY=1 才启动真实 Pi，仍为零 token
-pnpm itest:token:tutorial  # 默认 skip；还需单次授权、carrier 与私密配置
-pnpm itest:token:pi-pty    # 默认 skip；还需单次授权、carriers.pi 借用声明与宿主登录态
+pnpm ittest:token:tutorial  # 默认 skip；还需单次授权、carrier 与私密配置
+pnpm ittest:token:pi-pty    # 默认 skip；还需单次授权、carriers.pi 借用声明与宿主登录态
 ```
 
 真实宿主走 `*.ittest.ts`，真实 provider 走只能显式运行的 `*.token.ittest.ts`。PTY、headless、smoke 只是文件 stem/catalog 标签，不再增加终止后缀；完整规则见[测试分层规范](../spec/testing.md)，决策证据见[后缀调研](../research/test-file-naming-taxonomy.md)。

@@ -125,7 +125,7 @@
       "title": "Pi CLI + PtyAgentDriver live 分支（借用宿主指定 provider 渠道与凭据）",
       "source": "examples/tutorial/11-pi-live-pty.token.ittest.ts",
       "guide": "docs/tutorial/recipes/pi-live-pty.md",
-      "command": "pnpm itest:token:pi-pty",
+      "command": "pnpm ittest:token:pi-pty",
       "modules": ["llm-fixture", "harness"],
       "mode": "explicit-live-token",
       "expected": [
@@ -139,7 +139,7 @@
       "title": "Explicit live provider tool-calling smoke",
       "source": "examples/tutorial/10-live-smoke.token.ittest.ts",
       "guide": "docs/tutorial/recipes/live-token-smoke.md",
-      "command": "pnpm itest:token:tutorial",
+      "command": "pnpm ittest:token:tutorial",
       "modules": ["llm-fixture", "sandbox"],
       "mode": "explicit-live-token",
       "expected": [

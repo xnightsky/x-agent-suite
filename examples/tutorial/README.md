@@ -13,7 +13,7 @@
 | `07-pty.test.ts`                | `pnpm tutorial:pty`         | 合成 TUI 的 ready/回显/提交/idle/清理   |
 | `08-live-guard.test.ts`         | `pnpm tutorial:live:guard`  | live 默认阻断、零网络与诊断脱敏         |
 | `09-pi-pty.ittest.ts`           | `pnpm tutorial:pty:pi`      | 真实 Pi TUI + fake provider，零 token   |
-| `10-live-smoke.token.ittest.ts` | `pnpm itest:token:tutorial` | 真实 provider 的最小 tool-calling 对照  |
+| `10-live-smoke.token.ittest.ts` | `pnpm ittest:token:tutorial` | 真实 provider 的最小 tool-calling 对照  |
 
 前八个机制示例通过教程测试运行器执行，并把稳定的 `TUTORIAL_SUMMARY` 摘要写到 stdout。会生成报告或请求 dump 的示例默认写到 `.tmp/tutorial/<recipe>/`。
 

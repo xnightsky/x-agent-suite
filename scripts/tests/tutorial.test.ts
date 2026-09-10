@@ -464,7 +464,7 @@ test("package scripts 暴露安全教程命令且 typecheck 覆盖示例", async
       "tutorial:pty": packageJson.scripts["tutorial:pty"],
       "tutorial:live:guard": packageJson.scripts["tutorial:live:guard"],
       "tutorial:pty:pi": packageJson.scripts["tutorial:pty:pi"],
-      "itest:token:tutorial": packageJson.scripts["itest:token:tutorial"],
+      "ittest:token:tutorial": packageJson.scripts["ittest:token:tutorial"],
       "tutorial:check": packageJson.scripts["tutorial:check"],
     },
     {
@@ -482,7 +482,7 @@ test("package scripts 暴露安全教程命令且 typecheck 覆盖示例", async
       "tutorial:live:guard":
         "tsx --test examples/tutorial/08-live-guard.test.ts",
       "tutorial:pty:pi": "tsx --test examples/tutorial/09-pi-pty.ittest.ts",
-      "itest:token:tutorial":
+      "ittest:token:tutorial":
         "tsx --test examples/tutorial/10-live-smoke.token.ittest.ts",
       "tutorial:check": "tsx --test scripts/tests/tutorial.test.ts",
     },

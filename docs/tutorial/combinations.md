@@ -25,7 +25,7 @@ Backend 不属于 `MockDriver` 或底层 `JsonlProcess` 本身；Scenario DSL ru
 | 真实 headless CLI，零 token | profile + fixture + sandbox + harness                 | 有条件         | [headless-fixture](./recipes/headless-fixture.md)；合成链可直接运行        |
 | 长驻与入站                  | LongLivedAgentDriver + consumer runner                | 有条件         | [long-lived](./recipes/long-lived.md)；内存参考实现可直接运行              |
 | JSON-RPC 长驻 wire          | JsonRpcPeer + LongLivedJsonRpcDriver + 消费者 adapter | 有条件         | [long-lived-wire](./recipes/long-lived-wire.md)；假 peer 链可直接运行      |
-| TUI 审批                    | PTY profile + PtyAgentDriver                          | 有条件、高风险 | [pty](./recipes/pty.md)；含合成单测与真实宿主 itest 分层                   |
+| TUI 审批                    | PTY profile + PtyAgentDriver                          | 有条件、高风险 | [pty](./recipes/pty.md)；含合成单测与真实宿主 ittest 分层                   |
 | Pi 真实 PTY                 | Pi profile + fake backend + PTY                       | 有条件         | [pi-pty-integration](./recipes/pi-pty-integration.md)；默认 skip，零 token |
 | Pi 真实 PTY 打真实 provider/model | Pi profile + LiveBackend + 借用渠道注入           | 有条件、高风险 | [pi-live-pty](./recipes/pi-live-pty.md)；仅显式 token 入口                 |
 | live 默认安全门             | authorization + redact                                | 支持           | [live-guard](./recipes/live-guard.md)；默认零网络                          |

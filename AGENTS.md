@@ -72,10 +72,10 @@
 
 - 安装：`pnpm install`
 - 单元测试：`pnpm test`
-- 集成测试：`pnpm itest`
+- 集成测试：`pnpm ittest`
 - 类型检查：`pnpm typecheck`
 - 边界守卫：`pnpm boundary`
-- 收口：`pnpm check`（boundary + typecheck + test + itest；不含 token 级）
+- 收口：`pnpm check`（boundary + typecheck + test + ittest；不含 token 级）
 
 ## 代码与测试
 
@@ -86,12 +86,12 @@
 
 ### 测试分层约定（适用全仓所有 `*test*` 文件）
 
-- 只有两类默认测试：单元测试（`*.test.ts`，`pnpm test`）与集成测试（`*.ittest.ts`，`pnpm itest`）。
+- 只有两类默认测试：单元测试（`*.test.ts`，`pnpm test`）与集成测试（`*.ittest.ts`，`pnpm ittest`）。
 - 分类看验证对象与代价，**不看是否起子进程**：纯 fake、进程内组件、loopback 假端点、通用测试子进程均归单元测试，只要不拉起真实宿主 CLI 且零 token。
 - 拉起真实宿主 CLI，并经 sandbox + 假端点验证 harness 编排或真实宿主路径的，归集成测试；该层仍必须零 token，可按显式前置条件 skip。
-- live 模式打真实 provider、会产生真实 token/费用的测试统一命名 `*.token.ittest.ts`，不进入 `pnpm test`、`pnpm itest` 或 `pnpm check`。
-- token 测试可与普通 itest 平铺，便于全仓打平观察；数量较多或需要权限分组时，也可按仓库需要放进 `tests/token/`。目录只负责组织，不承担安全语义；默认 runner 必须按完整后缀排除所有 `*.token.ittest.ts`。
-- token 测试只能通过显式 `itest:token:*` 脚本运行，首个 token 用例落地时再添加精确入口；不得依赖目录结构来防止默认命令误收。
+- live 模式打真实 provider、会产生真实 token/费用的测试统一命名 `*.token.ittest.ts`，不进入 `pnpm test`、`pnpm ittest` 或 `pnpm check`。
+- token 测试可与普通 ittest 平铺，便于全仓打平观察；数量较多或需要权限分组时，也可按仓库需要放进 `tests/token/`。目录只负责组织，不承担安全语义；默认 runner 必须按完整后缀排除所有 `*.token.ittest.ts`。
+- token 测试只能通过显式 `ittest:token:*` 脚本运行，首个 token 用例落地时再添加精确入口；不得依赖目录结构来防止默认命令误收。
 - 保留的终止后缀只有 `*.test.ts`、`*.ittest.ts`、`*.token.ittest.ts`；PTY、headless、sandbox 是机制，smoke/contract 是范围或目的，只写在文件 stem、测试标题和 catalog，不再组合成新的官方后缀。决策依据见 `docs/research/test-file-naming-taxonomy.md`。
 - token 测试默认从仓库根 `.env.e2e.yaml`（已 gitignore）读取 live 配置；若确需借用本机登录态，测试必须自带显式 skip 闸门、最小权限 sandbox、现场清理和脱敏诊断。
 - 教程的可执行验证同样遵守该分层；“PTY/headless/子进程”本身不会自动升级为 `*.ittest.ts`，只有接入真实宿主才升级。

@@ -35,7 +35,7 @@ pnpm tutorial:sandbox
 - 为退出、超时、坏 JSON 和 stderr 增加带上下文错误；
 - 保持 `close()` 幂等。
 
-如果替换后拉起的是消费者注册的真实 Agent CLI，这个用例就升级为 `*.ittest.ts`，应进入 `pnpm itest`，而不是继续留在单元层。
+如果替换后拉起的是消费者注册的真实 Agent CLI，这个用例就升级为 `*.ittest.ts`，应进入 `pnpm ittest`，而不是继续留在单元层。
 
 ## 常见误区
 

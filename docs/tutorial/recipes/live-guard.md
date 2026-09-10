@@ -22,7 +22,7 @@ pnpm tutorial:live:guard
 packages/<consumer-boundary>/tests/<scenario>.token.ittest.ts
 ```
 
-如果同一边界已有大量 token 用例，也可以按需放进 `tests/token/`，但这只是可选分组。无论位置如何，都要同时新增精确指向该文件或明确集合的 `itest:token:*` 脚本。用例顺序必须是：
+如果同一边界已有大量 token 用例，也可以按需放进 `tests/token/`，但这只是可选分组。无论位置如何，都要同时新增精确指向该文件或明确集合的 `ittest:token:*` 脚本。用例顺序必须是：
 
 1. 检查单次授权开关；缺失则 skip。
 2. 经 `.env.e2e.yaml` 发现链（repo 根 > home 级 `~/`）加载渠道，不从源码读取字面量密钥。
@@ -32,7 +32,7 @@ packages/<consumer-boundary>/tests/<scenario>.token.ittest.ts
 6. `finally` 清理进程、端口、sandbox 和临时产物。
 7. 所有错误、skip 和报告先经过 `redactLiveSecrets`。
 
-`*.token.ittest.ts` 可以平铺或分组，但不进 `pnpm test`、`pnpm itest`、`pnpm check`；默认 runner 按完整后缀排除，不依赖路径约定。本仓用精确的 `pnpm itest:token:tutorial` 运行当前唯一 token 教程，不提供宽泛的默认 token glob。
+`*.token.ittest.ts` 可以平铺或分组，但不进 `pnpm test`、`pnpm ittest`、`pnpm check`；默认 runner 按完整后缀排除，不依赖路径约定。本仓用精确的 `pnpm ittest:token:tutorial` 运行当前唯一 token 教程，不提供宽泛的默认 token glob。
 
 ## fixture 与 live 的证据关系
 

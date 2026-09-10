@@ -3,7 +3,7 @@
 这是教程目录中真正访问 provider 的最小证据，不是 guard 模拟。源码：[`examples/tutorial/10-live-smoke.token.ittest.ts`](../../../examples/tutorial/10-live-smoke.token.ittest.ts)，唯一入口是：
 
 ```bash
-pnpm itest:token:tutorial
+pnpm ittest:token:tutorial
 ```
 
 直接运行仍会 skip。测试必须同时获得：
@@ -29,7 +29,7 @@ carriers:
 XAS_TUTORIAL_LIVE_AUTHORIZATION=I_ACCEPT_LIVE_COST_AND_DATA_EGRESS \
 XAS_TUTORIAL_LIVE_CARRIER=tutorial \
 TUTORIAL_PROVIDER_API_KEY='<从安全凭据源注入>' \
-pnpm itest:token:tutorial
+pnpm ittest:token:tutorial
 ```
 
 ## 执行链
