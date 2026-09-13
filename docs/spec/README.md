@@ -7,6 +7,7 @@
 | 文档                                               | 内容                                                                  |
 | -------------------------------------------------- | --------------------------------------------------------------------- |
 | [suite-design.md](./suite-design.md)               | 框架总览：验证层、运行模式、环境变量                                  |
+| [capability-system.md](./capability-system.md)     | 能力体系：能力账本（内核/子包/不做）、五问需求侧、P0–P8 路线          |
 | [boundary-discipline.md](./boundary-discipline.md) | 边界纪律：四条守卫、三个合法出口、边界债务                            |
 | [layering.md](./layering.md)                       | 分层与依赖选型：工具型库 vs 平台                                      |
 | [contracts.md](./contracts.md)                     | 通用类型契约：Observation、Driver、Scenario、Criterion、Registry      |
