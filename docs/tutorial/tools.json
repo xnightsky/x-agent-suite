@@ -445,6 +445,13 @@
           "reason": "由模块手册说明直接用法，当前无需独立可执行 recipe。"
         },
         {
+          "name": "resolveAggregate",
+          "category": "primary",
+          "purpose": "把判据的具名结果按维度声明（weight/knockout/absent/threshold）聚合成出口分。",
+          "risk": "safe",
+          "reason": "纯函数零依赖，设计见 docs/spec/scoring-aggregation.md；runner 落地后再补 recipe。"
+        },
+        {
           "name": "writeScenarioReports",
           "category": "primary",
           "purpose": "同时写出 Markdown 结论表和 JSON 明细。",

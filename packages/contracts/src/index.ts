@@ -73,6 +73,16 @@ export type {
 
 export type { ExpectBlock, TurnSpec, ScenarioSpec } from "./dsl.ts";
 
+export type {
+  AbsentMapping,
+  DimensionSpec,
+  AggregationSpec,
+  DimensionState,
+  DimensionOutcome,
+  AggregateCoverage,
+  AggregateResult,
+} from "./aggregation.ts";
+
 export type { Scenario } from "./scenario.ts";
 
 export type {
