@@ -17,13 +17,13 @@ x-agent-suite 是领域中立的 Agent 测试框架：不认识任何被测系�
 
 以「判断一个能力包优劣」为典型负载，它要回答五个问题，每个都映射到下方能力件：
 
-| 考题 | 含义 | 依赖能力件 |
-| --- | --- | --- |
-| 触发对不对 | 该加载时加载、近似场景不误触发 | 场景 DSL、runner、sandbox、确定性判据（GREEN/RED） |
-| 规矩守不守 | 加载后是否按规则行事 | 场景 DSL、文本判定、模型裁定 |
-| 活干得好不好 | 真实任务终态对不对 | provision、driver、终态证据、证据核对判据 |
-| 边界越不越 | 不越权、不越界、会消歧 | sandbox、RED 反向判据 |
-| 稳不稳贵不贵 | N 次稳定率、token/步数开销 | 统计层、矩阵 |
+| 考题         | 含义                           | 依赖能力件                                         |
+| ------------ | ------------------------------ | -------------------------------------------------- |
+| 触发对不对   | 该加载时加载、近似场景不误触发 | 场景 DSL、runner、sandbox、确定性判据（GREEN/RED） |
+| 规矩守不守   | 加载后是否按规则行事           | 场景 DSL、文本判定、模型裁定                       |
+| 活干得好不好 | 真实任务终态对不对             | provision、driver、终态证据、证据核对判据          |
+| 边界越不越   | 不越权、不越界、会消歧         | sandbox、RED 反向判据                              |
+| 稳不稳贵不贵 | N 次稳定率、token/步数开销     | 统计层、矩阵                                       |
 
 ## 能力账本（按层）
 
@@ -31,83 +31,83 @@ x-agent-suite 是领域中立的 Agent 测试框架：不认识任何被测系�
 
 ### 场景层
 
-| 能力件 | 概念来源 | 裁决 | 归属 | 状态 |
-| --- | --- | --- | --- | --- |
-| 场景声明 DSL | promptfoo tests / Inspect Task | 内核 | `contracts/dsl` | ⚠️ 契约在 |
-| 场景 runner + Registry + CLI | promptfoo eval / Inspect | 内核 | P3 | ❌ P3 |
-| 考题 authoring 规范（GREEN/RED、钉词表、防免费绿） | 内部评测实践 | 文档 + 模板 | `docs/` | ❌ P3 配套 |
+| 能力件                                             | 概念来源                       | 裁决        | 归属            | 状态       |
+| -------------------------------------------------- | ------------------------------ | ----------- | --------------- | ---------- |
+| 场景声明 DSL                                       | promptfoo tests / Inspect Task | 内核        | `contracts/dsl` | ⚠️ 契约在  |
+| 场景 runner + Registry + CLI                       | promptfoo eval / Inspect       | 内核        | P3              | ❌ P3      |
+| 考题 authoring 规范（GREEN/RED、钉词表、防免费绿） | 内部评测实践                   | 文档 + 模板 | `docs/`         | ❌ P3 配套 |
 
 ### 执行层
 
-| 能力件 | 概念来源 | 裁决 | 归属 | 状态 |
-| --- | --- | --- | --- | --- |
-| 驱动契约（AgentDriver / HarnessProfile） | 本仓原创（强于 promptfoo providers） | 内核 | `contracts/driver`、`harness` | ✅ |
-| 进程/PTY 基座 | — | 内核 | `driver` | ✅ |
-| 隔离（HOME/cwd/env 白名单） | Inspect sandbox / Terminal-Bench 容器 | 内核 | `sandbox` | ✅ |
-| provision（铺安装态、嵌套依赖、fixture） | SWE-bench 任务容器 | 钩子在内核、配方在文档 | `contracts/dsl` + `docs/` | ⚠️ 钩子 ✅ / 配方 ❌ P4 |
-| PTY 审批专项（真实 TUI 门槛场景激活） | — | 内核 | `driver` + `harness` | ⚠️ 驱动在、场景未激活 |
-| 统一混合执行抽象 | — | **不做**（分层承载，见本文决策记录） | — | ⛔ |
+| 能力件                                   | 概念来源                              | 裁决                                 | 归属                          | 状态                    |
+| ---------------------------------------- | ------------------------------------- | ------------------------------------ | ----------------------------- | ----------------------- |
+| 驱动契约（AgentDriver / HarnessProfile） | 本仓原创（强于 promptfoo providers）  | 内核                                 | `contracts/driver`、`harness` | ✅                      |
+| 进程/PTY 基座                            | —                                     | 内核                                 | `driver`                      | ✅                      |
+| 隔离（HOME/cwd/env 白名单）              | Inspect sandbox / Terminal-Bench 容器 | 内核                                 | `sandbox`                     | ✅                      |
+| provision（铺安装态、嵌套依赖、fixture） | SWE-bench 任务容器                    | 钩子在内核、配方在文档               | `contracts/dsl` + `docs/`     | ⚠️ 钩子 ✅ / 配方 ❌ P4 |
+| PTY 审批专项（真实 TUI 门槛场景激活）    | —                                     | 内核                                 | `driver` + `harness`          | ⚠️ 驱动在、场景未激活   |
+| 统一混合执行抽象                         | —                                     | **不做**（分层承载，见本文决策记录） | —                             | ⛔                      |
 
 ### 观测层
 
-| 能力件 | 概念来源 | 裁决 | 归属 | 状态 |
-| --- | --- | --- | --- | --- |
-| Observation 归一（文本/工具调用/轮数/用量） | Inspect trace / promptfoo trajectory | 内核 | `contracts/observation` | ✅ |
-| 终态证据（ArtifactEvidence） | 内部评测实践 / Inspect sandbox 检查 | 类型在内核、采集在消费者 | `contracts` | ⚠️ |
-| OTel GenAI 命名对齐 | OTel 语义约定 | 缓：仅对齐稳定子集 | 未排期 | ❌ |
+| 能力件                                      | 概念来源                             | 裁决                     | 归属                    | 状态 |
+| ------------------------------------------- | ------------------------------------ | ------------------------ | ----------------------- | ---- |
+| Observation 归一（文本/工具调用/轮数/用量） | Inspect trace / promptfoo trajectory | 内核                     | `contracts/observation` | ✅   |
+| 终态证据（ArtifactEvidence）                | 内部评测实践 / Inspect sandbox 检查  | 类型在内核、采集在消费者 | `contracts`             | ⚠️   |
+| OTel GenAI 命名对齐                         | OTel 语义约定                        | 缓：仅对齐稳定子集       | 未排期                  | ❌   |
 
 ### 判定层（读答案判对错）
 
-| 能力件 | 概念来源 | 裁决 | 归属 | 状态 |
-| --- | --- | --- | --- | --- |
-| 确定性判据（contains / not-contains / regex / 工具调用核对） | promptfoo deterministic / Inspect includes·match·pattern | **一等子包** | `@x-agent-suite/criteria`（新建） | ❌ P1（当前咽喉） |
-| 模型裁定判据（rubric judge，grader 借用 live 通道） | promptfoo llm-rubric / Inspect model_graded_qa | 子包内可选件 | 同上 | ❌ P1 后续批 |
-| 失败类别注册（内容失败 vs 环境失败） | 内部评测实践 / Inspect scoring policy | 内核 | `contracts/criterion` | ✅ |
+| 能力件                                                           | 概念来源                                                 | 裁决         | 归属                      | 状态      |
+| ---------------------------------------------------------------- | -------------------------------------------------------- | ------------ | ------------------------- | --------- |
+| 确定性判据（contains / not-contains / 工具调用核对；regex 待补） | promptfoo deterministic / Inspect includes·match·pattern | **一等子包** | `@x-agent-suite/criteria` | ✅ P1     |
+| 模型裁定判据（rubric judge，grader 借用 live 通道）              | promptfoo llm-rubric / Inspect model_graded_qa           | 子包内可选件 | 同上                      | ❌ 后续批 |
+| 失败类别注册（内容失败 vs 环境失败）                             | 内部评测实践 / Inspect scoring policy                    | 内核         | `contracts/criterion`     | ✅        |
 
 ### 打分层
 
-| 能力件 | 概念来源 | 裁决 | 归属 | 状态 |
-| --- | --- | --- | --- | --- |
-| 加权聚合机（weight/threshold/knockout/absent） | promptfoo + 自造语义 | 内核 | `observation/resolveAggregate` | ✅ |
-| 离线判分（对已有输出跑判定，不起 agent） | promptfoo `--model-outputs` | 内核入口产品化 | `observation` | ❌ P2 附带 |
-| 自定义打分函数 | promptfoo assertScoringFunction | 天然对等（判据即函数） | 已有契约 | ✅ |
+| 能力件                                         | 概念来源                        | 裁决                   | 归属                           | 状态       |
+| ---------------------------------------------- | ------------------------------- | ---------------------- | ------------------------------ | ---------- |
+| 加权聚合机（weight/threshold/knockout/absent） | promptfoo + 自造语义            | 内核                   | `observation/resolveAggregate` | ✅         |
+| 离线判分（对已有输出跑判定，不起 agent）       | promptfoo `--model-outputs`     | 内核入口产品化         | `observation`                  | ❌ P2 附带 |
+| 自定义打分函数                                 | promptfoo assertScoringFunction | 天然对等（判据即函数） | 已有契约                       | ✅         |
 
 ### 统计层（数据集轴）
 
-| 能力件 | 概念来源 | 裁决 | 归属 | 状态 |
-| --- | --- | --- | --- | --- |
-| repeat 稳定率 / 成本方差 | promptfoo repeat / Inspect epochs+reducer | 内核 | 未排期 | ❌ P5 |
-| 派生指标（表达式） | promptfoo derivedMetrics | **子包依赖 mathjs**，不自造解析器 | 未排期 | ❌ P5 |
+| 能力件                   | 概念来源                                  | 裁决                              | 归属   | 状态  |
+| ------------------------ | ----------------------------------------- | --------------------------------- | ------ | ----- |
+| repeat 稳定率 / 成本方差 | promptfoo repeat / Inspect epochs+reducer | 内核                              | 未排期 | ❌ P5 |
+| 派生指标（表达式）       | promptfoo derivedMetrics                  | **子包依赖 mathjs**，不自造解析器 | 未排期 | ❌ P5 |
 
 ### 报告层
 
-| 能力件 | 概念来源 | 裁决 | 归属 | 状态 |
-| --- | --- | --- | --- | --- |
-| md/json 报告 + 分维度 + coverage | promptfoo CLI 报告 | 内核 | `observation/report` | ✅（coverage 展示 P2 补） |
-| 两版报告维度级 diff（反馈闭环） | promptfoo side-by-side | 内核极简工具 | 未排期 | ❌ P6 |
-| 更多输出格式（JUnit / HTML / 自定义模板） | CI 生态惯例 | 内核（按需） | `observation/report` | ❌ 未排期 |
-| Web UI | promptfoo web 报告 | **不做**（反转条件：第三个消费者要求） | — | ⛔ |
+| 能力件                                    | 概念来源               | 裁决                                   | 归属                 | 状态                      |
+| ----------------------------------------- | ---------------------- | -------------------------------------- | -------------------- | ------------------------- |
+| md/json 报告 + 分维度 + coverage          | promptfoo CLI 报告     | 内核                                   | `observation/report` | ✅（coverage 展示 P2 补） |
+| 两版报告维度级 diff（反馈闭环）           | promptfoo side-by-side | 内核极简工具                           | 未排期               | ❌ P6                     |
+| 更多输出格式（JUnit / HTML / 自定义模板） | CI 生态惯例            | 内核（按需）                           | `observation/report` | ❌ 未排期                 |
+| Web UI                                    | promptfoo web 报告     | **不做**（反转条件：第三个消费者要求） | —                    | ⛔                        |
 
 ### 工程层
 
-| 能力件 | 概念来源 | 裁决 | 归属 | 状态 |
-| --- | --- | --- | --- | --- |
-| 变体矩阵（场景×模型×carrier） | promptfoo 三维矩阵 | 内核 | `matrix` | ✅ |
-| 假端点零 token 回归 / live 借用通道 | 本仓原创 | 内核 | `llm-fixture` | ✅ |
-| CI 分层（零 token 默认 / live 显式） | 本仓测试分层约定 | 流水线配置 | CI | ⚠️ P7 |
-| live 评估转正（nightly 流水线） | — | 工程化 | CI | ❌ 未排期 |
-| fake provider wire 扩展（OpenAI chat 变体等） | — | 内核（按需） | `llm-fixture` | ❌ 按需 |
-| 架构拆分评估（是否拆独立 repo） | — | 治理决策 | — | ❌ P3 后评估 |
-| release 通道（tarball pin 供下游） | 消费纪律 | 发版流程 | packaging | ⚠️ v0.4.0 后未发 |
+| 能力件                                        | 概念来源           | 裁决         | 归属          | 状态             |
+| --------------------------------------------- | ------------------ | ------------ | ------------- | ---------------- |
+| 变体矩阵（场景×模型×carrier）                 | promptfoo 三维矩阵 | 内核         | `matrix`      | ✅               |
+| 假端点零 token 回归 / live 借用通道           | 本仓原创           | 内核         | `llm-fixture` | ✅               |
+| CI 分层（零 token 默认 / live 显式）          | 本仓测试分层约定   | 流水线配置   | CI            | ⚠️ P7            |
+| live 评估转正（nightly 流水线）               | —                  | 工程化       | CI            | ❌ 未排期        |
+| fake provider wire 扩展（OpenAI chat 变体等） | —                  | 内核（按需） | `llm-fixture` | ❌ 按需          |
+| 架构拆分评估（是否拆独立 repo）               | —                  | 治理决策     | —             | ❌ P3 后评估     |
+| release 通道（tarball pin 供下游）            | 消费纪律           | 发版流程     | packaging     | ⚠️ v0.4.0 后未发 |
 
 ### 明确不做（全局）
 
-| 能力 | 理由 |
-| --- | --- |
-| Red teaming / 漏洞扫描 / guardrails | 安全对抗是另一产品域，稀释评测主线 |
-| 几百家 provider 逐一适配 | 本框架走「宿主 CLI + fake/live 双端点」，架构上不需要 |
-| skill 依赖解析 | 业界规范层无解；只评「打包好的安装态整体」 |
-| 统一混合执行抽象 | 分层承载；业界与内部实践双向印证（见 [skill-mixed-execution.md](../research/skill-mixed-execution.md)） |
+| 能力                                | 理由                                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Red teaming / 漏洞扫描 / guardrails | 安全对抗是另一产品域，稀释评测主线                                                                      |
+| 几百家 provider 逐一适配            | 本框架走「宿主 CLI + fake/live 双端点」，架构上不需要                                                   |
+| skill 依赖解析                      | 业界规范层无解；只评「打包好的安装态整体」                                                              |
+| 统一混合执行抽象                    | 分层承载；业界与内部实践双向印证（见 [skill-mixed-execution.md](../research/skill-mixed-execution.md)） |
 
 ## 阶段路线（P0–P8）
 
@@ -124,16 +124,16 @@ flowchart TD
     P3 --> P8
 ```
 
-| 阶段 | 交付物 | 硬性成功标准 |
-| --- | --- | --- |
-| P1 | criteria 子包：contains / not-contains / 工具调用核对（judge 缓） | 判据单测绿；喂 mock Observation 真实出 pass/fail；过边界守卫 |
-| P2 | examples 全链 demo + 离线判分入口 | 跑出真实 md/json 报告且含 coverage |
-| P3 | Registry + runner + CLI | 声明 3+ 场景，一条命令出全部出口分 |
-| P4 | provision 配方文档 + 参考实现 | demo 用安装态能力包跑通 |
-| P5 | repeat 统计 + 派生指标 | 报告含稳定率维度 |
-| P6 | 报告 diff 工具 | 改一行提示词，对比直接显示维度变化 |
-| P7 | CI 零 token 默认 + live 显式入口 | CI 默认零 token |
-| P8 | 下游 pin 新 release 接入 | 既有基线不退化 + coverage 进报告 |
+| 阶段 | 交付物                                                            | 硬性成功标准                                                 |
+| ---- | ----------------------------------------------------------------- | ------------------------------------------------------------ |
+| P1   | criteria 子包：contains / not-contains / 工具调用核对（judge 缓） | 判据单测绿；喂 mock Observation 真实出 pass/fail；过边界守卫 |
+| P2   | examples 全链 demo + 离线判分入口                                 | 跑出真实 md/json 报告且含 coverage                           |
+| P3   | Registry + runner + CLI                                           | 声明 3+ 场景，一条命令出全部出口分                           |
+| P4   | provision 配方文档 + 参考实现                                     | demo 用安装态能力包跑通                                      |
+| P5   | repeat 统计 + 派生指标                                            | 报告含稳定率维度                                             |
+| P6   | 报告 diff 工具                                                    | 改一行提示词，对比直接显示维度变化                           |
+| P7   | CI 零 token 默认 + live 显式入口                                  | CI 默认零 token                                              |
+| P8   | 下游 pin 新 release 接入                                          | 既有基线不退化 + coverage 进报告                             |
 
 **最小可用闭环** = P1 + P2 + P3 + P7简化；P4–P6 是体验增强，可缓（P6 前期用 git diff
 顶替、P5 前期手动 repeat 顶替）。

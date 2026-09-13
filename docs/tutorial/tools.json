@@ -493,6 +493,33 @@
           "recipes": ["matrix-report"]
         }
       ]
+    },
+    {
+      "id": "criteria",
+      "purpose": "通用判据子包：文本包含/排除与工具调用核对（可选插件）。",
+      "tools": [
+        {
+          "name": "textContains",
+          "category": "primary",
+          "purpose": "文本包含判据（AND 语义）。",
+          "risk": "safe",
+          "reason": "可选判据子包，设计见 docs/spec/capability-system.md；runner 落地后补 recipe。"
+        },
+        {
+          "name": "textNotContains",
+          "category": "primary",
+          "purpose": "红线排除判据。",
+          "risk": "safe",
+          "reason": "可选判据子包，设计见 docs/spec/capability-system.md；runner 落地后补 recipe。"
+        },
+        {
+          "name": "toolCall",
+          "category": "primary",
+          "purpose": "工具调用核对判据（completed + 入参子集）。",
+          "risk": "safe",
+          "reason": "可选判据子包，设计见 docs/spec/capability-system.md；runner 落地后补 recipe。"
+        }
+      ]
     }
   ]
 }
