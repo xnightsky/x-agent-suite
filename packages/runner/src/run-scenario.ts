@@ -97,7 +97,7 @@ export async function runScenarioSpec(
         commands: [],
         startedAt: turnStart,
         endedAt: Date.now(),
-        metadata: {},
+        metadata: observation.metadata ?? {},
       });
     }
   } finally {

@@ -142,6 +142,39 @@ test("轮次超时显式抛错", async () => {
   );
 });
 
+test("driver 提供的 metadata 透传进 TurnObservation（领域证据自由区）", async () => {
+  const withEvidence: AgentDriver = {
+    start: async () => {},
+    sendPrompt: async (text) => ({
+      text,
+      toolCalls: [],
+      toolCallsCount: 0,
+      events: [],
+      metadata: { sideEffect: "role-a.json 快照" },
+    }),
+    events: () => ({
+      [Symbol.asyncIterator]: () => ({
+        next: () => Promise.resolve({ done: true, value: undefined }),
+      }),
+    }),
+    close: async () => {},
+  };
+  const evidenceCheck: Criterion = {
+    name: "evidence-check",
+    scope: "turn",
+    evaluate: (turn) => ({
+      pass: turn.metadata.sideEffect === "role-a.json 快照",
+      score: 1,
+      reason: String(turn.metadata.sideEffect ?? "无证据"),
+    }),
+  };
+  const result = await runScenarioSpec(
+    makeSpec({ turns: [{ send: "你好", expect: { "evidence-check": true } }] }),
+    { createDriver: () => withEvidence, criteria: [evidenceCheck] },
+  );
+  assert.equal(result.hardPass, true);
+});
+
 test("空轮次场景显式抛错", async () => {
   await assert.rejects(
     () =>
