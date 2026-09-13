@@ -51,6 +51,8 @@ export interface ScenarioResult {
 
 默认 Dry + Hard 必须全过；Fuzzy 兜底；LLM judge 仅人工评估时开启。
 
+各判据的具名结果如何加权汇总成出口分（weight / knockout / absent / threshold），见 [scoring-aggregation.md](./scoring-aggregation.md)。
+
 ## 执行不变量
 
 从实际 runner 实践中沉淀的硬约束。违反不会立即抛错，但会污染评估结果。

@@ -11,3 +11,4 @@
 | [test-file-naming-taxonomy.md](./test-file-naming-taxonomy.md)                 | 测试终止后缀、风险车道与横切标签的取舍               |
 | [harness-capability-surface.md](./harness-capability-surface.md)               | 业界测试框架能力面对标：点收编与面缺口               |
 | [on-demand-install-artifact-matrix.md](./on-demand-install-artifact-matrix.md) | 按需安装形态评估：为什么不现在扩展制品矩阵           |
+| [skill-mixed-execution.md](./skill-mixed-execution.md)                           | 混合执行场景承载力：skill+脚本+CLI / 依赖嵌套 / 安装布局的业界做法 |

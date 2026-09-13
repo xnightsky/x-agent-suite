@@ -16,6 +16,7 @@
 | [llm-fixture.md](./llm-fixture.md)                 | `LlmBackend`、自研 fake provider、`HarnessProfile` 配置               |
 | [packaging.md](./packaging.md)                     | 包分发、安装方式、版本管理与原生依赖分层                              |
 | [scenario-evaluation.md](./scenario-evaluation.md) | 评分层：Dry / Hard / Fuzzy / enumerate / 报告                         |
+| [scoring-aggregation.md](./scoring-aggregation.md) | 打分聚合机：维度声明、knockout/absent 三态、静态打分出口              |
 | [matrix.md](./matrix.md)                           | `runMatrix`：变体串行、carrier 并行、对照表与报告                     |
 | [long-lived-driver.md](./long-lived-driver.md)     | `LongLivedAgentDriver` 与入站事件观测                                 |
 | [pty-driver.md](./pty-driver.md)                   | PTY 驱动层：屏幕 idle 判定与 TUI 门槛                                 |

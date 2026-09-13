@@ -43,6 +43,13 @@
 - **理由**：headless 结构化输出有契约，PTY 屏幕断言随界面改版即碎。
 - **PTY 唯一不可替代处**：验证交互式审批流本身。
 
+### 混合执行：不提供统一执行抽象
+
+- **否决**：为「skill + 脚本 + CLI」混合场景提供统一的执行载体抽象。
+- **理由**：业界成熟方案（Inspect 的 solver、SWE-bench 的容器任务）全是「环境 / 编排 / 打分」分层，编排自由度留在消费者侧；内部 skill 工具链实践的统一载体抽象尝试亦以下线收场。框架只提供 Scenario / provision / sandbox / driver 四个口子。
+- **反转条件**：某执行抽象被证明在两个以上消费领域同时成立。
+- 依据见 `docs/research/skill-mixed-execution.md`。
+
 ### 入站验证：长驻协议优先于一次性 headless
 
 - **否决**：只用一次性 headless 覆盖全部语义。
