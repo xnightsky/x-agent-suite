@@ -4,9 +4,10 @@
 
 ## 目录
 
-| 文档                                                             | 内容                                                 |
-| ---------------------------------------------------------------- | ---------------------------------------------------- |
-| [mcp-push-vs-pull.md](./mcp-push-vs-pull.md)                     | MCP 服务端能否主动推送：协议层、传输层、客户端层分析 |
-| [agent-messaging-layers.md](./agent-messaging-layers.md)         | Agent 消息通信：传输层与入站触达层的拆分             |
-| [test-file-naming-taxonomy.md](./test-file-naming-taxonomy.md)   | 测试终止后缀、风险车道与横切标签的取舍               |
-| [harness-capability-surface.md](./harness-capability-surface.md) | 业界测试框架能力面对标：点收编与面缺口               |
+| 文档                                                                           | 内容                                                 |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| [mcp-push-vs-pull.md](./mcp-push-vs-pull.md)                                   | MCP 服务端能否主动推送：协议层、传输层、客户端层分析 |
+| [agent-messaging-layers.md](./agent-messaging-layers.md)                       | Agent 消息通信：传输层与入站触达层的拆分             |
+| [test-file-naming-taxonomy.md](./test-file-naming-taxonomy.md)                 | 测试终止后缀、风险车道与横切标签的取舍               |
+| [harness-capability-surface.md](./harness-capability-surface.md)               | 业界测试框架能力面对标：点收编与面缺口               |
+| [on-demand-install-artifact-matrix.md](./on-demand-install-artifact-matrix.md) | 按需安装形态评估：为什么不现在扩展制品矩阵           |
