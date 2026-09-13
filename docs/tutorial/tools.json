@@ -527,6 +527,40 @@
           "recipes": ["criteria-aggregation"]
         }
       ]
+    },
+    {
+      "id": "runner",
+      "purpose": "场景运行器：Registry 运行时、ScenarioSpec 执行与 CLI。",
+      "tools": [
+        {
+          "name": "createRegistry",
+          "category": "primary",
+          "purpose": "创建内存注册表（driver/profile/判据/场景）。",
+          "risk": "safe",
+          "reason": "P3 落地；e2e 证据见 packages/runner/tests/cli.test.ts，recipe 随 P4 补。"
+        },
+        {
+          "name": "runScenarioSpec",
+          "category": "primary",
+          "purpose": "执行一个 ScenarioSpec：逐轮驱动、判据调度、可选聚合。",
+          "risk": "safe",
+          "reason": "P3 落地；e2e 证据见 packages/runner/tests/cli.test.ts，recipe 随 P4 补。"
+        },
+        {
+          "name": "main",
+          "category": "primary",
+          "purpose": "CLI 入口：x-agent-suite eval <config-module>。",
+          "risk": "safe",
+          "reason": "P3 落地；e2e 证据见 packages/runner/tests/cli.test.ts，recipe 随 P4 补。"
+        },
+        {
+          "name": "loadRunConfig",
+          "category": "primitive",
+          "purpose": "加载并校验 run config 模块形状。",
+          "risk": "safe",
+          "reason": "CLI 内部接缝，按模块手册使用。"
+        }
+      ]
     }
   ]
 }

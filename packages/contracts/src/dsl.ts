@@ -8,6 +8,8 @@
  * - 领域特有需求通过 `metadata` / `provision` / `driverOptions` 自由区表达。
  */
 
+import type { AggregationSpec } from "./aggregation.ts";
+
 /**
  * expect 块：键为 metric 名，值原样透传给同名判据。
  *
@@ -49,6 +51,8 @@ export interface ScenarioSpec {
   readonly turns: TurnSpec[];
   /** 会话终态判据。 */
   readonly expect?: ExpectBlock;
+  /** 聚合声明：存在时由 runner 用 resolveAggregate 产出口分。 */
+  readonly aggregate?: AggregationSpec;
   /** 场景级等待上界默认值。 */
   readonly timeoutMs?: number;
   /** 领域自由区（分类标签、说明、优先级……）。kit 只透传进报告。 */

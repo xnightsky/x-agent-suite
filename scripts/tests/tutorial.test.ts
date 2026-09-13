@@ -22,6 +22,7 @@ const PACKAGE_IDS = [
   "observation",
   "matrix",
   "criteria",
+  "runner",
 ] as const;
 
 interface TutorialCatalog {

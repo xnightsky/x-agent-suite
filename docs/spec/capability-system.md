@@ -34,7 +34,7 @@ x-agent-suite 是领域中立的 Agent 测试框架：不认识任何被测系�
 | 能力件                                             | 概念来源                       | 裁决        | 归属            | 状态       |
 | -------------------------------------------------- | ------------------------------ | ----------- | --------------- | ---------- |
 | 场景声明 DSL                                       | promptfoo tests / Inspect Task | 内核        | `contracts/dsl` | ⚠️ 契约在  |
-| 场景 runner + Registry + CLI                       | promptfoo eval / Inspect       | 内核        | P3              | ❌ P3      |
+| 场景 runner + Registry + CLI                       | promptfoo eval / Inspect       | 内核        | P3              | ✅ P3      |
 | 考题 authoring 规范（GREEN/RED、钉词表、防免费绿） | 内部评测实践                   | 文档 + 模板 | `docs/`         | ❌ P3 配套 |
 
 ### 执行层
@@ -115,7 +115,7 @@ x-agent-suite 是领域中立的 Agent 测试框架：不认识任何被测系�
 flowchart TD
     P0["P0 基座 ✅<br/>7 包 + 聚合机 + 专题文档"] --> P1["P1 判定层 ✅<br/>@x-agent-suite/criteria 最小判据集"]
     P1 --> P2["P2 端到端证据 ✅<br/>demo 全链 + 离线判分 + 报告 coverage"]
-    P2 --> P3["P3 runner + Registry + CLI<br/>考卷一条命令全跑（最大单件）"]
+    P2 --> P3["P3 runner + Registry + CLI ✅<br/>考卷一条命令全跑"]
     P2 --> P4["P4 安装态 provision 配方"]
     P3 --> P5["P5 统计层<br/>repeat 稳定率 + 派生指标(mathjs)"]
     P5 --> P6["P6 报告 diff 工具<br/>反馈闭环"]

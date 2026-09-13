@@ -192,6 +192,31 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  packages/runner:
+    dependencies:
+      '@x-agent-suite/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@x-agent-suite/observation':
+        specifier: workspace:*
+        version: link:../observation
+    devDependencies:
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.9.5
+      '@x-agent-suite/criteria':
+        specifier: workspace:*
+        version: link:../criteria
+      '@x-agent-suite/driver':
+        specifier: workspace:*
+        version: link:../driver
+      tsx:
+        specifier: ^4.21.0
+        version: 4.23.12
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   packages/sandbox:
     dependencies:
       '@x-agent-suite/contracts':
