@@ -31,6 +31,17 @@ config：[`examples/tutorial/fixtures/tutorial-runner.config.ts`](../../../examp
 3. 每场景写 md + json 报告，聚合结果经 `artifact` 透传进 JSON；
 4. 任一场景基础设施失败（启动失败/超时/驱动报错）→ 退出码 1；用法错误 → 2。
 
+## diff：改一行提示词，看维度变化
+
+```bash
+x-agent-suite diff <基线.json|目录> <候选.json|目录>
+```
+
+对两份报告产出维度级变化清单：`hardPass ✓→✗`、`score 0.8→0.4（Δ-0.40）`、
+`text-contains hit→miss`、稳定率变化；目录模式按场景 id 配对（多出的场景标
+NEW/REMOVED）。diff 是只读工具，退出码恒 0（用法错误 2）——迭代 prompt 时
+它就是反馈闭环的最后一环。
+
 ## repeat：稳定率维度
 
 config 加 `repeat: N` 后每个场景顺序执行 N 次（本教程 config 即 `repeat: 2`）：

@@ -6,3 +6,4 @@ export * from "./checks.ts";
 export * from "./aggregation.ts";
 export * from "./criteria-runner.ts";
 export * from "./report.ts";
+export * from "./report-diff.ts";

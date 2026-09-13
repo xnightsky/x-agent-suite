@@ -49,6 +49,7 @@ export type {
 export type {
   ScenarioReportRow,
   RepeatStats,
+  ReportDocument,
   WriteReportsOptions,
   ReportPaths,
 } from "./report.ts";

@@ -483,6 +483,13 @@
           "purpose": "按 expect 块把判据集分发到各轮/会话并收集具名结果。",
           "risk": "safe",
           "recipes": ["criteria-aggregation"]
+        },
+        {
+          "name": "diffScenarioReports",
+          "category": "primary",
+          "purpose": "对比两份 JSON 报告产出维度级变化清单（lens 注入聚合视图）。",
+          "risk": "safe",
+          "reason": "P6 落地；单测见 observation/tests/report-diff.test.ts，CLI e2e 见 runner/tests/cli.test.ts。"
         }
       ]
     },

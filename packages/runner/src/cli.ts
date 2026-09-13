@@ -9,8 +9,15 @@
 
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { ScenarioSpec } from "@x-agent-suite/contracts";
-import { writeScenarioReports } from "@x-agent-suite/observation";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { join } from "node:path";
+import type { ReportDocument, ScenarioSpec } from "@x-agent-suite/contracts";
+import {
+  diffScenarioReports,
+  writeScenarioReports,
+  type ReportDiffLens,
+  type ScenarioReportDiff,
+} from "@x-agent-suite/observation";
 import {
   runScenarioSpec,
   type RunnerArtifact,
@@ -52,9 +59,103 @@ export async function loadRunConfig(configPath: string): Promise<RunConfig> {
   return config as RunConfig;
 }
 
+/** RunnerArtifact 的 diff 镜头：聚合分 + 维度状态。 */
+const runnerLens: ReportDiffLens = {
+  score: (artifact) =>
+    (artifact as RunnerArtifact | undefined)?.aggregate?.score,
+  dimensions: (artifact) =>
+    (artifact as RunnerArtifact | undefined)?.aggregate?.dimensions.map(
+      (dimension) => ({
+        metric: Array.isArray(dimension.metric)
+          ? dimension.metric.join("+")
+          : (dimension.metric as string),
+        state: dimension.state,
+      }),
+    ) ?? [],
+};
+
+/** 读取一个报告 JSON 文件。 */
+async function readReport(path: string): Promise<ReportDocument> {
+  return JSON.parse(await readFile(path, "utf8")) as ReportDocument;
+}
+
+/** 加载 diff 输入：单个 JSON 文件或目录（收集 *-report.json 按场景索引）。 */
+async function loadDiffTarget(
+  path: string,
+): Promise<Map<string, ReportDocument>> {
+  const reports = new Map<string, ReportDocument>();
+  const info = await stat(path);
+  const files = info.isDirectory()
+    ? (await readdir(path))
+        .filter((file) => file.endsWith("-report.json"))
+        .map((file) => join(path, file))
+    : [path];
+  for (const file of files) {
+    const report = await readReport(file);
+    reports.set(report.scenario, report);
+  }
+  return reports;
+}
+
+/** 渲染一个场景的 diff 行。 */
+function formatDiff(diff: ScenarioReportDiff): string {
+  if (!diff.changed) return `UNCHANGED ${diff.scenario}`;
+  const parts: string[] = [];
+  if (diff.hardPass) {
+    parts.push(
+      `hardPass ${diff.hardPass.before ? "✓" : "✗"}→${diff.hardPass.after ? "✓" : "✗"}`,
+    );
+  }
+  if (diff.score) {
+    parts.push(
+      `score ${diff.score.before}→${diff.score.after}（Δ${diff.score.delta.toFixed(2)}）`,
+    );
+  }
+  for (const dimension of diff.dimensions) {
+    parts.push(`${dimension.metric} ${dimension.before}→${dimension.after}`);
+  }
+  if (diff.hardPassRate) {
+    parts.push(`稳定率 ${diff.hardPassRate.before}→${diff.hardPassRate.after}`);
+  }
+  return `CHANGED ${diff.scenario}：${parts.join("；")}`;
+}
+
+/** diff 子命令：对比两份报告（文件或目录），返回进程退出码。 */
+async function diffMain(argv: readonly string[]): Promise<number> {
+  const [beforePath, afterPath] = argv;
+  if (!beforePath || !afterPath) {
+    console.error(
+      "用法：x-agent-suite diff <before.json|目录> <after.json|目录>",
+    );
+    return 2;
+  }
+  const before = await loadDiffTarget(beforePath);
+  const after = await loadDiffTarget(afterPath);
+  let changedCount = 0;
+  for (const [scenario, afterReport] of after) {
+    const beforeReport = before.get(scenario);
+    if (!beforeReport) {
+      console.log(`NEW ${scenario}（基线中不存在）`);
+      continue;
+    }
+    const diff = diffScenarioReports(beforeReport, afterReport, runnerLens);
+    if (diff.changed) changedCount += 1;
+    console.log(formatDiff(diff));
+  }
+  for (const scenario of before.keys()) {
+    if (!after.has(scenario))
+      console.log(`REMOVED ${scenario}（候选中不存在）`);
+  }
+  console.log(`diff 完成：${changedCount} 个场景有变化`);
+  return 0;
+}
+
 /** CLI 主入口；返回进程退出码。 */
 export async function main(argv: readonly string[]): Promise<number> {
   const [command, configPath] = argv;
+  if (command === "diff") {
+    return diffMain(argv.slice(1));
+  }
   // 命令名对齐业界词汇（promptfoo eval / inspect eval），run 保留为别名。
   if ((command !== "run" && command !== "eval") || !configPath) {
     console.error(

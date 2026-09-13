@@ -69,3 +69,13 @@ export interface ReportPaths {
   /** 明细路径。 */
   readonly jsonPath: string;
 }
+
+/** JSON 报告的落盘文档形状（diff 与离线消费的读取面）。 */
+export interface ReportDocument<Artifact = Record<string, unknown>> {
+  /** 场景 id。 */
+  readonly scenario: string;
+  /** 报告时间戳。 */
+  readonly stamp: string;
+  /** 报告行。 */
+  readonly rows: readonly ScenarioReportRow<Artifact>[];
+}

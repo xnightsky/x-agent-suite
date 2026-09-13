@@ -120,7 +120,7 @@ flowchart TD
     P2 --> P3["P3 runner + Registry + CLI ✅<br/>考卷一条命令全跑"]
     P2 --> P4["P4 安装态 provision ✅<br/>钩子+配方+参考实现+demo"]
     P3 --> P5["P5 统计层 ✅<br/>repeat 稳定率 + 报告维度"]
-    P5 --> P6["P6 报告 diff 工具<br/>反馈闭环"]
+    P5 --> P6["P6 报告 diff ✅<br/>维度级变化清单 + CLI diff"]
     P3 --> P7["P7 CI 分层"]
     P1 --> P8["P8 首个消费者实战<br/>（解冻后；预期回改 P1/P3）"]
     P3 --> P8
@@ -133,7 +133,7 @@ flowchart TD
 | P3   | Registry + runner + CLI                                           | 声明 3+ 场景，一条命令出全部出口分                           |
 | P4   | provision 配方文档 + 参考实现                                     | demo 用安装态能力包跑通                                      |
 | P5   | repeat 统计 + 派生指标                                            | 报告含稳定率维度                                             |
-| P6   | 报告 diff 工具                                                    | 改一行提示词，对比直接显示维度变化                           |
+| P6   | 报告 diff 工具 ✅                                                 | 改一行提示词，对比直接显示维度变化                           |
 | P7   | CI 零 token 默认 + live 显式入口                                  | CI 默认零 token                                              |
 | P8   | 下游 pin 新 release 接入                                          | 既有基线不退化 + coverage 进报告                             |
 

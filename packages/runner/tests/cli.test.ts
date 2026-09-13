@@ -4,7 +4,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadRunConfig, main } from "../src/cli.ts";
@@ -49,6 +49,75 @@ test("3 场景一条命令：行为失败不影响退出码，报告含 coverage
     assert.equal(mdReports.length, 3);
   } finally {
     await rm(outDir, { recursive: true, force: true });
+  }
+});
+
+test("diff 子命令：基线与候选对比点名维度迁移", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "xas-runner-diff-"));
+  try {
+    const makeReport = (score: number, state: string, hardPass: boolean) => ({
+      scenario: "demo/diff",
+      stamp: "s",
+      rows: [
+        {
+          scenario: "demo/diff",
+          carrier: "default",
+          promptVariant: "default",
+          result: {
+            observation: {
+              text: "",
+              toolCalls: [],
+              toolCallsCount: 0,
+              events: [],
+            },
+            artifact: {
+              outcomes: [],
+              aggregate: {
+                pass: hardPass,
+                score,
+                rawScore: score,
+                maxScore: 1,
+                coverage: { evaluated: 1, total: 1 },
+                dimensions: [
+                  {
+                    metric: "text-contains",
+                    state,
+                    contribution: score,
+                    reason: "",
+                  },
+                ],
+                reason: "",
+              },
+            },
+            dryPass: true,
+            hardPass,
+            fuzzyPass: hardPass,
+            latencyMs: 1,
+          },
+        },
+      ],
+    });
+    const beforePath = join(dir, "before-report.json");
+    const afterPath = join(dir, "after-report.json");
+    await writeFile(beforePath, JSON.stringify(makeReport(1, "hit", true)));
+    await writeFile(afterPath, JSON.stringify(makeReport(0, "miss", false)));
+
+    const logs: string[] = [];
+    const original = console.log;
+    console.log = (line: string) => logs.push(String(line));
+    let code = 2;
+    try {
+      code = await main(["diff", beforePath, afterPath]);
+    } finally {
+      console.log = original;
+    }
+    assert.equal(code, 0);
+    const output = logs.join("\n");
+    assert.ok(output.includes("CHANGED demo/diff"), output);
+    assert.ok(output.includes("text-contains hit→miss"), output);
+    assert.ok(output.includes("Δ-1.00"), output);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
   }
 });
 
