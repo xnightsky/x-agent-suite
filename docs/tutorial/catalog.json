@@ -162,6 +162,16 @@
         "Markdown report",
         "JSON report"
       ]
+    },
+    {
+      "id": "scenario-runner",
+      "title": "Scenario Runner：一条命令跑完整考卷",
+      "source": "examples/tutorial/13-scenario-runner.test.ts",
+      "guide": "docs/tutorial/recipes/scenario-runner.md",
+      "command": "pnpm tutorial:runner",
+      "modules": ["driver", "criteria", "runner"],
+      "mode": "offline",
+      "expected": ["exit code 0", "3 scenario reports", "aggregate coverage"]
     }
   ],
   "combinations": [

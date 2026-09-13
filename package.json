@@ -46,7 +46,8 @@
     "ittest": "tsx scripts/run-ittests.ts",
     "typecheck": "tsc --noEmit",
     "boundary": "node scripts/check-boundary.mjs",
-    "check": "pnpm boundary && pnpm typecheck && pnpm test && pnpm ittest"
+    "check": "pnpm boundary && pnpm typecheck && pnpm test && pnpm ittest",
+    "tutorial:runner": "tsx --test examples/tutorial/13-scenario-runner.test.ts"
   },
   "dependencies": {
     "@x-agent-suite/contracts": "workspace:*",
@@ -56,7 +57,8 @@
     "@x-agent-suite/llm-fixture": "workspace:*",
     "@x-agent-suite/matrix": "workspace:*",
     "@x-agent-suite/observation": "workspace:*",
-    "@x-agent-suite/sandbox": "workspace:*"
+    "@x-agent-suite/sandbox": "workspace:*",
+    "@x-agent-suite/runner": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

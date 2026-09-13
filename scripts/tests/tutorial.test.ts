@@ -301,6 +301,32 @@ test("AGENTS 为玩法问题提供教程上下文指针", async () => {
   assert.match(agents, /组合.*docs\/tutorial\/catalog\.json/);
 });
 
+test("scenario-runner 一条命令跑 3 场景并出报告", async () => {
+  const { summary, outDir } = await runRecipe(
+    "examples/tutorial/13-scenario-runner.test.ts",
+  );
+  try {
+    assert.equal(summary.recipe, "scenario-runner");
+    assert.equal(summary.exitCode, 0);
+    assert.equal(summary.reports, 3);
+    const scenarios = summary.scenarios as readonly {
+      hardPass: boolean;
+      score: number | null;
+      coverage: { evaluated: number; total: number } | null;
+    }[];
+    assert.equal(scenarios.length, 3);
+    assert.equal(
+      scenarios.filter((item) => item.hardPass).length,
+      2,
+      "runner-pass 与 runner-no-expect 应通过",
+    );
+    const aggregated = scenarios.find((item) => item.coverage !== null);
+    assert.deepEqual(aggregated?.coverage, { evaluated: 2, total: 3 });
+  } finally {
+    await rm(outDir, { recursive: true, force: true });
+  }
+});
+
 test("criteria-aggregation 跑通判据调度、聚合与双格式报告", async () => {
   const { summary, outDir } = await runRecipe(
     "examples/tutorial/12-criteria-aggregation.test.ts",

@@ -34,6 +34,9 @@ importers:
       '@x-agent-suite/observation':
         specifier: workspace:*
         version: link:packages/observation
+      '@x-agent-suite/runner':
+        specifier: workspace:*
+        version: link:packages/runner
       '@x-agent-suite/sandbox':
         specifier: workspace:*
         version: link:packages/sandbox
