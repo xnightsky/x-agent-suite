@@ -147,6 +147,21 @@
         "real tool-calling response",
         "redacted diagnostics"
       ]
+    },
+    {
+      "id": "criteria-aggregation",
+      "title": "Criteria → Aggregation → Report",
+      "source": "examples/tutorial/12-criteria-aggregation.test.ts",
+      "guide": "docs/tutorial/recipes/criteria-aggregation.md",
+      "command": "pnpm tutorial:aggregate",
+      "modules": ["driver", "observation", "criteria"],
+      "mode": "offline",
+      "expected": [
+        "criterion outcomes",
+        "aggregate coverage",
+        "Markdown report",
+        "JSON report"
+      ]
     }
   ],
   "combinations": [
@@ -236,10 +251,7 @@
     {
       "goal": "用借用的指定 provider/model 渠道驱动真实 Pi PTY（真实 token）",
       "status": "conditional",
-      "modules": [
-        "harness:createPtyAgentDriver",
-        "llm-fixture:LiveBackend"
-      ],
+      "modules": ["harness:createPtyAgentDriver", "llm-fixture:LiveBackend"],
       "requires": [
         "已安装 Pi CLI",
         "宿主登录态与 ~/.env.e2e.yaml carriers.pi 声明（from: harness，可选 provider 选择器）",

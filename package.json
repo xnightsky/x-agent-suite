@@ -36,6 +36,7 @@
     "tutorial:long-lived-wire": "tsx --test examples/tutorial/06-long-lived-wire.test.ts",
     "tutorial:pty": "tsx --test examples/tutorial/07-pty.test.ts",
     "tutorial:live:guard": "tsx --test examples/tutorial/08-live-guard.test.ts",
+    "tutorial:aggregate": "tsx --test examples/tutorial/12-criteria-aggregation.test.ts",
     "tutorial:pty:pi": "tsx --test examples/tutorial/09-pi-pty.ittest.ts",
     "ittest:token:tutorial": "tsx --test examples/tutorial/10-live-smoke.token.ittest.ts",
     "ittest:token:pi-pty": "tsx --test examples/tutorial/11-pi-live-pty.token.ittest.ts",
@@ -49,6 +50,7 @@
   },
   "dependencies": {
     "@x-agent-suite/contracts": "workspace:*",
+    "@x-agent-suite/criteria": "workspace:*",
     "@x-agent-suite/driver": "workspace:*",
     "@x-agent-suite/harness": "workspace:*",
     "@x-agent-suite/llm-fixture": "workspace:*",

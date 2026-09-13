@@ -457,6 +457,13 @@
           "purpose": "同时写出 Markdown 结论表和 JSON 明细。",
           "risk": "safe",
           "recipes": ["mock-report", "matrix-report"]
+        },
+        {
+          "name": "runCriteria",
+          "category": "primary",
+          "purpose": "按 expect 块把判据集分发到各轮/会话并收集具名结果。",
+          "risk": "safe",
+          "recipes": ["criteria-aggregation"]
         }
       ]
     },
@@ -503,21 +510,21 @@
           "category": "primary",
           "purpose": "文本包含判据（AND 语义）。",
           "risk": "safe",
-          "reason": "可选判据子包，设计见 docs/spec/capability-system.md；runner 落地后补 recipe。"
+          "recipes": ["criteria-aggregation"]
         },
         {
           "name": "textNotContains",
           "category": "primary",
           "purpose": "红线排除判据。",
           "risk": "safe",
-          "reason": "可选判据子包，设计见 docs/spec/capability-system.md；runner 落地后补 recipe。"
+          "recipes": ["criteria-aggregation"]
         },
         {
           "name": "toolCall",
           "category": "primary",
           "purpose": "工具调用核对判据（completed + 入参子集）。",
           "risk": "safe",
-          "reason": "可选判据子包，设计见 docs/spec/capability-system.md；runner 落地后补 recipe。"
+          "recipes": ["criteria-aggregation"]
         }
       ]
     }

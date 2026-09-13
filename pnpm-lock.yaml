@@ -16,6 +16,9 @@ importers:
       '@x-agent-suite/contracts':
         specifier: workspace:*
         version: link:packages/contracts
+      '@x-agent-suite/criteria':
+        specifier: workspace:*
+        version: link:packages/criteria
       '@x-agent-suite/driver':
         specifier: workspace:*
         version: link:packages/driver

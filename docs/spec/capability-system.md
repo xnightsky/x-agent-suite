@@ -66,11 +66,11 @@ x-agent-suite 是领域中立的 Agent 测试框架：不认识任何被测系�
 
 ### 打分层
 
-| 能力件                                         | 概念来源                        | 裁决                   | 归属                           | 状态       |
-| ---------------------------------------------- | ------------------------------- | ---------------------- | ------------------------------ | ---------- |
-| 加权聚合机（weight/threshold/knockout/absent） | promptfoo + 自造语义            | 内核                   | `observation/resolveAggregate` | ✅         |
-| 离线判分（对已有输出跑判定，不起 agent）       | promptfoo `--model-outputs`     | 内核入口产品化         | `observation`                  | ❌ P2 附带 |
-| 自定义打分函数                                 | promptfoo assertScoringFunction | 天然对等（判据即函数） | 已有契约                       | ✅         |
+| 能力件                                         | 概念来源                        | 裁决                   | 归属                           | 状态  |
+| ---------------------------------------------- | ------------------------------- | ---------------------- | ------------------------------ | ----- |
+| 加权聚合机（weight/threshold/knockout/absent） | promptfoo + 自造语义            | 内核                   | `observation/resolveAggregate` | ✅    |
+| 离线判分（对已有输出跑判定，不起 agent）       | promptfoo `--model-outputs`     | 内核入口产品化         | `observation/runCriteria`      | ✅ P2 |
+| 自定义打分函数                                 | promptfoo assertScoringFunction | 天然对等（判据即函数） | 已有契约                       | ✅    |
 
 ### 统计层（数据集轴）
 
@@ -81,12 +81,12 @@ x-agent-suite 是领域中立的 Agent 测试框架：不认识任何被测系�
 
 ### 报告层
 
-| 能力件                                    | 概念来源               | 裁决                                   | 归属                 | 状态                      |
-| ----------------------------------------- | ---------------------- | -------------------------------------- | -------------------- | ------------------------- |
-| md/json 报告 + 分维度 + coverage          | promptfoo CLI 报告     | 内核                                   | `observation/report` | ✅（coverage 展示 P2 补） |
-| 两版报告维度级 diff（反馈闭环）           | promptfoo side-by-side | 内核极简工具                           | 未排期               | ❌ P6                     |
-| 更多输出格式（JUnit / HTML / 自定义模板） | CI 生态惯例            | 内核（按需）                           | `observation/report` | ❌ 未排期                 |
-| Web UI                                    | promptfoo web 报告     | **不做**（反转条件：第三个消费者要求） | —                    | ⛔                        |
+| 能力件                                    | 概念来源               | 裁决                                   | 归属                 | 状态                                                      |
+| ----------------------------------------- | ---------------------- | -------------------------------------- | -------------------- | --------------------------------------------------------- |
+| md/json 报告 + 分维度 + coverage          | promptfoo CLI 报告     | 内核                                   | `observation/report` | ✅（coverage 经 artifact 进 JSON；md 表展示留待未决事项） |
+| 两版报告维度级 diff（反馈闭环）           | promptfoo side-by-side | 内核极简工具                           | 未排期               | ❌ P6                                                     |
+| 更多输出格式（JUnit / HTML / 自定义模板） | CI 生态惯例            | 内核（按需）                           | `observation/report` | ❌ 未排期                                                 |
+| Web UI                                    | promptfoo web 报告     | **不做**（反转条件：第三个消费者要求） | —                    | ⛔                                                        |
 
 ### 工程层
 
@@ -113,8 +113,8 @@ x-agent-suite 是领域中立的 Agent 测试框架：不认识任何被测系�
 
 ```mermaid
 flowchart TD
-    P0["P0 基座 ✅<br/>7 包 + 聚合机 + 专题文档"] --> P1["P1 判定层 ❌咽喉<br/>@x-agent-suite/criteria 最小判据集"]
-    P1 --> P2["P2 端到端证据<br/>demo 全链 + 离线判分 + 报告补 coverage"]
+    P0["P0 基座 ✅<br/>7 包 + 聚合机 + 专题文档"] --> P1["P1 判定层 ✅<br/>@x-agent-suite/criteria 最小判据集"]
+    P1 --> P2["P2 端到端证据 ✅<br/>demo 全链 + 离线判分 + 报告 coverage"]
     P2 --> P3["P3 runner + Registry + CLI<br/>考卷一条命令全跑（最大单件）"]
     P2 --> P4["P4 安装态 provision 配方"]
     P3 --> P5["P5 统计层<br/>repeat 稳定率 + 派生指标(mathjs)"]

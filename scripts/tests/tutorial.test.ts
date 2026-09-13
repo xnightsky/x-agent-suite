@@ -300,6 +300,26 @@ test("AGENTS 为玩法问题提供教程上下文指针", async () => {
   assert.match(agents, /组合.*docs\/tutorial\/catalog\.json/);
 });
 
+test("criteria-aggregation 跑通判据调度、聚合与双格式报告", async () => {
+  const { summary, outDir } = await runRecipe(
+    "examples/tutorial/12-criteria-aggregation.test.ts",
+  );
+  try {
+    assert.equal(summary.recipe, "criteria-aggregation");
+    assert.equal(summary.pass, false);
+    assert.equal(summary.rawScore, 1);
+    assert.equal(summary.maxScore, 5);
+    assert.deepEqual(summary.coverage, { evaluated: 3, total: 4 });
+    assert.deepEqual(summary.states, ["hit", "hit", "miss", "absent"]);
+    const report = summary.report as { mdPath: string; jsonPath: string };
+    const json = await readFile(report.jsonPath, "utf8");
+    assert.ok(json.includes("coverage"), "JSON 报告应包含 coverage");
+    await access(report.mdPath);
+  } finally {
+    await rm(outDir, { recursive: true, force: true });
+  }
+});
+
 test("mock-report 跑通 Observation、checks 与双格式报告", async () => {
   const { summary, outDir } = await runRecipe(
     "examples/tutorial/01-mock-report.test.ts",
