@@ -44,6 +44,7 @@ E2E_PI_PTY=1 pnpm tutorial:pty:pi
 - 屏幕文本用于 ready、回显和 idle 同步。
 - 真实工具成功必须来自结构化遥测、server 记录或 artifact，不能靠 prompt/屏幕上出现“成功”字样。
 - 当前 `PtyAgentDriver` 的屏幕方案不提供结构化 inbound，`waitInbound` 会显式拒绝。
+- PTY 面 `Observation.toolCalls` 恒为空（TUI 屏幕看不到结构化工具调用）：`tool-call` 判据直接用在 PTY driver 上会误报 miss。需要工具调用断言时，由复合 driver 从 fake 端点请求体重建 ToolCall 序列放入 Observation（首个 runner 消费者的已验证做法）。
 - PTY 目录必须可丢弃、最小权限；需要绕过审批时还要禁止公网出站并获得单次明确授权。
 
 如果 PTY 同时连接真实 provider，就不再是普通 ittest，必须改名为 `*.token.ittest.ts` 并只允许显式运行；是否放进 `tests/token/` 由仓库组织需要决定。

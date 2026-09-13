@@ -178,6 +178,20 @@ flowchart TD
 - Registry 的 API 形态（同步 / 异步、文件扫描 / 显式 import）待第一个 consumer 验证。
 - CLI 是否需要内置配置文件（如 `x-agent-suite.config.ts`）还是完全通过代码注册。
 - 报告输出格式优先级。
+- 「从 wire 请求重建 ToolCall 序列」是否沉淀为框架工具函数：首个 runner 消费者的复合 driver 已自证可行（PTY 面 `Observation.toolCalls` 恒空时的适配），按边界纪律等第二个消费者出现再立项。
+
+## 消费者验证记录
+
+按反馈回路设计登记真实消费者的验证结论与缺口反馈（匿名化，只记需求模式）。
+
+**2026-09-13 · 首个 runner 消费者（双会话 Agent 协作评测，dev 快照 0.5.0-dev.20260913.1162fbc）**
+
+- 验证通过：子路径导入、ScenarioSpec 执行、判据调度、聚合出口、knockout/threshold 语义、
+  metadata 透传（d82261e）、负向 FAIL 点名未命中维度；真实双 PTY 复合 driver（fake 端点零
+  token）满足 AgentDriver 契约，跨端投递证据经 metadata 断言通过，聚合 1.0。
+- 反馈一（已闭环）：expect 块键名是 metric 名（kebab-case）而非导出名，recipe 已强调。
+- 反馈二（进未决事项）：PTY 面 toolCalls 恒空的「wire 重建 ToolCall」适配件，候选框架能力。
+- 未验证：token 车道（双真实模型）——验证 skill 措辞本身，消费者侧发版后接入。
 
 ## 专题权威索引
 

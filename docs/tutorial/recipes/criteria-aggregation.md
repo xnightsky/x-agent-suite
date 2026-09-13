@@ -38,5 +38,6 @@ pnpm tutorial:aggregate
 
 ## 常见误区
 
+- expect 块的键是 **metric 名**（kebab-case：`text-contains` / `tool-call`），不是导出名（`textContains`）；写错会被引用完整性检查显式抛错。
 - 不要把「判据没跑」当「判据没过」：缺席走 `absent` 映射并计入 coverage，语义不同；
 - 不要在报告里直接比较不同 coverage 的聚合分。

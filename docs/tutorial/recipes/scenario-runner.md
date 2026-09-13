@@ -44,5 +44,6 @@ config：[`examples/tutorial/fixtures/tutorial-runner.config.ts`](../../../examp
 
 ## 常见误区
 
+- expect 块的键是 **metric 名**（kebab-case，如 `text-contains`），不是判据导出名；
 - 不要用退出码表达「评测过没过」——退出码只表达基础设施成败；
 - 行为结论看报告的 `hardPass` / 聚合分，配合 coverage 一起读。

@@ -2,6 +2,21 @@
 
 本文件记录影响消费者接口、行为、安装、配置、协议或报告格式的变化。版本遵循 [Semantic Versioning 2.0.0](https://semver.org/)；源码 workspace 的 `0.0.0` 是不可发布占位值，制品版本由 Git history 与稳定 tag 管理。历史章节与本仓稳定 tag 一一对应，不记录未发布的版本号。
 
+## 0.5.0 - 2026-09-13
+
+### Added
+
+- 聚合打分机 `resolveAggregate`（`x-agent-suite/observation`）：维度三态（hit/miss/absent）、缺席映射（zero/pass/fail）、knockout 短路、负分维度、coverage 披露、weight 默认 1、threshold 出口门槛；配套契约 `AggregationSpec` / `DimensionSpec` / `AggregateResult`。
+- 判据调度 `runCriteria`（`x-agent-suite/observation`）：按 expect 块把判据集分发到各轮/会话并收集 `CriterionOutcome`，引用完整性与重复注册显式抛错；同一入口支持离线判分（对已有 Observation 复跑判定，不起 driver）。
+- 最小领域中立判据集（`x-agent-suite/criteria`）：`textContains` / `textNotContains` / `toolCall`（metric 名分别为 `text-contains` / `text-not-contains` / `tool-call`）；expect 形状非法抛 TypeError（配置错误不等于评测失败）。
+- 场景运行器（`x-agent-suite/runner`）：`createRegistry` 内存注册表（契约写侧 + 读侧查找）；`runScenarioSpec` 执行 `ScenarioSpec`（逐轮驱动 → 会话观测 → 判据调度 → 可选聚合 → ScenarioResult；三级轮超时、基础设施失败显式抛错、finally close）；CLI `x-agent-suite eval <config-module>`（config 为代码模块；退出码只反映基础设施失败，行为结论看报告）。`ScenarioSpec` 新增可选 `aggregate` 字段作为聚合声明载体。
+- 聚合分发包新增 `x-agent-suite/criteria` 与 `x-agent-suite/runner` 子路径。
+- 教程：criteria-aggregation 与 scenario-runner 两个 recipe；根 README 新增「流水线阶段」槽位表（每段可替换的默认实现与合法替换值）。
+
+### Fixed
+
+- `runScenarioSpec` 透传 driver 提供的 `Observation.metadata` 至轮切片（此前静默丢弃，领域证据自由区在 runner 链路断裂）。
+
 ## 0.4.0 - 2026-09-10
 
 ### Added
