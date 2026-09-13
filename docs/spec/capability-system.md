@@ -46,7 +46,7 @@ x-agent-suite 是领域中立的 Agent 测试框架：不认识任何被测系�
 | 驱动契约（AgentDriver / HarnessProfile） | 本仓原创（强于 promptfoo providers）  | 内核                                 | `contracts/driver`、`harness` | ✅                                                                     |
 | 进程/PTY 基座                            | —                                     | 内核                                 | `driver`                      | ✅                                                                     |
 | 隔离（HOME/cwd/env 白名单）              | Inspect sandbox / Terminal-Bench 容器 | 内核                                 | `sandbox`                     | ✅                                                                     |
-| provision（铺安装态、嵌套依赖、fixture） | SWE-bench 任务容器                    | 钩子在内核、配方在文档               | `contracts/dsl` + `docs/`     | ⚠️ 钩子 ✅ / 配方 ❌ P4                                                |
+| provision（铺安装态、嵌套依赖、fixture） | SWE-bench 任务容器                    | 钩子在内核、配方在文档               | `contracts/dsl` + `docs/`     | ✅（钩子 PTY/headless 双driver 齐全；配方+参考实现+安装态 demo 落地）  |
 | PTY 审批专项（真实 TUI 门槛场景激活）    | —                                     | 内核                                 | `driver` + `harness`          | ⚠️ 驱动在；runner×PTY 接线已激活（recipe pi-pty-runner），门槛场景待补 |
 | 统一混合执行抽象                         | —                                     | **不做**（分层承载，见本文决策记录） | —                             | ⛔                                                                     |
 
@@ -118,7 +118,7 @@ flowchart TD
     P0["P0 基座 ✅<br/>7 包 + 聚合机 + 专题文档"] --> P1["P1 判定层 ✅<br/>@x-agent-suite/criteria 最小判据集"]
     P1 --> P2["P2 端到端证据 ✅<br/>demo 全链 + 离线判分 + 报告 coverage"]
     P2 --> P3["P3 runner + Registry + CLI ✅<br/>考卷一条命令全跑"]
-    P2 --> P4["P4 安装态 provision 配方"]
+    P2 --> P4["P4 安装态 provision ✅<br/>钩子+配方+参考实现+demo"]
     P3 --> P5["P5 统计层<br/>repeat 稳定率 + 派生指标(mathjs)"]
     P5 --> P6["P6 报告 diff 工具<br/>反馈闭环"]
     P3 --> P7["P7 CI 分层"]

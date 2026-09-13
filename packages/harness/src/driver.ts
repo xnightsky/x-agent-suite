@@ -49,6 +49,8 @@ export interface HarnessDriverOptions {
   readonly promptTimeoutMs?: number;
   /** 测试注入：跳过 resolveHarnessCommand 直接使用该命令。 */
   readonly commandOverride?: ResolvedCommand;
+  /** sandbox 创建与宿主配置完成后、命令解析与 spawn 前的准备回调（provision 挂载点）。 */
+  readonly sandboxSetup?: (sandbox: SandboxContext) => Promise<void>;
 }
 
 const DEFAULT_PROMPT_TIMEOUT_MS = 120_000;
@@ -108,6 +110,8 @@ class HarnessDriverImpl implements HarnessDriver {
         apiKey: backend.apiKey,
         ...(backend.liveChannel ? { live: backend.liveChannel } : {}),
       });
+      stage = "provision";
+      await this.options.sandboxSetup?.(sandbox);
       stage = "command";
       this.command =
         this.options.commandOverride ??

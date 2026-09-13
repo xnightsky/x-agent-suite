@@ -23,6 +23,7 @@ Backend 不属于 `MockDriver` 或底层 `JsonlProcess` 本身；Scenario DSL ru
 | 一条命令跑完整考卷                | runner CLI（eval）+ config 模块                       | 支持           | [scenario-runner](./recipes/scenario-runner.md)（`pnpm tutorial:runner`）              |
 | harness driver 接 runner          | createHarnessDriver + runScenarioSpec                 | 支持           | [harness-runner](./recipes/harness-runner.md)（`pnpm tutorial:harness-runner`）        |
 | 真实宿主 PTY 接 runner            | createPtyAgentDriver + runScenarioSpec                | 支持（门控）   | [pi-pty-runner](./recipes/pi-pty-runner.md)（`pnpm tutorial:runner:pi`）               |
+| 安装态能力评测（provision）       | sandboxSetup + provisionSandbox + runner              | 支持           | [provision-skill](./recipes/provision-skill.md)（`pnpm tutorial:provision`）           |
 | 自定义 JSONL driver               | sandbox + JsonlProcess                                | 支持           | [sandbox-jsonl](./recipes/sandbox-jsonl.md)（`pnpm tutorial:sandbox`）                 |
 | 测试模型 wire                     | FakeProviderBackend                                   | 支持           | [fixture-backend](./recipes/fixture-backend.md)（`pnpm tutorial:fixture`）             |
 | 横向比较                          | Driver factory + runMatrix + report                   | 支持           | [matrix-report](./recipes/matrix-report.md)（`pnpm tutorial:matrix`）                  |

@@ -85,6 +85,20 @@
           "purpose": "幂等清理单次运行沙箱。",
           "risk": "safe",
           "recipes": ["sandbox-jsonl", "headless-fixture", "pty"]
+        },
+        {
+          "name": "provisionSandbox",
+          "category": "primary",
+          "purpose": "把能力包/fixture 目录铺进沙箱宿主可见位置（copy/symlink，越界显式抛错）。",
+          "risk": "safe",
+          "recipes": ["provision-skill"]
+        },
+        {
+          "name": "sandboxHomePath",
+          "category": "primitive",
+          "purpose": "拼接沙箱 home 下相对路径。",
+          "risk": "safe",
+          "recipes": ["provision-skill"]
         }
       ]
     },
@@ -268,7 +282,7 @@
           "category": "primary",
           "purpose": "创建一次性 headless AgentDriver。",
           "risk": "conditional",
-          "recipes": ["headless-fixture", "harness-runner"]
+          "recipes": ["headless-fixture", "harness-runner", "provision-skill"]
         },
         {
           "name": "createPtyAgentDriver",

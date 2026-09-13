@@ -7,6 +7,11 @@
 
 export { createSandbox } from "./create.ts";
 export { cleanupSandbox } from "./cleanup.ts";
+export {
+  provisionSandbox,
+  sandboxHomePath,
+  type ProvisionEntry,
+} from "./provision.ts";
 export type {
   CreateSandboxOptions,
   SandboxContext,

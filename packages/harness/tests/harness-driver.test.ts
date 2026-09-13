@@ -61,6 +61,32 @@ test("HarnessDriver：writeConfig 失败时清理已创建沙箱并停止 backen
   assert.equal(existsSync(sandboxPath), false);
 });
 
+test("HarnessDriver：sandboxSetup 在 writeConfig 后调用，失败同样聚合清理", async () => {
+  const order: string[] = [];
+  let stopCalls = 0;
+  const driver = createHarnessDriver(
+    makeProfile(async () => {
+      order.push("writeConfig");
+    }),
+    makeBackend(async () => {
+      stopCalls += 1;
+    }),
+    {
+      serverEntry: process.execPath,
+      commandOverride: { command: process.execPath, argsPrefix: [] },
+      sandboxSetup: async (sandbox) => {
+        order.push("sandboxSetup");
+        assert.ok(existsSync(sandbox.homeDir), "钩子应拿到已创建的 sandbox");
+        throw new Error("provision boom");
+      },
+    },
+  );
+
+  await assert.rejects(driver.start(), /provision boom/);
+  assert.deepEqual(order, ["writeConfig", "sandboxSetup"]);
+  assert.equal(stopCalls, 1);
+});
+
 test("HarnessDriver：异常、cause、事件、Observation 与 stderr 均应用 backend redactor", async () => {
   const secret = "synthetic-driver-secret";
   const redactor = (text: string) => text.replaceAll(secret, "[REDACTED]");

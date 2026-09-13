@@ -49,7 +49,8 @@
     "check": "pnpm boundary && pnpm typecheck && pnpm test && pnpm ittest",
     "tutorial:runner": "tsx --test examples/tutorial/13-scenario-runner.test.ts",
     "tutorial:harness-runner": "tsx --test examples/tutorial/14-harness-runner.test.ts",
-    "tutorial:runner:pi": "tsx --test examples/tutorial/15-pi-pty-runner.ittest.ts"
+    "tutorial:runner:pi": "tsx --test examples/tutorial/15-pi-pty-runner.ittest.ts",
+    "tutorial:provision": "tsx --test examples/tutorial/16-provision-skill.test.ts"
   },
   "dependencies": {
     "@x-agent-suite/contracts": "workspace:*",

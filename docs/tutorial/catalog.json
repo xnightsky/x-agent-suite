@@ -195,6 +195,16 @@
         "skip unless E2E_PI_PTY=1",
         "real host scenario run via runner"
       ]
+    },
+    {
+      "id": "provision-skill",
+      "title": "provision 安装态：能力包铺入沙箱并被宿主读取",
+      "source": "examples/tutorial/16-provision-skill.test.ts",
+      "guide": "docs/tutorial/recipes/provision-skill.md",
+      "command": "pnpm tutorial:provision",
+      "modules": ["sandbox", "harness", "criteria", "runner"],
+      "mode": "loopback",
+      "expected": ["installed capability visible in sandbox", "criterion pass"]
     }
   ],
   "combinations": [

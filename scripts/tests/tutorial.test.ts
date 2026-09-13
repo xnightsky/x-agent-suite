@@ -301,6 +301,15 @@ test("AGENTS 为玩法问题提供教程上下文指针", async () => {
   assert.match(agents, /组合.*docs\/tutorial\/catalog\.json/);
 });
 
+test("provision-skill 安装态能力包被宿主读取并通过判据", async () => {
+  const { summary } = await runRecipe(
+    "examples/tutorial/16-provision-skill.test.ts",
+  );
+  assert.equal(summary.recipe, "provision-skill");
+  assert.equal(summary.hardPass, true);
+  assert.equal(summary.backendRequests, 1);
+});
+
 test("harness-runner 跑通 harness driver 全链接线", async () => {
   const { summary } = await runRecipe(
     "examples/tutorial/14-harness-runner.test.ts",
