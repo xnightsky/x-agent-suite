@@ -333,6 +333,7 @@ test("scenario-runner 一条命令跑 3 场景并出报告", async () => {
       hardPass: boolean;
       score: number | null;
       coverage: { evaluated: number; total: number } | null;
+      repeat: { runs: number; hardPassCount: number } | null;
     }[];
     assert.equal(scenarios.length, 3);
     assert.equal(
@@ -342,6 +343,8 @@ test("scenario-runner 一条命令跑 3 场景并出报告", async () => {
     );
     const aggregated = scenarios.find((item) => item.coverage !== null);
     assert.deepEqual(aggregated?.coverage, { evaluated: 2, total: 3 });
+    assert.equal(aggregated?.repeat?.runs, 2, "config repeat: 2 应执行两次");
+    assert.equal(aggregated?.repeat?.hardPassCount, 2, "报告应含稳定率维度");
   } finally {
     await rm(outDir, { recursive: true, force: true });
   }

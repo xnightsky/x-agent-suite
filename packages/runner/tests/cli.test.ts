@@ -41,6 +41,10 @@ test("3 场景一条命令：行为失败不影响退出码，报告含 coverage
     assert.ok(passReport, "应存在 demo/pass 的报告");
     const serialized = await readFile(join(outDir, passReport), "utf8");
     assert.ok(serialized.includes("coverage"), "PASS 场景报告应含 coverage");
+    assert.ok(
+      serialized.includes("hardPassRate"),
+      "config repeat: 2 应让报告含稳定率维度",
+    );
     const mdReports = files.filter((file) => file.endsWith("-report.md"));
     assert.equal(mdReports.length, 3);
   } finally {

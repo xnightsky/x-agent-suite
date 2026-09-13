@@ -27,6 +27,10 @@ interface ReportJson {
         };
       };
     };
+    readonly repeat?: {
+      readonly runs: number;
+      readonly hardPassCount: number;
+    };
   }[];
 }
 
@@ -55,6 +59,7 @@ test("tutorial/scenario-runner：eval 一条命令跑 3 场景并出报告", asy
       hardPass: row.result.hardPass,
       score: row.result.artifact?.aggregate?.score ?? null,
       coverage: row.result.artifact?.aggregate?.coverage ?? null,
+      repeat: row.repeat ?? null,
     });
   }
   const passScenario = scenarios.find((item) => item.score !== null);

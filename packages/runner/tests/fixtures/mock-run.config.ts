@@ -26,6 +26,7 @@ const config: RunConfig = {
   ],
   createDriver: () => new MockDriver(),
   criteria: [textContains],
+  repeat: 2,
   outDir: process.env.XAS_TEST_OUT_DIR ?? ".tmp/runner-cli-test",
 };
 

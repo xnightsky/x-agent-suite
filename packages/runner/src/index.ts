@@ -8,4 +8,9 @@ export {
   type RunScenarioSpecDeps,
   type RunnerArtifact,
 } from "./run-scenario.ts";
+export {
+  runScenarioRepeat,
+  summarizeRepeat,
+  type RepeatRun,
+} from "./repeat.ts";
 export { main, loadRunConfig, type RunConfig } from "./cli.ts";

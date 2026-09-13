@@ -16,6 +16,7 @@ import {
   type RunnerArtifact,
   type RunScenarioSpecDeps,
 } from "./run-scenario.ts";
+import { runScenarioRepeat } from "./repeat.ts";
 
 /** 运行配置：config 模块的 default 导出形状。 */
 export interface RunConfig {
@@ -27,6 +28,8 @@ export interface RunConfig {
   readonly criteria: RunScenarioSpecDeps["criteria"];
   /** 报告输出目录（缺省 .tmp/x-agent-suite）。 */
   readonly outDir?: string;
+  /** 每个场景重复执行次数（缺省 1；大于 1 时报告含稳定率维度）。 */
+  readonly repeat?: number;
 }
 
 /** 加载 config 模块并校验形状；非法显式抛错。 */
@@ -61,10 +64,37 @@ export async function main(argv: readonly string[]): Promise<number> {
   }
   const config = await loadRunConfig(configPath);
   const outDir = config.outDir ?? ".tmp/x-agent-suite";
+  const repeat = config.repeat ?? 1;
   let infraFailures = 0;
 
   for (const spec of config.scenarios) {
     try {
+      if (repeat > 1) {
+        const { results, stats } = await runScenarioRepeat(spec, {
+          createDriver: config.createDriver,
+          criteria: config.criteria,
+          repeat,
+        });
+        const last = results[results.length - 1]!;
+        await writeScenarioReports(
+          [
+            {
+              scenario: spec.id,
+              carrier: "default",
+              promptVariant: "default",
+              result: last,
+              repeat: stats,
+            },
+          ],
+          { scenarioId: spec.id, outDir },
+        );
+        const aggregate = (last.artifact as RunnerArtifact).aggregate;
+        const scoreText = aggregate ? ` score=${aggregate.score}` : "";
+        console.log(
+          `${last.hardPass ? "PASS" : "FAIL"} ${spec.id} 稳定率=${stats.hardPassCount}/${stats.runs}${scoreText}`,
+        );
+        continue;
+      }
       const result = await runScenarioSpec(spec, {
         createDriver: config.createDriver,
         criteria: config.criteria,

@@ -578,6 +578,20 @@
           "purpose": "加载并校验 run config 模块形状。",
           "risk": "safe",
           "reason": "CLI 内部接缝，按模块手册使用。"
+        },
+        {
+          "name": "runScenarioRepeat",
+          "category": "primary",
+          "purpose": "同一场景顺序执行 N 次并汇总稳定率与聚合分统计。",
+          "risk": "safe",
+          "recipes": ["scenario-runner"]
+        },
+        {
+          "name": "summarizeRepeat",
+          "category": "primitive",
+          "purpose": "把单次结果集汇总为 RepeatStats（纯函数，离线统计可复用）。",
+          "risk": "safe",
+          "recipes": ["scenario-runner"]
         }
       ]
     }

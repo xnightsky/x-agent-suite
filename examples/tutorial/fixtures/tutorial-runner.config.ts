@@ -39,6 +39,7 @@ const config: RunConfig = {
   ],
   createDriver: () => new MockDriver(),
   criteria: [textContains, textNotContains],
+  repeat: 2,
   outDir: process.env.XAS_TUTORIAL_OUT_DIR ?? ".tmp/tutorial/scenario-runner",
 };
 

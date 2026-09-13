@@ -9,6 +9,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
+  RepeatStats,
   ReportPaths,
   ScenarioReportRow,
   WriteReportsOptions,
@@ -129,19 +130,27 @@ function renderMarkdown<Artifact = Record<string, unknown>>(
   const lines = [
     `# 报告：${scenarioId}（${stamp}）`,
     "",
-    "| scenario | carrier | prompt | dry | hard | fuzzy | calls | 耗时(ms) | cost($) | error |",
-    "|---|---|---|---|---|---|---|---|---|---|",
+    "| scenario | carrier | prompt | dry | hard | fuzzy | 稳定率 | calls | 耗时(ms) | cost($) | error |",
+    "|---|---|---|---|---|---|---|---|---|---|---|",
   ];
   for (const row of rows) {
     const r = row.result;
     lines.push(
       `| ${row.scenario} | ${row.carrier} | ${row.promptVariant}` +
         ` | ${mark(r.dryPass)} | ${mark(r.hardPass)} | ${mark(r.fuzzyPass)}` +
+        ` | ${formatRepeat(row.repeat)}` +
         ` | ${r.observation.toolCallsCount} | ${r.latencyMs} | ${r.costUsd ?? "—"} | ${r.error ?? "—"} |`,
     );
   }
   lines.push("");
   return lines.join("\n");
+}
+
+/** 渲染稳定率单元格：通过率 + 可选聚合分均值。 */
+function formatRepeat(repeat: RepeatStats | undefined): string {
+  if (!repeat) return "—";
+  const base = `${repeat.hardPassCount}/${repeat.runs}`;
+  return repeat.score ? `${base} μ${repeat.score.mean.toFixed(2)}` : base;
 }
 
 /**

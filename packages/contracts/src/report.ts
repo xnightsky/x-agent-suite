@@ -28,6 +28,26 @@ export interface ScenarioReportRow<Artifact = Record<string, unknown>> {
   readonly stdoutTail?: string;
   /** 宿主 stderr 尾部（排查用，可选）。 */
   readonly stderrTail?: string;
+  /** repeat 统计：同一场景重复执行多次时由 runner 填入。 */
+  readonly repeat?: RepeatStats;
+}
+
+/** repeat 统计：同一场景 N 次执行的稳定性维度。 */
+export interface RepeatStats {
+  /** 执行次数。 */
+  readonly runs: number;
+  /** hardPass 通过次数。 */
+  readonly hardPassCount: number;
+  /** hardPass 稳定率（0..1）。 */
+  readonly hardPassRate: number;
+  /** fuzzyPass 稳定率（0..1）。 */
+  readonly fuzzyPassRate: number;
+  /** 聚合分统计（仅声明了 aggregate 的场景存在）。 */
+  readonly score?: {
+    readonly mean: number;
+    readonly min: number;
+    readonly max: number;
+  };
 }
 
 /** writeScenarioReports 选项。 */

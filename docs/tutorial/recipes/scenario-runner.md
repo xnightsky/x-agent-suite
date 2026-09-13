@@ -31,6 +31,16 @@ config：[`examples/tutorial/fixtures/tutorial-runner.config.ts`](../../../examp
 3. 每场景写 md + json 报告，聚合结果经 `artifact` 透传进 JSON；
 4. 任一场景基础设施失败（启动失败/超时/驱动报错）→ 退出码 1；用法错误 → 2。
 
+## repeat：稳定率维度
+
+config 加 `repeat: N` 后每个场景顺序执行 N 次（本教程 config 即 `repeat: 2`）：
+
+- 报告行多出 `repeat` 统计：稳定率（`hardPassCount/runs`）、fuzzy 稳定率、
+  聚合分均值/极值（仅声明了 `aggregate` 的场景）；
+- md 报告出现「稳定率」列（如 `2/2 μ1.00`），JSON 行携带完整 `RepeatStats`；
+- 任一基础设施失败立即抛出——统计不掩盖基础设施问题；
+- 报告里的代表结果是**最后一次**执行（确定性选择，排查时知道看哪次）。
+
 ## config 为什么是代码模块
 
 判据与 driver 工厂本就是函数，YAML 放不下（promptfoo 被迫逃向 `.mjs` 的前车之鉴）。
