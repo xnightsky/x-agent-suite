@@ -2,6 +2,15 @@
 
 本文件记录影响消费者接口、行为、安装、配置、协议或报告格式的变化。版本遵循 [Semantic Versioning 2.0.0](https://semver.org/)；源码 workspace 的 `0.0.0` 是不可发布占位值，制品版本由 Git history 与稳定 tag 管理。历史章节与本仓稳定 tag 一一对应，不记录未发布的版本号。
 
+## 0.6.0 - 2026-09-13
+
+### Added
+
+- provision 参考实现（`x-agent-suite/sandbox`）：`provisionSandbox` 把能力包 / fixture 目录铺进沙箱宿主可见位置（copy 默认 / symlink 显式，home / cwd 双基准，越界显式抛错），配套 `sandboxHomePath`；headless `createHarnessDriver` 新增 `sandboxSetup` 钩子（时机：sandbox 创建 → writeConfig → provision → spawn，与 PTY driver 对齐），安装态能力评测打通。
+- repeat 统计（`x-agent-suite/runner`）：`runScenarioRepeat` / `summarizeRepeat` 产出 `RepeatStats`（稳定率 + 聚合分均值/极值）；`ScenarioReportRow` 新增可选 `repeat` 字段，md 报告新增「稳定率」列；CLI config 新增 `repeat` 旋钮。
+- 报告 diff（`x-agent-suite/observation` + runner CLI）：`diffScenarioReports` 纯函数以 lens 注入聚合视图（泛型核心不绑 artifact 形状），产出维度级变化清单；CLI 新增 `x-agent-suite diff <基线|目录> <候选|目录>` 子命令（按场景配对、NEW/REMOVED 标注、只读退出码恒 0）。契约新增 `ReportDocument`（JSON 报告读取面）。
+- 教程：harness-runner（合成 headless 接 runner）、pi-pty-runner（真实 PTY 经 runner，门控 `E2E_PI_PTY`）、provision-skill（安装态能力包）三个 recipe。
+
 ## 0.5.0 - 2026-09-13
 
 ### Added
