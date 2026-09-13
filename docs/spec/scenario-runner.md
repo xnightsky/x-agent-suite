@@ -79,6 +79,11 @@ export function runScenarioSpec(
 
 ## CLI 形态（未决事项的暂定答案）
 
+> **可替换性声明**：本节与「`aggregate` 载体随考卷」都是**默认取值，不是唯一合法形态**。
+> runner 的三个入参（场景集合、driver 工厂、判据集）本身就是槽位——config 代码模块只是
+> 装载它们的一种默认方式；YAML/JSON 加载器、注册表装载、编程式拼装均合法，见根 README
+> 「流水线阶段」槽位表。
+
 `x-agent-suite run <config-module>`：配置文件为代码模块（TS/JS），default 导出：
 
 ```ts

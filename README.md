@@ -20,8 +20,10 @@ packages/
   sandbox/        # 临时 HOME / cwd / env 隔离
   llm-fixture/    # fake provider + live backend
   harness/        # HarnessProfile + 一次性/长驻 driver
-  observation/    # Observation / 评分 / 报告
+  observation/    # Observation / 判据调度 / 聚合 / 报告
+  criteria/       # 最小领域中立判据集（text / tool-call）
   matrix/         # 矩阵对照 CLI / API
+  runner/         # Registry 运行时 + ScenarioSpec 执行 + eval CLI
 ```
 
 ## 开发
@@ -43,16 +45,36 @@ pnpm artifacts:pack
 先从 [`docs/tutorial/`](docs/tutorial/README.md) 建立完整玩法：按目标选择模块、运行离线示例，再用组合矩阵替换成消费者自己的 driver、profile、scenario 和 criterion。
 
 ```bash
-pnpm tutorial        # Mock → Observation → Checks → Report
-pnpm tutorial:check  # 全部安全离线教程
-pnpm tutorial:pty:pi # 真实 Pi + fake provider；默认 skip，零 token
+pnpm tutorial         # Mock → Observation → Checks → Report
+pnpm tutorial:runner  # Scenario Runner：eval 一条命令跑完整考卷
+pnpm tutorial:check   # 全部安全离线教程
+pnpm tutorial:pty:pi  # 真实 Pi + fake provider；默认 skip，零 token
 ```
 
 真实 provider 对照文件为 `examples/tutorial/10-live-smoke.token.ittest.ts`，只允许通过精确的 `pnpm ittest:token:tutorial` 显式运行，且测试内部仍要求单次授权值。
 
-当前是库级组合入口；运行时 Registry、Scenario DSL runner 和统一 CLI 仍在路线图阶段。
+运行入口已落地为库级 + CLI 双形态：`@x-agent-suite/runner` 提供 `runScenarioSpec`（库级）与 `x-agent-suite eval <config>`（命令级），矩阵对照继续由 `@x-agent-suite/matrix` 自持。
 
 兄弟仓库的本地 tarball、git 源码自构建、远程 GET、未来 registry 安装配置，以及固定版本重打方式，见 [`docs/spec/packaging.md`](docs/spec/packaging.md)。`artifacts/` 是本地交付输出并已加入 `.gitignore`。
+
+## 流水线阶段：每段都是可替换槽位
+
+评测流水线由若干**阶段槽位**组成：槽位是契约（数据形状），默认实现只是槽位的一个取值。
+每个阶段都可以被消费者整体替换——替换不改变上下游的数据形状，正如姿态轴换取值不换场景：
+
+| 阶段     | 槽位（契约）            | 默认实现                           | 可替换为                                         |
+| -------- | ----------------------- | ---------------------------------- | ------------------------------------------------ |
+| 场景声明 | `ScenarioSpec`          | config 代码模块                    | YAML/JSON 加载器、代码 `Scenario`、矩阵展开      |
+| 驱动     | `AgentDriver`           | `MockDriver` / harness driver      | 任何自持 driver（PTY、HTTP、SDK…）               |
+| 观测     | `Observation`           | 各 driver 归一产出                 | 消费者胶水（如 skill 脚本采集）                  |
+| 判据     | `Criterion`             | `@x-agent-suite/criteria` 最小集   | 消费者注册的任意判据（含未来 autoevals 子包）    |
+| 判据调度 | `runCriteria`           | observation 内置（顺序、引用完整） | 自定义调度器（并行、短路、采样）                 |
+| 聚合     | `resolveAggregate`      | observation 内置加权机             | mathjs 表达式、自定义聚合器                      |
+| 报告     | `writeScenarioReports`  | md/json 双格式                     | 自定义 reporter（JUnit、HTML…）                  |
+| 执行编排 | `runScenarioSpec` / CLI | runner 包                          | 消费者自持编排（`@x-agent-suite/matrix` 即先例） |
+
+约束只有一条：**上游槽位的输出形状必须满足下游槽位的输入契约**。判据可以换、调度可以换、
+聚合可以换，但 `CriterionOutcome` 的形状不变——这是「换方案不换框架」的代价与收益所在。
 
 ## 真实测试姿态：隔离 × 载具 × 凭证
 
@@ -66,14 +88,14 @@ pnpm tutorial:pty:pi # 真实 Pi + fake provider；默认 skip，零 token
 
 fake 是减少对真实环境访问的降噪机制，不是验收终点；最终验收面是 live。同一套 scenario 与判据不随姿态变化，只换后端、隔离和凭证来源。安全规则挂在**姿态轴的取值**上，不挂在具体机制上：后端取 `live` 自动落入 token 层，隔离取 `非沙箱` 自带副作用风险，两者独立成闸。
 
-| 组合（后端 × 隔离 × 载具）  | 什么时候用                                                             | 怎么用                                                                                      | 风险                                            | 闸门与分层                                                   |
-| --------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------ |
-| fake × 沙箱 × harness       | 默认回归主链：协议、工具轮、Observation 归一                           | `pnpm test`；[headless-fixture](docs/tutorial/recipes/headless-fixture.md)                  | 无真实外访                                      | 默认允许                                                     |
+| 组合（后端 × 隔离 × 载具）  | 什么时候用                                                             | 怎么用                                                                                       | 风险                                            | 闸门与分层                                                   |
+| --------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------ |
+| fake × 沙箱 × harness       | 默认回归主链：协议、工具轮、Observation 归一                           | `pnpm test`；[headless-fixture](docs/tutorial/recipes/headless-fixture.md)                   | 无真实外访                                      | 默认允许                                                     |
 | fake × 沙箱 × PTY           | TUI 交互门槛回归：审批框、首次信任、独占输入                           | `pnpm tutorial:pty`；真实宿主走 [pi-pty ittest](docs/tutorial/recipes/pi-pty-integration.md) | PTY 原生依赖编译；屏幕时序漂移                  | `*.ittest.ts` 分层，前置缺失显式 skip，零 token              |
-| fake × 非沙箱 × harness/PTY | 调试 driver 机制本身（对着真实安装的宿主，不碰真 provider）            | 手工临时运行，无默认入口                                                                    | 副作用直达真实 HOME 与配置                      | **当前无显式闸门**，仅限本地调试，不得进共享回归             |
+| fake × 非沙箱 × harness/PTY | 调试 driver 机制本身（对着真实安装的宿主，不碰真 provider）            | 手工临时运行，无默认入口                                                                     | 副作用直达真实 HOME 与配置                      | **当前无显式闸门**，仅限本地调试，不得进共享回归             |
 | live × 沙箱 × harness       | 真实模型最小对照：wire 保真、限额、脱敏链路                            | `ittest:token:*` 显式入口；[live-token-smoke](docs/tutorial/recipes/live-token-smoke.md)     | token 与费用；凭证泄漏                          | token 后缀排除 + 显式授权 + `redactLiveSecrets` + 限额       |
-| live × 沙箱 × PTY           | **最终验收面**：真实 TUI + 真实端点，环境仍隔离                        | token 显式入口（按宿主落地时添加精确脚本）                                                  | 同上，叠加 PTY 时序与原生依赖                   | 同 live 闸门，叠加 PTY 前提（ptyArgs、ready/prompt pattern） |
-| live × 非沙箱 × 任意        | 仅当验收目标就是宿主与真实配置的交互（如真实插件安装、真实登录态刷新） | 手工、逐次授权                                                                              | **最高**：真凭证 × 真环境，误操作可损坏本机配置 | 建议后端与隔离双显式武装；定位为调试/专项，非常态回归        |
+| live × 沙箱 × PTY           | **最终验收面**：真实 TUI + 真实端点，环境仍隔离                        | token 显式入口（按宿主落地时添加精确脚本）                                                   | 同上，叠加 PTY 时序与原生依赖                   | 同 live 闸门，叠加 PTY 前提（ptyArgs、ready/prompt pattern） |
+| live × 非沙箱 × 任意        | 仅当验收目标就是宿主与真实配置的交互（如真实插件安装、真实登录态刷新） | 手工、逐次授权                                                                               | **最高**：真凭证 × 真环境，误操作可损坏本机配置 | 建议后端与隔离双显式武装；定位为调试/专项，非常态回归        |
 
 live 组合的凭证按三级阶梯解析，有下级就不用上级：
 
