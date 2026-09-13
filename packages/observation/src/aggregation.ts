@@ -67,7 +67,11 @@ function applyAbsentMapping(
     case "pass":
       return { effectiveHit: true, participating: true, contribution: weight };
     case "fail":
-      return { effectiveHit: false, participating: true, contribution: -weight };
+      return {
+        effectiveHit: false,
+        participating: true,
+        contribution: -weight,
+      };
     default:
       return { effectiveHit: false, participating: false, contribution: 0 };
   }
@@ -95,7 +99,12 @@ function resolveDimension(
         ? "命中"
         : "未命中";
   return {
-    outcome: { metric: dim.metric, state, contribution: mapped.contribution, reason },
+    outcome: {
+      metric: dim.metric,
+      state,
+      contribution: mapped.contribution,
+      reason,
+    },
     effectiveHit: mapped.effectiveHit,
     participating: mapped.participating,
     weight,
@@ -124,12 +133,18 @@ export function resolveAggregate(
   outcomes: readonly CriterionOutcome[],
   spec: AggregationSpec,
 ): AggregateResult {
-  const resolved = spec.dimensions.map((dim) => resolveDimension(dim, outcomes));
+  const resolved = spec.dimensions.map((dim) =>
+    resolveDimension(dim, outcomes),
+  );
   const knockoutHit = resolved.some(
-    (dim, index) => spec.dimensions[index]!.knockout === true && !dim.effectiveHit,
+    (dim, index) =>
+      spec.dimensions[index]!.knockout === true && !dim.effectiveHit,
   );
   const participants = resolved.filter((dim) => dim.participating);
-  const rawScore = resolved.reduce((sum, dim) => sum + dim.outcome.contribution, 0);
+  const rawScore = resolved.reduce(
+    (sum, dim) => sum + dim.outcome.contribution,
+    0,
+  );
   const maxScore = participants.reduce((sum, dim) => sum + dim.weight, 0);
   const score = maxScore > 0 ? rawScore / maxScore : 0;
   const coverage = {
@@ -165,7 +180,8 @@ function buildReason(
     `${pass ? "通过" : "未通过"}；coverage ${coverage.evaluated}/${coverage.total}`,
   ];
   if (knockoutHit) parts.push("knockout 维度未命中，整体否决");
-  if (coverage.evaluated === 0) parts.push("无在场维度（空考，分数不代表能力）");
+  if (coverage.evaluated === 0)
+    parts.push("无在场维度（空考，分数不代表能力）");
   const absentNames = collectAbsentNames(spec, resolved);
   if (absentNames.length > 0) {
     parts.push(`无判据结果的引用：${absentNames.join("、")}`);

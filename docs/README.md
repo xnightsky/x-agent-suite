@@ -18,7 +18,7 @@ x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenari
 | [`spec/boundary-discipline.md`](./spec/boundary-discipline.md)                     | 边界纪律：四条守卫、三个合法出口、边界债务                   |
 | [`spec/layering.md`](./spec/layering.md)                                           | 分层与依赖选型：工具型库 vs 平台                             |
 | [`spec/packaging.md`](./spec/packaging.md)                                         | 包分发、安装方式、版本管理与原生依赖分层                     |
-| [`spec/testing.md`](./spec/testing.md)                                             | test / ittest / token ittest 的分层、位置与默认回归规则        |
+| [`spec/testing.md`](./spec/testing.md)                                             | test / ittest / token ittest 的分层、位置与默认回归规则      |
 | [`research/test-file-naming-taxonomy.md`](./research/test-file-naming-taxonomy.md) | 为什么不继续增加 PTY/live/smoke 等测试终止后缀               |
 | [`research/agent-messaging-layers.md`](./research/agent-messaging-layers.md)       | Agent 消息通信：传输层与入站触达层的拆分                     |
 | [`spec/contracts.md`](./spec/contracts.md)                                         | 核心契约：Observation、Driver、Scenario、Criterion、Registry |
@@ -31,4 +31,4 @@ x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenari
 | [`spec/long-lived-driver.md`](./spec/long-lived-driver.md)                         | 长驻会话驱动契约                                             |
 | [`spec/pty-driver.md`](./spec/pty-driver.md)                                       | PTY 驱动层                                                   |
 | [`spec/lessons-from-evals.md`](./spec/lessons-from-evals.md)                       | 从评测实践借鉴的通用模式                                     |
-| [`spec/capability-system.md`](./spec/capability-system.md)                         | 能力账本、P0–P8 路线与决策记录                             |
+| [`spec/capability-system.md`](./spec/capability-system.md)                         | 能力账本、P0–P8 路线与决策记录                               |

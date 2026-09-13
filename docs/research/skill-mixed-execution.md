@@ -78,13 +78,13 @@ flowchart LR
 
 ## 对 x-agent-suite 的归属判断
 
-| 复杂问题 | 业界对应层 | 框架归属层 | 裁决 |
-| --- | --- | --- | --- |
-| 混合执行编排 | Inspect solver / SWE-bench 容器脚本 | `Scenario.run`（自由编排）+ `ScenarioSpec`（声明式子集） | ✅ 不做统一执行抽象 |
-| skill 驱动 CLI 的权限 | `allowed-tools` / approver / 容器边界 | sandbox 隔离 + `HarnessProfile.allowedTools` 白名单 | ✅ 两条路都通 |
-| skill 嵌套 / 依赖 | 规范层无解，靠打包 | `provision` 钩子（`unknown`，原样交消费者） | ✅ 保持无机制 |
-| 安装态铺设 | 相对 skill 根引用 + 作用域目录 | `provision` + sandbox HOME 重定向 | ✅ 安装语义领域特定，不内建 |
-| 打分出口 | promptfoo 样本内加权 / Inspect per-scorer metrics | `Criterion` + `resolveAggregate` | ✅ 本框架唯一该内建的部分 |
+| 复杂问题              | 业界对应层                                        | 框架归属层                                               | 裁决                        |
+| --------------------- | ------------------------------------------------- | -------------------------------------------------------- | --------------------------- |
+| 混合执行编排          | Inspect solver / SWE-bench 容器脚本               | `Scenario.run`（自由编排）+ `ScenarioSpec`（声明式子集） | ✅ 不做统一执行抽象         |
+| skill 驱动 CLI 的权限 | `allowed-tools` / approver / 容器边界             | sandbox 隔离 + `HarnessProfile.allowedTools` 白名单      | ✅ 两条路都通               |
+| skill 嵌套 / 依赖     | 规范层无解，靠打包                                | `provision` 钩子（`unknown`，原样交消费者）              | ✅ 保持无机制               |
+| 安装态铺设            | 相对 skill 根引用 + 作用域目录                    | `provision` + sandbox HOME 重定向                        | ✅ 安装语义领域特定，不内建 |
+| 打分出口              | promptfoo 样本内加权 / Inspect per-scorer metrics | `Criterion` + `resolveAggregate`                         | ✅ 本框架唯一该内建的部分   |
 
 ## 设计反哺
 

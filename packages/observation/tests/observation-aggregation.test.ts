@@ -53,10 +53,7 @@ test("三态：同名多结果有一个 fail 即 miss（严格口径），贡献
 });
 
 test("三态：名下无任何结果为 absent，缺省 zero 映射贡献 0 且不计入 maxScore", () => {
-  const result = resolveAggregate(
-    [],
-    singleDim({ metric: "ghost" }),
-  );
+  const result = resolveAggregate([], singleDim({ metric: "ghost" }));
   assert.equal(result.dimensions[0]!.state, "absent");
   assert.equal(result.dimensions[0]!.contribution, 0);
   assert.equal(result.maxScore, 0);
@@ -167,7 +164,9 @@ test("threshold：归一分过线即 pass，不过线即 fail", () => {
 
 test("threshold 省略时：计入维全部命中才 pass", () => {
   const outcomes = [makeOutcome("a", true), makeOutcome("b", true)];
-  const spec: AggregationSpec = { dimensions: [{ metric: "a" }, { metric: "b" }] };
+  const spec: AggregationSpec = {
+    dimensions: [{ metric: "a" }, { metric: "b" }],
+  };
   assert.equal(resolveAggregate(outcomes, spec).pass, true);
   assert.equal(
     resolveAggregate([outcomes[0]!, makeOutcome("b", false)], spec).pass,
@@ -247,7 +246,10 @@ test("空 dimensions：coverage 0/0，score=0，reason 警示空考", () => {
 
 test("同一 metric 被两个维度重复引用：各自独立计分", () => {
   const result = resolveAggregate([makeOutcome("a", true)], {
-    dimensions: [{ metric: "a", weight: 2 }, { metric: "a", weight: 3 }],
+    dimensions: [
+      { metric: "a", weight: 2 },
+      { metric: "a", weight: 3 },
+    ],
   });
   assert.equal(result.rawScore, 5);
   assert.equal(result.maxScore, 5);
