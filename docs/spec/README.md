@@ -22,4 +22,3 @@
 | [long-lived-driver.md](./long-lived-driver.md)     | `LongLivedAgentDriver` 与入站事件观测                                 |
 | [pty-driver.md](./pty-driver.md)                   | PTY 驱动层：屏幕 idle 判定与 TUI 门槛                                 |
 | [lessons-from-evals.md](./lessons-from-evals.md)   | 从内部评测实践总结的通用模式                                          |
-| [roadmap.md](./roadmap.md)                         | 演进路线与未决事项                                                    |

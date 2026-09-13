@@ -169,7 +169,7 @@ provision（铺安装态，消费者写）
 
 - **类型**：`@x-agent-suite/contracts`（与本包「只导出类型」一致，上述接口均为类型声明）。
 - **实现**：`@x-agent-suite/observation` 新增 `resolveAggregate` 纯函数——该包已是「判据结果 → 报告」的汇聚点。
-- **spec 载体**：当前框架无通用 runner（roadmap 阶段 1–2 未交付），聚合声明由消费者放在自己的场景文件 / `metadata` 自由区，调用 `resolveAggregate` 后把 `AggregateResult` 塞进 `ScenarioResult.evidence` 进报告。runner 落地时再定官方载体，本设计不预设。
+- **spec 载体**：当前框架无通用 runner（P3 未交付），聚合声明由消费者放在自己的场景文件 / `metadata` 自由区，调用 `resolveAggregate` 后把 `AggregateResult` 塞进 `ScenarioResult.evidence` 进报告。runner 落地时再定官方载体，本设计不预设。
 
 ## judge 接入面（不内建 judge）
 
@@ -182,7 +182,7 @@ provision（铺安装态，消费者写）
 | 决策 | 结论 | 理由 | 反转条件 |
 | --- | --- | --- | --- |
 | 聚合机自研，不引 promptfoo 本体 | ✅ | 聚合未从 promptfoo 抽成独立模块；引入整个评测产品换约 100 行算术，语义还随其版本漂移 | 业界出现独立、稳定、语义等价的聚合规范包 |
-| 不引 autoevals 进内核 | ✅ | 它是判据库（judge 侧），进内核违反「零内建判据」 | 仅可在可选插件层（roadmap 阶段 4）以可选依赖接入 |
+| 不引 autoevals 进内核 | ✅ | 它是判据库（judge 侧），进内核违反「零内建判据」 | 仅可在可选判据子包以可选依赖接入 |
 | 表达式派生指标需要时引 mathjs | 暂缓 | 当前声明式维度已够用（YAGNI）；mathjs 是 promptfoo derivedMetrics 的同款选型 | 消费者提出公式型派生指标需求 |
 | 命名对齐 promptfoo：`weight` / `threshold` / `metric` | ✅ | 业界最广为人知的聚合语义，降低学习成本 | — |
 | `knockout` / `absent` 自造 | ✅ | 业界无声明式对应物，命名直白即可 | 业界出现对应标准词汇 |

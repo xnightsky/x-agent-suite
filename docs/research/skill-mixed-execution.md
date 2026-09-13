@@ -90,7 +90,7 @@ flowchart LR
 
 1. **聚合机文档已补「职责边界」**：`resolveAggregate` 不承载执行编排，
    防止消费者误以为它该管 provision / 脚本步骤 / 安装布局。
-2. **「不做统一混合执行抽象」应入 roadmap 决策记录**：业界（Inspect/SWE-bench）与
+2. **「不做统一混合执行抽象」已入决策记录**（capability-system.md）：业界（Inspect/SWE-bench）与
    内部实践双向印证；反转条件 = 某抽象被证明在两个以上领域成立。
 3. **provision 是消费者侧真实复杂度所在**：铺安装态（含打包依赖、资源镜像）是评测准备的
    主要工作量；框架给 sandbox 隔离与钩子即可，业界同样止步于此。

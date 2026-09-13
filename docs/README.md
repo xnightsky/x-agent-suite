@@ -31,4 +31,4 @@ x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenari
 | [`spec/long-lived-driver.md`](./spec/long-lived-driver.md)                         | 长驻会话驱动契约                                             |
 | [`spec/pty-driver.md`](./spec/pty-driver.md)                                       | PTY 驱动层                                                   |
 | [`spec/lessons-from-evals.md`](./spec/lessons-from-evals.md)                       | 从评测实践借鉴的通用模式                                     |
-| [`spec/roadmap.md`](./spec/roadmap.md)                                             | 后续演进路线                                                 |
+| [`spec/capability-system.md`](./spec/capability-system.md)                         | 能力账本、P0–P8 路线与决策记录                             |
