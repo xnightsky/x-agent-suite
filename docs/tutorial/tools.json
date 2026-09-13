@@ -268,14 +268,19 @@
           "category": "primary",
           "purpose": "创建一次性 headless AgentDriver。",
           "risk": "conditional",
-          "recipes": ["headless-fixture"]
+          "recipes": ["headless-fixture", "harness-runner"]
         },
         {
           "name": "createPtyAgentDriver",
           "category": "advanced",
           "purpose": "创建 PTY 长驻驱动，覆盖 TUI 独占交互。",
           "risk": "high",
-          "recipes": ["pty", "pi-pty-integration", "pi-live-pty"]
+          "recipes": [
+            "pty",
+            "pi-pty-integration",
+            "pi-live-pty",
+            "pi-pty-runner"
+          ]
         },
         {
           "name": "createPtyScreenWatcher",
@@ -510,7 +515,7 @@
           "category": "primary",
           "purpose": "文本包含判据（AND 语义）。",
           "risk": "safe",
-          "recipes": ["criteria-aggregation"]
+          "recipes": ["criteria-aggregation", "harness-runner"]
         },
         {
           "name": "textNotContains",
@@ -524,7 +529,7 @@
           "category": "primary",
           "purpose": "工具调用核对判据（completed + 入参子集）。",
           "risk": "safe",
-          "recipes": ["criteria-aggregation"]
+          "recipes": ["criteria-aggregation", "harness-runner"]
         }
       ]
     },
@@ -544,7 +549,7 @@
           "category": "primary",
           "purpose": "执行一个 ScenarioSpec：逐轮驱动、判据调度、可选聚合。",
           "risk": "safe",
-          "recipes": ["scenario-runner"]
+          "recipes": ["scenario-runner", "harness-runner"]
         },
         {
           "name": "main",

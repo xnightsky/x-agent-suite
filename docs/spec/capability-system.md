@@ -41,14 +41,14 @@ x-agent-suite 是领域中立的 Agent 测试框架：不认识任何被测系�
 
 ### 执行层
 
-| 能力件                                   | 概念来源                              | 裁决                                 | 归属                          | 状态                    |
-| ---------------------------------------- | ------------------------------------- | ------------------------------------ | ----------------------------- | ----------------------- |
-| 驱动契约（AgentDriver / HarnessProfile） | 本仓原创（强于 promptfoo providers）  | 内核                                 | `contracts/driver`、`harness` | ✅                      |
-| 进程/PTY 基座                            | —                                     | 内核                                 | `driver`                      | ✅                      |
-| 隔离（HOME/cwd/env 白名单）              | Inspect sandbox / Terminal-Bench 容器 | 内核                                 | `sandbox`                     | ✅                      |
-| provision（铺安装态、嵌套依赖、fixture） | SWE-bench 任务容器                    | 钩子在内核、配方在文档               | `contracts/dsl` + `docs/`     | ⚠️ 钩子 ✅ / 配方 ❌ P4 |
-| PTY 审批专项（真实 TUI 门槛场景激活）    | —                                     | 内核                                 | `driver` + `harness`          | ⚠️ 驱动在、场景未激活   |
-| 统一混合执行抽象                         | —                                     | **不做**（分层承载，见本文决策记录） | —                             | ⛔                      |
+| 能力件                                   | 概念来源                              | 裁决                                 | 归属                          | 状态                                                                   |
+| ---------------------------------------- | ------------------------------------- | ------------------------------------ | ----------------------------- | ---------------------------------------------------------------------- |
+| 驱动契约（AgentDriver / HarnessProfile） | 本仓原创（强于 promptfoo providers）  | 内核                                 | `contracts/driver`、`harness` | ✅                                                                     |
+| 进程/PTY 基座                            | —                                     | 内核                                 | `driver`                      | ✅                                                                     |
+| 隔离（HOME/cwd/env 白名单）              | Inspect sandbox / Terminal-Bench 容器 | 内核                                 | `sandbox`                     | ✅                                                                     |
+| provision（铺安装态、嵌套依赖、fixture） | SWE-bench 任务容器                    | 钩子在内核、配方在文档               | `contracts/dsl` + `docs/`     | ⚠️ 钩子 ✅ / 配方 ❌ P4                                                |
+| PTY 审批专项（真实 TUI 门槛场景激活）    | —                                     | 内核                                 | `driver` + `harness`          | ⚠️ 驱动在；runner×PTY 接线已激活（recipe pi-pty-runner），门槛场景待补 |
+| 统一混合执行抽象                         | —                                     | **不做**（分层承载，见本文决策记录） | —                             | ⛔                                                                     |
 
 ### 观测层
 
@@ -192,6 +192,11 @@ flowchart TD
 - 反馈一（已闭环）：expect 块键名是 metric 名（kebab-case）而非导出名，recipe 已强调。
 - 反馈二（进未决事项）：PTY 面 toolCalls 恒空的「wire 重建 ToolCall」适配件，候选框架能力。
 - 未验证：token 车道（双真实模型）——验证 skill 措辞本身，消费者侧发版后接入。
+
+**2026-09-13 · 同一消费者 · 正式 0.5.0 制品收口**
+
+- file: 切至 artifacts/0.5.0 正式 tgz：395 单测 + typecheck + 19 ittest（真实 PTY 零 token）全绿；
+  runner 消费路径与双 PTY 复合 driver 真实场景在正式版复跑通过，聚合 1.0。
 
 ## 专题权威索引
 

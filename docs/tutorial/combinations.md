@@ -21,6 +21,8 @@ Backend 不属于 `MockDriver` 或底层 `JsonlProcess` 本身；Scenario DSL ru
 | 学习完整数据链                    | Mock + checks + report                                | 支持           | [mock-report](./recipes/mock-report.md)（`pnpm tutorial`）                             |
 | 判据调度与聚合打分                | runCriteria + resolveAggregate + report               | 支持           | [criteria-aggregation](./recipes/criteria-aggregation.md)（`pnpm tutorial:aggregate`） |
 | 一条命令跑完整考卷                | runner CLI（eval）+ config 模块                       | 支持           | [scenario-runner](./recipes/scenario-runner.md)（`pnpm tutorial:runner`）              |
+| harness driver 接 runner          | createHarnessDriver + runScenarioSpec                 | 支持           | [harness-runner](./recipes/harness-runner.md)（`pnpm tutorial:harness-runner`）        |
+| 真实宿主 PTY 接 runner            | createPtyAgentDriver + runScenarioSpec                | 支持（门控）   | [pi-pty-runner](./recipes/pi-pty-runner.md)（`pnpm tutorial:runner:pi`）               |
 | 自定义 JSONL driver               | sandbox + JsonlProcess                                | 支持           | [sandbox-jsonl](./recipes/sandbox-jsonl.md)（`pnpm tutorial:sandbox`）                 |
 | 测试模型 wire                     | FakeProviderBackend                                   | 支持           | [fixture-backend](./recipes/fixture-backend.md)（`pnpm tutorial:fixture`）             |
 | 横向比较                          | Driver factory + runMatrix + report                   | 支持           | [matrix-report](./recipes/matrix-report.md)（`pnpm tutorial:matrix`）                  |

@@ -172,6 +172,29 @@
       "modules": ["driver", "criteria", "runner"],
       "mode": "offline",
       "expected": ["exit code 0", "3 scenario reports", "aggregate coverage"]
+    },
+    {
+      "id": "harness-runner",
+      "title": "HarnessDriver → runScenarioSpec 主链",
+      "source": "examples/tutorial/14-harness-runner.test.ts",
+      "guide": "docs/tutorial/recipes/harness-runner.md",
+      "command": "pnpm tutorial:harness-runner",
+      "modules": ["llm-fixture", "harness", "criteria", "runner"],
+      "mode": "loopback",
+      "expected": ["harness-backed scenario run", "aggregate coverage"]
+    },
+    {
+      "id": "pi-pty-runner",
+      "title": "Pi PTY driver → runScenarioSpec（真实宿主）",
+      "source": "examples/tutorial/15-pi-pty-runner.ittest.ts",
+      "guide": "docs/tutorial/recipes/pi-pty-runner.md",
+      "command": "pnpm tutorial:runner:pi",
+      "modules": ["llm-fixture", "harness", "criteria", "runner"],
+      "mode": "real-host-loopback",
+      "expected": [
+        "skip unless E2E_PI_PTY=1",
+        "real host scenario run via runner"
+      ]
     }
   ],
   "combinations": [

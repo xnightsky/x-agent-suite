@@ -301,6 +301,17 @@ test("AGENTS 为玩法问题提供教程上下文指针", async () => {
   assert.match(agents, /组合.*docs\/tutorial\/catalog\.json/);
 });
 
+test("harness-runner 跑通 harness driver 全链接线", async () => {
+  const { summary } = await runRecipe(
+    "examples/tutorial/14-harness-runner.test.ts",
+  );
+  assert.equal(summary.recipe, "harness-runner");
+  assert.equal(summary.hardPass, true);
+  assert.equal(summary.score, 1);
+  assert.deepEqual(summary.coverage, { evaluated: 2, total: 3 });
+  assert.deepEqual(summary.states, ["hit", "hit", "absent"]);
+});
+
 test("scenario-runner 一条命令跑 3 场景并出报告", async () => {
   const { summary, outDir } = await runRecipe(
     "examples/tutorial/13-scenario-runner.test.ts",

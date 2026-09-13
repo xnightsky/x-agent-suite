@@ -45,6 +45,7 @@ HarnessProfile + LlmBackend + Sandbox
 | 学会 Driver、评分和报告闭环     | [Mock → Report](./recipes/mock-report.md)                   | 离线、安全                                |
 | 判据调度与聚合打分              | [Criteria → Aggregation](./recipes/criteria-aggregation.md) | 离线、安全                                |
 | 一条命令跑完整考卷              | [Scenario Runner](./recipes/scenario-runner.md)             | 离线、安全                                |
+| harness driver 接 runner        | [Harness Runner](./recipes/harness-runner.md)               | 离线、安全                                |
 | 驱动自己的 JSONL 子进程         | [Sandbox → JSONL](./recipes/sandbox-jsonl.md)               | 离线、安全                                |
 | 验证模型 wire 与工具轮次        | [Fake Provider](./recipes/fixture-backend.md)               | loopback、安全                            |
 | 横向比较 driver 和 prompt 变体  | [Matrix → Report](./recipes/matrix-report.md)               | 离线、安全                                |
