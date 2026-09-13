@@ -12,7 +12,9 @@ export const CORE_EXPORT_NAMES = [
   "llm-fixture",
   "harness",
   "observation",
+  "criteria",
   "matrix",
+  "runner",
 ] as const;
 
 /** 核心聚合包保持外置的标准运行时依赖及其精确版本范围。 */
