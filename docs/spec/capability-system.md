@@ -179,6 +179,7 @@ flowchart TD
 - CLI 是否需要内置配置文件（如 `x-agent-suite.config.ts`）还是完全通过代码注册。
 - 报告输出格式优先级。
 - 「从 wire 请求重建 ToolCall 序列」是否沉淀为框架工具函数：首个 runner 消费者的复合 driver 已自证可行（PTY 面 `Observation.toolCalls` 恒空时的适配），按边界纪律等第二个消费者出现再立项。
+- CLI 是否需要「行为失败门禁」旗标（如 `--fail-on-behavior`）：第二个消费者（内部 KB 评测库，v0.4.0 消费中）提出的四个缺口中唯一未补项——当前设计为退出码只反映基础设施失败（刻意分歧），替代路径是读 JSON 报告 hardPass 自行 gate。若其确认需要内建旗标，即凑齐两消费者论证，可立项。
 
 ## 消费者验证记录
 
