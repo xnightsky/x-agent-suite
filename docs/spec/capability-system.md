@@ -204,6 +204,9 @@ flowchart TD
 - file: 切至 artifacts/0.6.0 正式 tgz：395 单测 + typecheck + 19 ittest 全绿；两条 scratch
   （runner 消费路径、双 PTY 复合 driver）复跑通过。repeat 稳定率与报告 diff 已被标记为
   token 车道验证 skill 措辞的成套工具，待实战回传。
+- 收尾：切至 GitHub Release HTTPS tarball 消费（与本地制品逐字节 diff 一致），全门禁绿；
+  runner 场景车道转正为正式测试资产（复合 driver + 单测层消费路径锁定 + 集成层场景用例）。
+  **HTTPS tarball 交付路径经真实消费者跨机器验证可行，不再依赖本机路径。**
 
 ## 专题权威索引
 
