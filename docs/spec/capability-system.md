@@ -207,6 +207,10 @@ flowchart TD
 - 收尾：切至 GitHub Release HTTPS tarball 消费（与本地制品逐字节 diff 一致），全门禁绿；
   runner 场景车道转正为正式测试资产（复合 driver + 单测层消费路径锁定 + 集成层场景用例）。
   **HTTPS tarball 交付路径经真实消费者跨机器验证可行，不再依赖本机路径。**
+- token 车道首跑（真实模型、live 复合 driver、无假端点）：`runScenarioRepeat` repeat=3
+  全部 PASS（hardPassRate=1，score 均值/极值 1），约 28s/次全隔离编排成本可接受；
+  确认「每次重新 createDriver」的隔离语义与文档一致。**runner 的 live/token 层路径经真实
+  消费者验证。**报告 diff 待首次 A/B 措辞实验回传。
 
 ## 专题权威索引
 
