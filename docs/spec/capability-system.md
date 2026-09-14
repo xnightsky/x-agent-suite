@@ -198,6 +198,12 @@ flowchart TD
 - file: 切至 artifacts/0.5.0 正式 tgz：395 单测 + typecheck + 19 ittest（真实 PTY 零 token）全绿；
   runner 消费路径与双 PTY 复合 driver 真实场景在正式版复跑通过，聚合 1.0。
 
+**2026-09-13 · 同一消费者 · 正式 0.6.0 制品收口**
+
+- file: 切至 artifacts/0.6.0 正式 tgz：395 单测 + typecheck + 19 ittest 全绿；两条 scratch
+  （runner 消费路径、双 PTY 复合 driver）复跑通过。repeat 稳定率与报告 diff 已被标记为
+  token 车道验证 skill 措辞的成套工具，待实战回传。
+
 ## 专题权威索引
 
 单件设计细节不集中重复，权威出处：
