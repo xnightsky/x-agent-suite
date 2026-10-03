@@ -1,17 +1,27 @@
 # AGENTS.ai.md
 
-## AI 协作规则
+<!-- shared:begin -->
+## AI 工作边界
 
-- 进入仓库后先在根目录运行 `rg --files --max-depth 1 -g 'AGENTS.md' -g 'AGENTS.*.md'`。
-- 必须同时读取根 `AGENTS.md`；后续若新增 `AGENTS.<platform>.md`，仅在命中对应平台时读取。
-- 进入子目录前检查该边界是否有局部 `AGENTS.md` 或 `AGENTS.*.md`。
-- 非破坏性探索优先于实现；变更前说明目标、范围和预期影响。
-- 发现边界冲突、设计冲突、阶段切口冲突或隐藏的全局一致性风险时，第一时间用 `**[冲突提示]**` 高亮提示用户。
+- **先探索，再修改**：只读探索代码库后再动手；变更前说明目标、范围和预期影响。
+- **精确定位**：使用 `rg` 定位文件和文本，使用非交互式命令。
+- **最小改动**：不回退非自己产生的修改，不顺手重构无关代码。
+- **主动确认**：需求有歧义、范围扩大或跨仓约束冲突时先询问用户。
+- **自主抉择**：实现细节类抉择（命名、落盘位置、等价方案取舍）判断置信度 ≥90% 时，直接选定并执行，最终汇报中说明所选项与理由，不中途打断询问。
+- **例外**：Git 提交/远程写入、范围扩大、需求歧义、跨仓约束或边界冲突，不受上条放宽，仍按主动确认、冲突提示、提交授权执行。
 
-## 文档与 Superpowers 产物
+## 工具
+
+- 文件读取优先使用 read；精确修改优先使用 edit。
+- Shell 使用 PowerShell 7；包管理统一使用 pnpm。
+
+## Superpowers 产物重定向
+
+- **Brainstorming**：设计 spec 写入 `docs/spec/*.md`（覆盖默认的 `docs/superpowers/specs/`）。
+- **Planning**：实施计划是施工文档，与 `docs/spec/` 的设计/决策档案分层。无记录价值的计划（中间形态、一次性过程稿、与核心业务无关）写入 `.tmp/plans/*.md`（`.tmp/` 已在 `.gitignore`，不进版本库）；有记录价值的计划写入 `docs/plans/YYYY-MM-DD-<主题>.md` 入库留存。
+- **禁止创建** `docs/superpowers/` 层级；用户显式指定路径时以用户为准。
+<!-- shared:end -->
+
+## 文档分层（本仓）
 
 - 项目文档分层以 `docs/README.md` 为准，行为变化原地更新对应的 architecture、spec、tutorial 或 research 文档。
-- Brainstorming 设计稿写入 `docs/spec/*.md`，覆盖 skill 默认的 `docs/superpowers/specs/`。
-- Writing Plans 与 Executing Plans 的执行计划写入 `.tmp/plans/*.md`；`.tmp/` 已被 Git 忽略，计划不进入版本库。
-- 禁止创建 `docs/superpowers/` 层级。
-- 用户显式指定产物路径时，以用户指定路径为准。
