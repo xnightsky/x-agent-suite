@@ -180,7 +180,11 @@ test("createSandbox：homeDir/cwd 为物理路径，子进程 process.cwd() 与 
   // 符号链接形态差会导致永不命中。sandbox 必须在创建点 canonicalize。
   const sandbox = await createSandbox();
   try {
-    assert.equal(sandbox.cwd, await realpath(sandbox.cwd), "cwd 不含符号链接段");
+    assert.equal(
+      sandbox.cwd,
+      await realpath(sandbox.cwd),
+      "cwd 不含符号链接段",
+    );
     assert.equal(
       sandbox.homeDir,
       await realpath(sandbox.homeDir),
@@ -191,7 +195,11 @@ test("createSandbox：homeDir/cwd 为物理路径，子进程 process.cwd() 与 
       encoding: "utf8",
     });
     assert.equal(child.status, 0, child.stderr);
-    assert.equal(child.stdout.trim(), sandbox.cwd, "子进程视角 cwd 必须与 sandbox.cwd 字面一致");
+    assert.equal(
+      child.stdout.trim(),
+      sandbox.cwd,
+      "子进程视角 cwd 必须与 sandbox.cwd 字面一致",
+    );
   } finally {
     await cleanupSandbox(sandbox);
   }

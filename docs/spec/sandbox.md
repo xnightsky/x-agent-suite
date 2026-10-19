@@ -37,7 +37,7 @@ export interface SandboxContext {
 3. `cwd = realpath(mkdtemp(join(tmpdir(), `xas-sandbox-cwd-${id}-`)))`。
 4. 按需创建 `configDirs`、`configFilePath`、`runtimeDir`。
 5. 合并 `process.env` 与调用方注入变量，再执行剥离并写入受保护的 HOME 系列变量。
-创建即 realpath 规范化：`tmpdir()` 可能含符号链接段（如 macOS 的 `/var` → `/private/var`），而子进程 `process.cwd()` 恒返回物理路径；不规范化会让消费者对 `sandbox.cwd` 的字符串比较永不命中。
+   创建即 realpath 规范化：`tmpdir()` 可能含符号链接段（如 macOS 的 `/var` → `/private/var`），而子进程 `process.cwd()` 恒返回物理路径；不规范化会让消费者对 `sandbox.cwd` 的字符串比较永不命中。
 
 ## 子进程环境注入
 
