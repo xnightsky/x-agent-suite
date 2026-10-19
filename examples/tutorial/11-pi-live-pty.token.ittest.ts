@@ -75,10 +75,7 @@ test(
         `footer 未出现声明模型 ${resolved.channel.model}`,
       );
       const observation = await driver.sendPrompt("hi");
-      assert.ok(
-        observation.text.trim().length > 0,
-        "真实 provider 未返回文本",
-      );
+      assert.ok(observation.text.trim().length > 0, "真实 provider 未返回文本");
       t.diagnostic(`reply length: ${observation.text.trim().length}`);
     } finally {
       await driver.close("Pi live PTY token test complete");

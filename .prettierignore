@@ -1,0 +1,5 @@
+# 生成物与锁文件不参与格式检查
+pnpm-lock.yaml
+/artifacts/
+dist/
+coverage/

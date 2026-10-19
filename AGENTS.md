@@ -1,6 +1,7 @@
 # AGENTS.md
 
 <!-- shared:begin -->
+
 ## 响应与规则加载
 
 - 始终使用简体中文。
@@ -35,6 +36,7 @@
 
 - Commit 使用 Conventional Commits，中文摘要，不添加 AI 小尾巴。
 - 禁止 force push；未经当前会话明确授权，不执行 commit、push 或远程写入。
+
 <!-- shared:end -->
 
 ## 响应与沟通（本仓）

@@ -107,12 +107,12 @@ Project Trust 是输入加载门卫，不是沙盒：防仓库在用户批准前
 
 出口一览：
 
-| 方式 | 作用域 | 语义 |
-| ---- | ------ | ---- |
-| `--approve` / `-a` | 单次运行 | 跳过提问，信任项目本地文件 |
-| `--no-approve` / `-na` | 单次运行 | 跳过提问，忽略项目本地文件 |
-| `-p` / `--mode json` / `--mode rpc` | 非交互模式 | 不弹；无保存决定时 ask/never 忽略、always 信任 |
-| `defaultProjectTrust: "always"/"never"` | 全局 settings.json | 改兑底行为 |
-| `/trust` 或预写 `trust.json` | 按目录持久 | 保存的决定直接生效 |
+| 方式                                    | 作用域             | 语义                                           |
+| --------------------------------------- | ------------------ | ---------------------------------------------- |
+| `--approve` / `-a`                      | 单次运行           | 跳过提问，信任项目本地文件                     |
+| `--no-approve` / `-na`                  | 单次运行           | 跳过提问，忽略项目本地文件                     |
+| `-p` / `--mode json` / `--mode rpc`     | 非交互模式         | 不弹；无保存决定时 ask/never 忽略、always 信任 |
+| `defaultProjectTrust: "always"/"never"` | 全局 settings.json | 改兑底行为                                     |
+| `/trust` 或预写 `trust.json`            | 按目录持久         | 保存的决定直接生效                             |
 
 注意 `--approve` 会同时信任项目的其它本地资源，仅用于 cwd 内容自控的沙盒。profile 现有 `ptySetupSequence` 写 `\r`（选中默认 Trust）已足够；如需消除对话框时序依赖，可改为给 `ptyArgs` 加 `--approve`。

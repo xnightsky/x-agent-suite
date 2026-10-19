@@ -1,6 +1,7 @@
 # AGENTS.ai.md
 
 <!-- shared:begin -->
+
 ## AI 工作边界
 
 - **先探索，再修改**：只读探索代码库后再动手；变更前说明目标、范围和预期影响。
@@ -20,6 +21,7 @@
 - **Brainstorming**：设计 spec 写入 `docs/spec/*.md`（覆盖默认的 `docs/superpowers/specs/`）。
 - **Planning**：实施计划是施工文档，与 `docs/spec/` 的设计/决策档案分层。无记录价值的计划（中间形态、一次性过程稿、与核心业务无关）写入 `.tmp/plans/*.md`（`.tmp/` 已在 `.gitignore`，不进版本库）；有记录价值的计划写入 `docs/plans/YYYY-MM-DD-<主题>.md` 入库留存。
 - **禁止创建** `docs/superpowers/` 层级；用户显式指定路径时以用户为准。
+
 <!-- shared:end -->
 
 ## 文档分层（本仓）

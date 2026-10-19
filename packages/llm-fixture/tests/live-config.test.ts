@@ -392,7 +392,11 @@ test("from: harness + provider：provider 作为借用目标选择器透传给 b
   try {
     const repoRoot = join(root, "repo");
     await writeConfig(join(repoRoot, ".env.e2e.yaml"), {
-      pi: { from: "harness", provider: "kimi-coding", model: "kimi-for-coding" },
+      pi: {
+        from: "harness",
+        provider: "kimi-coding",
+        model: "kimi-for-coding",
+      },
     });
     let capturedHint: { readonly provider?: string } | undefined;
     let called = false;
@@ -418,7 +422,10 @@ test("from: harness + provider：provider 作为借用目标选择器透传给 b
     assert.equal(result.kind, "configured");
     if (result.kind !== "configured") return;
     assert.equal(result.channel.provider, "kimi-coding");
-    assert.equal(result.channel.baseUrl, "https://kimi-coding.example.com/coding");
+    assert.equal(
+      result.channel.baseUrl,
+      "https://kimi-coding.example.com/coding",
+    );
     assert.equal(result.channel.wire, "anthropic-messages");
     assert.equal(result.channel.model, "kimi-for-coding");
     assert.equal(result.channel.credential, "harness");
@@ -481,7 +488,10 @@ test("裸 from: harness 不传 provider hint（borrowChannel 第三参为 undefi
       },
     });
     assert.equal(capturedHint, undefined);
-    assert.equal(resolveLiveChannel(load, "default-host", {}).kind, "configured");
+    assert.equal(
+      resolveLiveChannel(load, "default-host", {}).kind,
+      "configured",
+    );
   } finally {
     await cleanup();
   }

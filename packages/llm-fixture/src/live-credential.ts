@@ -54,9 +54,7 @@ async function verifyBorrowedChannel(
   const borrowed = await borrow(
     source,
     options.homeDir ?? homedir(),
-    channel.provider !== undefined
-      ? { provider: channel.provider }
-      : undefined,
+    channel.provider !== undefined ? { provider: channel.provider } : undefined,
   );
   if (borrowed.kind === "missing") return { reason: borrowed.reason };
   const mismatches = BORROWED_CREDENTIAL_ENDPOINT_FIELDS.filter(
