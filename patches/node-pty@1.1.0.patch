@@ -1,5 +1,5 @@
 diff --git a/lib/conpty_console_list_agent.js b/lib/conpty_console_list_agent.js
-index 8c4fca9022a6d6f015bca87f61625cde2278f428..1c432cd6bcf54ed7036d52eb409d1df1fd58906c 100644
+index 8c4fca9022a6d6f015bca87f61625cde2278f428..d570b3ad295b2b67a64865df58203631ef4819f3 100644
 --- a/lib/conpty_console_list_agent.js
 +++ b/lib/conpty_console_list_agent.js
 @@ -10,7 +10,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
@@ -17,11 +17,19 @@ index 8c4fca9022a6d6f015bca87f61625cde2278f428..1c432cd6bcf54ed7036d52eb409d1df1
  process.send({ consoleProcessList: consoleProcessList });
  process.exit(0);
  //# sourceMappingURL=conpty_console_list_agent.js.map
+\ No newline at end of file
+diff --git a/prebuilds/darwin-arm64/spawn-helper b/prebuilds/darwin-arm64/spawn-helper
+old mode 100644
+new mode 100755
+diff --git a/prebuilds/darwin-x64/spawn-helper b/prebuilds/darwin-x64/spawn-helper
+old mode 100644
+new mode 100755
 diff --git a/src/conpty_console_list_agent.ts b/src/conpty_console_list_agent.ts
 index 181ccabbbe9c4948a9725fb1db907a68e9de01fc..2702ad3590b80c825931e9cd8da26ab5ebcc860c 100644
 --- a/src/conpty_console_list_agent.ts
 +++ b/src/conpty_console_list_agent.ts
-@@ -11,5 +11,10 @@
+@@ -10,6 +10,11 @@ import { loadNativeModule } from './utils';
+ 
  const getConsoleProcessList = loadNativeModule('conpty_console_list').module.getConsoleProcessList;
  const shellPid = parseInt(process.argv[2], 10);
 -const consoleProcessList = getConsoleProcessList(shellPid);
