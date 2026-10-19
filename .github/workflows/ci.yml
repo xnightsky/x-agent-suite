@@ -46,4 +46,4 @@ jobs:
         run: pnpm test
 
       - name: 集成测试
-        run: pnpm itest
+        run: pnpm ittest
