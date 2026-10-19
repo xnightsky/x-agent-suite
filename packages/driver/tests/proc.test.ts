@@ -69,7 +69,8 @@ test("JsonlProcess: stderr 环形缓冲按行丢弃旧内容（不依赖 data ch
     stderrRingLines: 2,
   });
   await proc.start();
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  // 轮询等末行进环（固定 sleep 在慢机器上会在子进程输出前 close，tail 为空假失败）。
+  await waitForStderrTail(proc, "chunk-4\n");
   await proc.close();
   const tail = proc.stderrTail();
   assert.ok(!tail.includes("chunk-0"), "最旧 chunk 应被丢弃");
