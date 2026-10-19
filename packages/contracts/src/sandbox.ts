@@ -3,16 +3,17 @@
  * 沙箱上下文类型：一个 harness 子进程一份隔离环境。
  *
  * 不变量：
- * - homeDir 与 cwd 均为临时生成的唯一目录；
+ * - homeDir 与 cwd 均为临时生成的唯一目录，且为 realpath 规范化后的物理路径
+ *   （与子进程 process.cwd() 口径一致，不含符号链接段）；
  * - env 已剥离代理变量与 profile 声明的 stripEnv；
  * - 具体宿主的专用配置目录通过 `configDirs` 自由区表达，本模块不解释键名。
  */
 
 /** 一个 harness 的隔离沙箱上下文。 */
 export interface SandboxContext {
-  /** 作为子进程 HOME 的临时目录。 */
+  /** 作为子进程 HOME 的临时目录（物理路径）。 */
   readonly homeDir: string;
-  /** 子进程工作目录（项目根）。 */
+  /** 子进程工作目录（项目根）；物理路径，与子进程 process.cwd() 字面一致。 */
   readonly cwd: string;
   /** 消费者专用配置目录映射；键为目录语义，值为沙箱内绝对路径。 */
   readonly configDirs?: Record<string, string>;

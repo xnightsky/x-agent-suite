@@ -33,10 +33,11 @@ export interface SandboxContext {
 创建流程：
 
 1. `id = randomUUID()`。
-2. `homeDir = mkdtemp(join(tmpdir(), `xas-sandbox-home-${id}-`))`。
-3. `cwd = mkdtemp(join(tmpdir(), `xas-sandbox-cwd-${id}-`))`。
+2. `homeDir = realpath(mkdtemp(join(tmpdir(), `xas-sandbox-home-${id}-`)))`。
+3. `cwd = realpath(mkdtemp(join(tmpdir(), `xas-sandbox-cwd-${id}-`)))`。
 4. 按需创建 `configDirs`、`configFilePath`、`runtimeDir`。
 5. 合并 `process.env` 与调用方注入变量，再执行剥离并写入受保护的 HOME 系列变量。
+创建即 realpath 规范化：`tmpdir()` 可能含符号链接段（如 macOS 的 `/var` → `/private/var`），而子进程 `process.cwd()` 恒返回物理路径；不规范化会让消费者对 `sandbox.cwd` 的字符串比较永不命中。
 
 ## 子进程环境注入
 
@@ -130,7 +131,7 @@ packages/sandbox/src/
 
 ## 验收标准
 
-- `createSandbox` 生成的 `homeDir`/`cwd` 互不重复。
+- `createSandbox` 生成的 `homeDir`/`cwd` 互不重复，且为 realpath 规范化后的物理路径（与子进程 `process.cwd()` 字面一致）。
 - 子进程 `process.env.HOME` 等于 sandbox homeDir。
 - 即使调用方在 `env` 中重新注入，`stripEnv` 声明项和代理变量仍不存在。
 - 测试结束后临时目录被删除（`E2E_KEEP_SANDBOX=0`）。

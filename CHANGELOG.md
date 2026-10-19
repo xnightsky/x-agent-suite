@@ -2,6 +2,12 @@
 
 本文件记录影响消费者接口、行为、安装、配置、协议或报告格式的变化。版本遵循 [Semantic Versioning 2.0.0](https://semver.org/)；源码 workspace 的 `0.0.0` 是不可发布占位值，制品版本由 Git history 与稳定 tag 管理。历史章节与本仓稳定 tag 一一对应，不记录未发布的版本号。
 
+## 0.6.1 - 2026-10-19
+
+### Fixed
+
+- `createSandbox` 生成的 `homeDir`/`cwd` 创建即 realpath 规范化为物理路径：`tmpdir()` 可能含符号链接段（如 macOS 的 `/var` → `/private/var`），而子进程 `process.cwd()` 恒返回物理路径，此前消费者拿 `sandbox.cwd` 与子进程上报的 cwd 做字符串比较会永不命中。契约 `SandboxContext` 不变量与 `docs/spec/sandbox.md` 同步。
+
 ## 0.6.0 - 2026-09-13
 
 ### Added

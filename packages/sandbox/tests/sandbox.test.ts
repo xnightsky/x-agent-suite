@@ -6,8 +6,9 @@
  * E2E_KEEP_SANDBOX=1 时清理跳过删除并保留目录。
  */
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { rm, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -170,6 +171,29 @@ test("createSandbox：拒绝可逃逸或跨平台非法的 configDirs 路径段"
     }
   } finally {
     await rm(outside, { recursive: true, force: true });
+  }
+});
+
+test("createSandbox：homeDir/cwd 为物理路径，子进程 process.cwd() 与 sandbox.cwd 一致", async () => {
+  // macOS 上 tmpdir() 经 /var 符号链接；子进程 getcwd 恒返回物理路径。
+  // 消费者若拿 sandbox.cwd 与子进程上报的 cwd 做字符串比较（如身份展示断言），
+  // 符号链接形态差会导致永不命中。sandbox 必须在创建点 canonicalize。
+  const sandbox = await createSandbox();
+  try {
+    assert.equal(sandbox.cwd, await realpath(sandbox.cwd), "cwd 不含符号链接段");
+    assert.equal(
+      sandbox.homeDir,
+      await realpath(sandbox.homeDir),
+      "homeDir 不含符号链接段",
+    );
+    const child = spawnSync(process.execPath, ["-p", "process.cwd()"], {
+      cwd: sandbox.cwd,
+      encoding: "utf8",
+    });
+    assert.equal(child.status, 0, child.stderr);
+    assert.equal(child.stdout.trim(), sandbox.cwd, "子进程视角 cwd 必须与 sandbox.cwd 字面一致");
+  } finally {
+    await cleanupSandbox(sandbox);
   }
 });
 

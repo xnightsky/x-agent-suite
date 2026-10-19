@@ -3,7 +3,9 @@
  * createSandbox：为单个 harness 创建隔离沙箱。
  *
  * 流程：
- * 1. mkdtemp 生成 homeDir / cwd；
+ * 1. mkdtemp 生成 homeDir / cwd，并 realpath 规范化（tmpdir 可能含符号链接段，
+ *    如 macOS 的 /var → /private/var；子进程 getcwd 恒返回物理路径，
+ *    不规范化会让消费者对 sandbox.cwd 的字符串比较永不命中）；
  * 2. 按需创建 configDirs 与 runtimeDir，均位于 homeDir 下；
  * 3. 合并 process.env 与调用方 env；
  * 4. 剥离内置代理变量与 stripEnv 声明的变量；
@@ -12,7 +14,7 @@
  * 代理变量剥离是硬要求：部分 CLI 会把对本地端点的请求发往 http_proxy。
  */
 import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type {
@@ -71,8 +73,12 @@ export async function createSandbox(
   }
 
   const id = randomUUID();
-  const homeDir = await mkdtemp(join(tmpdir(), `xas-sandbox-home-${id}-`));
-  const cwd = await mkdtemp(join(tmpdir(), `xas-sandbox-cwd-${id}-`));
+  const homeDir = await realpath(
+    await mkdtemp(join(tmpdir(), `xas-sandbox-home-${id}-`)),
+  );
+  const cwd = await realpath(
+    await mkdtemp(join(tmpdir(), `xas-sandbox-cwd-${id}-`)),
+  );
 
   const configDirs: Record<string, string> = {};
   if (configDirNames.length > 0) {
