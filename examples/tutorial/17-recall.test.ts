@@ -56,10 +56,11 @@ cases:
     };
     assert.equal(provision.context.files[0]!.content, "read only context");
 
+    const before = new Set(await readdir(outDir).catch(() => []));
     const exitCode = await main(["recall"], { cwd });
     assert.equal(exitCode, 0);
-    const files = (await readdir(outDir)).filter((file) =>
-      file.endsWith("-report.json"),
+    const files = (await readdir(outDir)).filter(
+      (file) => file.endsWith("-report.json") && !before.has(file),
     );
     assert.equal(files.length, 1);
     const report = JSON.parse(await readFile(join(outDir, files[0]!), "utf8"));
