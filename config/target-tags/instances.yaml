@@ -1,0 +1,77 @@
+# 真实 TargetTags 实例：只维护身份、引用、wire 与 tags，不保存端点、凭据或账号信息。
+# 公共实例来自官方目录与当前配置安全摘要；是否可选/默认执行仍由 loadLiveConfig/resolveLiveTargets 决定。
+# 空 tags 表示尚未声明，不表示官方禁止；auth/usage/live 不得从 from/credential/apiKey 推断。
+# 私有/自定义渠道不入库；由私密 live 配置根级 targetTags 可选补充并在加载时合并。
+# CLI 条目录入产品能力目录；候选判断不代替调用方落实对应启动参数。
+# CLI 事实来自官方 CLI 文档；模型事实核对自 Pi 官方 bundled model catalog（2026-10-27）。
+version: 1
+
+cli:
+  # Pi 能力目录；下列能力由对应开关提供，不表示默认开启或已做组合运行验证。
+  - id: pi
+    carrier: pi
+    wires: [openai-chat, openai-responses, anthropic-messages, gemini-generate]
+    tags:
+      - cli.execution.one-shot # --print：单次执行后退出。
+      - cli.execution.unattended # print 模式可在无人回答交互问题时完成。
+      - cli.execution.model-select # 可显式固定模型，避免静默切换。
+      - cli.execution.provider-select # 可显式固定 provider；与模型选择共同锁定目标。
+      - cli.execution.endpoint-select # 可通过模型配置固定端点。
+      - cli.session.ephemeral # --no-session：会话仅在内存，退出后不可恢复。
+      - cli.context.resources.off # 可关闭 extensions/skills/templates；不等于所有 context 都关闭。
+      - cli.context.system-prompt.replace # 可替换系统提示词，而非只能追加。
+      - cli.tools.none # --no-tools：关闭内建、扩展、自定义与 MCP 工具。
+      - cli.io.text # 支持最终文本输出。
+      - cli.io.jsonl # JSONL 事件输出可供程序逐行解析。
+
+  # Kimi 能力目录；print/AFK 不等于 tools.none，未核实的 no-session 不声明。
+  - id: kimi
+    carrier: kimi
+    wires: [openai-chat, openai-responses, anthropic-messages, gemini-generate]
+    tags:
+      - cli.execution.one-shot # --print：单次执行后退出。
+      - cli.execution.unattended # print/AFK 可无人值守完成，但不等于禁工具。
+      - cli.execution.model-select # --model 可显式固定模型。
+      - cli.session.persistent # 官方会话机制会自动保存会话。
+      - cli.session.resumable # 支持恢复既有会话。
+      - cli.tools.read-only # Plan mode 提供只读探索，不是 tools.none。
+      - cli.io.text # print 支持最终文本输出。
+      - cli.io.jsonl # stream-json 支持逐行事件解析。
+
+providers:
+  # 当前账号的凭据类型、套餐范围和 live 策略均未由安全结构摘要证明。
+  - { id: kimi-coding, tags: [] } # 保留公共父引用；账号 auth/usage/live 由私密 targetTags 补充。
+
+providerModels:
+  # k3 与 kimi-for-coding 是 Pi bundled catalog 中不同的模型条目，不互相设别名。
+  - id: kimi-coding/k3
+    providerRef: kimi-coding
+    model: k3
+    modelRef: k3
+    wire: openai-chat
+    tags:
+      - provider-model.api.complete # OpenAI Chat Completions 支持一次补全；不等于 direct 授权。
+      - provider-model.api.tools # Pi bundled catalog 明示支持会话中追加工具。
+
+  - id: kimi-coding/kimi-for-coding
+    providerRef: kimi-coding
+    model: kimi-for-coding
+    modelRef: kimi-for-coding
+    wire: openai-chat
+    tags:
+      - provider-model.api.complete # OpenAI Chat Completions 支持一次补全；不等于 direct 授权。
+      - provider-model.api.tools # Pi bundled catalog 明示支持会话中追加工具。
+
+models:
+  # Pi bundled catalog 明示 type=chat、reasoning=true、input=[text,image]；不额外推断结构化输出等能力。
+  - id: k3
+    tags:
+      - model.inference.chat # Pi catalog 的 type=chat，表示通用对话生成。
+      - model.inference.reasoning # Pi catalog 的 reasoning=true，支持思考/推理。
+      - model.inference.vision # Pi catalog 的 input 包含 image，支持图片输入。
+
+  - id: kimi-for-coding
+    tags:
+      - model.inference.chat # Pi catalog 的 type=chat，表示通用对话生成。
+      - model.inference.reasoning # Pi catalog 的 reasoning=true，支持思考/推理。
+      - model.inference.vision # Pi catalog 的 input 包含 image，支持图片输入。

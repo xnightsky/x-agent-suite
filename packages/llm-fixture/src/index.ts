@@ -41,6 +41,36 @@ export {
   type BorrowedChannelResult,
   type BorrowedCredentialResult,
 } from "./live-config.ts";
+export { decideLiveTargets } from "./target-tag-decision.ts";
+export {
+  loadTargetTagCatalog,
+  parseTargetTagDictionary,
+  parseTargetTagInstances,
+  TargetTagDefinitionError,
+  TARGET_TAG_DICTIONARY_FILE,
+  TARGET_TAG_INSTANCES_FILE,
+} from "./target-tags.ts";
+export type {
+  CliTags,
+  LivePolicyDecision,
+  LivePolicyStatus,
+  LiveTargetDecision,
+  LiveTargetDecisionResult,
+  LoadTargetTagCatalogOptions,
+  ModelTags,
+  ProviderModelTags,
+  ProviderTags,
+  TargetAccessMode,
+  TargetDecisionOptions,
+  TargetModeEvaluation,
+  TargetTagCatalog,
+  TargetTagDictionary,
+  TargetTagInstances,
+  TargetTagKey,
+  TargetTagRequirement,
+  TargetTagScope,
+  TargetTagStatus,
+} from "./target-tag-types.ts";
 export {
   buildLiveRequest,
   createFetchTransport,

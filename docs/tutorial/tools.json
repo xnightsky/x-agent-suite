@@ -181,6 +181,55 @@
           "recipes": ["live-token-smoke"]
         },
         {
+          "name": "loadTargetTagCatalog",
+          "category": "live",
+          "purpose": "加载公共 TargetTags 词典与实例，并合并当前 live 文件的可选私密覆盖。",
+          "risk": "safe",
+          "reason": "只读 YAML，不发起模型调用；使用示例见 docs/spec/target-tags.md。"
+        },
+        {
+          "name": "parseTargetTagDictionary",
+          "category": "advanced",
+          "purpose": "校验并解析 TagKey/TagValue 词典 YAML。",
+          "risk": "safe",
+          "reason": "纯本地解析，暂无独立 recipe；见 docs/spec/target-tags.md。"
+        },
+        {
+          "name": "parseTargetTagInstances",
+          "category": "advanced",
+          "purpose": "按词典校验四层 TargetTags 实例、标签和引用。",
+          "risk": "safe",
+          "reason": "纯本地解析，暂无独立 recipe；见 docs/spec/target-tags.md。"
+        },
+        {
+          "name": "decideLiveTargets",
+          "category": "live",
+          "purpose": "复用完整 live target 评估 direct/borrowed 候选与 live 门禁。",
+          "risk": "safe",
+          "reason": "只返回决策，不执行 direct/borrowed 调用；见 docs/spec/target-tags.md。"
+        },
+        {
+          "name": "TargetTagDefinitionError",
+          "category": "advanced",
+          "purpose": "标识 TargetTags 词典、实例或需求定义错误。",
+          "risk": "safe",
+          "reason": "定义错误类型，暂无独立 recipe；见 docs/spec/target-tags.md。"
+        },
+        {
+          "name": "TARGET_TAG_DICTIONARY_FILE",
+          "category": "advanced",
+          "purpose": "默认 TargetTags 词典的仓库相对路径。",
+          "risk": "safe",
+          "reason": "路径常量，暂无独立 recipe；见 docs/spec/target-tags.md。"
+        },
+        {
+          "name": "TARGET_TAG_INSTANCES_FILE",
+          "category": "advanced",
+          "purpose": "默认公共 TargetTags 实例的仓库相对路径。",
+          "risk": "safe",
+          "reason": "路径常量，暂无独立 recipe；见 docs/spec/target-tags.md。"
+        },
+        {
           "name": "resolveLiveCredential",
           "category": "live",
           "purpose": "按显式配置或借用钩子解析凭据。",

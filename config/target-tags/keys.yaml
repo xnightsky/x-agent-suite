@@ -1,0 +1,174 @@
+# TargetTags 的 TagKey/TagValue 词典；本文件不声明任何真实实例能力。
+# 新 value 先在这里注册，再由 instances.yaml 使用；reserved/deprecated 不产生能力。
+version: 1
+
+rules:
+  tag_key: <scope>.<dimension>
+  tag_id: <tag_key>.<value>
+  unregistered_key: definition-error
+  missing_value: unknown
+  reserved_key: no-tag-id-and-no-capability
+  cross_tags: false
+  provider_model_override: narrow-only
+  model_identity: canonical-model-id-plus-optional-revision
+  # 任一相关作用域命中即按此顺序合并；unknown 默认不允许 live。
+  live_priority: [disallowed, review-required, allowed, unknown]
+  live_unknown: not-allowed-by-default
+
+keys:
+  # CLI 一次执行、无人值守与目标选择能力。
+  - key: cli.execution
+    scope: cli
+    dimension: execution
+    status: maintained
+    values:
+      [
+        one-shot,
+        interactive,
+        unattended,
+        abort,
+        model-select,
+        provider-select,
+        endpoint-select,
+      ]
+
+  # 会话是否持久化、是否可恢复；每次新进程不等于 ephemeral。
+  - key: cli.session
+    scope: cli
+    dimension: session
+    status: maintained
+    values: [ephemeral, persistent, resumable]
+
+  # 上下文隔离逐项声明，不使用无法验证的笼统 clean。
+  - key: cli.context
+    scope: cli
+    dimension: context
+    status: maintained
+    values:
+      [
+        user-config.off,
+        project-config.off,
+        exec-rules.off,
+        resources.off,
+        system-prompt.replace,
+      ]
+
+  # 工具关闭、只读、白名单与 MCP；自动批准不等于 tools.none。
+  - key: cli.tools
+    scope: cli
+    dimension: tools
+    status: maintained
+    values: [none, read-only, allowlist, mcp]
+
+  # CLI 输出与可观测性；json/jsonl 不证明模型符合 Schema。
+  - key: cli.io
+    scope: cli
+    dimension: io
+    status: maintained
+    values: [text, json, jsonl, schema, usage, trace]
+
+  # provider 默认认证事实；host-borrowed 可与具体凭据类型并存。
+  - key: provider.auth
+    scope: provider
+    dimension: auth
+    status: maintained
+    values: [api-key, oauth, ambient-cloud, host-borrowed, none]
+
+  # provider 默认使用范围和 live 策略；不由凭据来源或历史成功推断。
+  - key: provider.usage
+    scope: provider
+    dimension: usage
+    status: maintained
+    values:
+      [
+        cli-subscription,
+        ci-subscription,
+        third-party-subscription,
+        api-payg,
+        api-credit,
+        cli-free,
+        api-free,
+        live.allowed,
+        live.review-required,
+        live.disallowed,
+      ]
+
+  # provider × model 的 API 表面；不能仅由协议名称猜测。
+  - key: provider-model.api
+    scope: provider-model
+    dimension: api
+    status: maintained
+    values: [complete, stream, tools, schema, usage, abort]
+
+  # 模型级认证差异；缺省时继承 provider.auth 默认值。
+  - key: provider-model.auth
+    scope: provider-model
+    dimension: auth
+    status: maintained
+    values: [api-key, oauth, ambient-cloud, host-borrowed, none]
+
+  # 模型级使用范围与 live 收窄；live 合并不允许覆盖放行。
+  - key: provider-model.usage
+    scope: provider-model
+    dimension: usage
+    status: maintained
+    values:
+      [
+        cli-subscription,
+        ci-subscription,
+        third-party-subscription,
+        api-payg,
+        api-credit,
+        cli-free,
+        api-free,
+        live.allowed,
+        live.review-required,
+        live.disallowed,
+      ]
+
+  # canonical model/revision 自身能力；同名 provider 别名不自动共享。
+  - key: model.inference
+    scope: model
+    dimension: inference
+    status: maintained
+    values:
+      [
+        chat,
+        reasoning,
+        vision,
+        video,
+        tool-calling,
+        structured-output,
+        classifier,
+        image-generation,
+      ]
+
+  # 预留 key：只登记未来维度，不产生 TagId，也不能满足需求。
+  - {
+      key: cli.approval,
+      scope: cli,
+      dimension: approval,
+      status: reserved,
+      values: [],
+    }
+  - {
+      key: provider.api,
+      scope: provider,
+      dimension: api,
+      status: reserved,
+      values: [],
+    }
+  - {
+      key: provider-model.compat,
+      scope: provider-model,
+      dimension: compat,
+      status: reserved,
+      values: [],
+    }
+  - {
+      key: model.audio,
+      scope: model,
+      dimension: audio,
+      status: reserved,
+      values: [],
+    }
