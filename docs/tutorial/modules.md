@@ -1,6 +1,6 @@
 # 模块与工具手册
 
-本页按“做什么、何时用、与谁组合”解释七个包。[`catalog.json`](./catalog.json) 记录组合并指向公开工具真相源 [`tools.json`](./tools.json)；新增或删除导出时，教程测试会要求同步分类。
+本页按“做什么、何时用、与谁组合”解释各包。[`catalog.json`](./catalog.json) 记录组合并指向公开工具真相源 [`tools.json`](./tools.json)；新增或删除导出时，教程测试会要求同步分类。
 
 分类含义：
 
@@ -132,3 +132,14 @@ Harness Driver 已经组合 sandbox；只有直接使用 `JsonlProcess`/`PtyProc
 | `writeScenarioReports` | 主路径 | 转导出 observation 报告工具                |
 
 Matrix 不加载 scenario、不创建 profile、不解释 criterion。它只编排消费者传入的四个函数：carrier 列表、variant discovery、driver factory、scenario runner。
+
+## 8. recall：声明式考卷
+
+| 工具               | 分类     | 用法                                                       |
+| ------------------ | -------- | ---------------------------------------------------------- |
+| `loadRecall`       | 主路径   | 自动/显式发现 config 与 YAML，并在执行前完成全部严格校验   |
+| `runRecall`        | 主路径   | 复用 Runner 执行独立 case/repeat 并写 Markdown + JSON 报告 |
+| `main`             | 主路径   | 接入 `x-agent-suite recall` 子命令                         |
+| `loadRecallConfig` | 底层原语 | 自定义装载时单独读取代码运行配置                           |
+
+Recall 只负责发现、读取、校验和编译；模型、渠道、凭证与 sandbox 物化仍由消费者提供。完整契约见[原生 Recall 规范](../spec/recall.md)，可运行示例见 [Recall recipe](./recipes/recall.md)。

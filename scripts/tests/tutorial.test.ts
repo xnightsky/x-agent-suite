@@ -23,6 +23,7 @@ const PACKAGE_IDS = [
   "matrix",
   "criteria",
   "runner",
+  "recall",
 ] as const;
 
 interface TutorialCatalog {
@@ -179,7 +180,7 @@ async function runRecipe(
   }
 }
 
-test("教程目录覆盖七个包的全部公开运行时导出", async () => {
+test("教程目录覆盖全部包的全部公开运行时导出", async () => {
   const catalog = await readCatalog();
   assert.deepEqual(
     catalog.packages.map((item) => item.id),
@@ -515,6 +516,22 @@ test("live-guard 默认不出网且所有诊断经过脱敏", async () => {
     assert.equal(summary.authorized, false);
     assert.equal(summary.networkAttempted, false);
     assert.equal(summary.redacted, true);
+  } finally {
+    await rm(outDir, { recursive: true, force: true });
+  }
+});
+
+test("recall 自动发现多轮 YAML 并出报告", async () => {
+  const { summary, outDir } = await runRecipe(
+    "examples/tutorial/17-recall.test.ts",
+  );
+  try {
+    assert.equal(summary.recipe, "recall");
+    assert.equal(summary.exitCode, 0);
+    assert.equal(summary.reports, 1);
+    assert.equal(summary.scenario, "tutorial-recall/multi-turn");
+    assert.equal(summary.turns, 2);
+    assert.equal(summary.contextPath, "CONTEXT.md");
   } finally {
     await rm(outDir, { recursive: true, force: true });
   }

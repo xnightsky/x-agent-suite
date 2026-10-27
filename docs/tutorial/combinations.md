@@ -12,7 +12,7 @@
 | 评分    | dry / hard / fuzzy / enumerate / 自定义 Criterion       | 通用函数 + 消费者        |
 | 输出    | Observation / ScenarioResult / Markdown+JSON            | driver、runner、reporter |
 
-Backend 不属于 `MockDriver` 或底层 `JsonlProcess` 本身；Scenario DSL runner 也尚不是框架运行时。把“不适用”与“尚未实现”区分开，能避免产生不存在的组合。
+Backend 不属于 `MockDriver` 或底层 `JsonlProcess` 本身；Scenario Runner 与 Recall 也不负责选择 backend。把“不适用”与“尚未实现”区分开，能避免产生不存在的组合。
 
 ## 支持矩阵
 
@@ -21,6 +21,7 @@ Backend 不属于 `MockDriver` 或底层 `JsonlProcess` 本身；Scenario DSL ru
 | 学习完整数据链                    | Mock + checks + report                                | 支持           | [mock-report](./recipes/mock-report.md)（`pnpm tutorial`）                             |
 | 判据调度与聚合打分                | runCriteria + resolveAggregate + report               | 支持           | [criteria-aggregation](./recipes/criteria-aggregation.md)（`pnpm tutorial:aggregate`） |
 | 一条命令跑完整考卷                | runner CLI（eval）+ config 模块                       | 支持           | [scenario-runner](./recipes/scenario-runner.md)（`pnpm tutorial:runner`）              |
+| `.recall` 声明式多轮考卷          | recall + YAML + runner                                | 支持           | [recall](./recipes/recall.md)（`pnpm tutorial:recall`）                                |
 | harness driver 接 runner          | createHarnessDriver + runScenarioSpec                 | 支持           | [harness-runner](./recipes/harness-runner.md)（`pnpm tutorial:harness-runner`）        |
 | 真实宿主 PTY 接 runner            | createPtyAgentDriver + runScenarioSpec                | 支持（门控）   | [pi-pty-runner](./recipes/pi-pty-runner.md)（`pnpm tutorial:runner:pi`）               |
 | 安装态能力评测（provision）       | sandboxSetup + provisionSandbox + runner              | 支持           | [provision-skill](./recipes/provision-skill.md)（`pnpm tutorial:provision`）           |
@@ -35,7 +36,6 @@ Backend 不属于 `MockDriver` 或底层 `JsonlProcess` 本身；Scenario DSL ru
 | Pi 真实 PTY 打真实 provider/model | Pi profile + LiveBackend + 借用渠道注入               | 有条件、高风险 | [pi-live-pty](./recipes/pi-live-pty.md)；仅显式 token 入口                             |
 | live 默认安全门                   | authorization + redact                                | 支持           | [live-guard](./recipes/live-guard.md)；默认零网络                                      |
 | 真实模型最小对照                  | live config + sniff                                   | 有条件、高风险 | [live-token-smoke](./recipes/live-token-smoke.md)；仅显式 token 入口                   |
-| `x-agent-suite run`               | Runtime Registry + DSL runner + CLI                   | 尚未实现       | 路线图阶段 1/2                                                                         |
 
 ## 真实 headless CLI + fixture
 
@@ -175,4 +175,4 @@ await runMatrix(
 pnpm artifacts:pack
 ```
 
-具体 tarball 文件名、固定版本重打和外部 `pnpm add` 方式见[打包规范](../spec/packaging.md)。Registry/CLI 上线后再增加统一配置文件与命令教程。
+具体 tarball 文件名、固定版本重打和外部 `pnpm add` 方式见[打包规范](../spec/packaging.md)，统一 CLI 与声明式配置见[原生 Recall 规范](../spec/recall.md)。

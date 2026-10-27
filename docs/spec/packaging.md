@@ -31,7 +31,7 @@
 
 ## 当前形态
 
-x-agent-suite 已拆为 7 个 workspace 包：
+x-agent-suite 已拆为 10 个 workspace 包：
 
 | 包                           | 内容                                         | 运行时依赖             | 原生依赖           |
 | ---------------------------- | -------------------------------------------- | ---------------------- | ------------------ |
@@ -42,6 +42,9 @@ x-agent-suite 已拆为 7 个 workspace 包：
 | `@x-agent-suite/harness`     | `HarnessProfile` / driver 组合               | workspace 包           | 无                 |
 | `@x-agent-suite/observation` | checks / report                              | workspace 包           | 无                 |
 | `@x-agent-suite/matrix`      | `runMatrix` / 报告落盘                       | workspace 包           | 无                 |
+| `@x-agent-suite/criteria`    | 可选通用判据插件                             | workspace 包           | 无                 |
+| `@x-agent-suite/runner`      | ScenarioSpec 执行 / repeat / eval CLI        | workspace 包           | 无                 |
+| `@x-agent-suite/recall`      | 原生 `.recall` 发现 / YAML 编译 / CLI        | `yaml`、workspace 包   | 无                 |
 
 `@x-agent-suite/driver` 的问题：它同时包含 `JsonlProcess`（零原生）和 `PtyProcess`（需 `node-pty`）。这意味着即使 consumer 只用 headless JSONL，也要背 `node-pty` 及其编译代价。
 
@@ -121,7 +124,7 @@ tarball 只包含运行所需的 `dist/`、类型声明、README、LICENSE 与�
 
 ### 当前状态
 
-仓库已经提供根级统一入口 `artifacts:pack`。它从 Git history 自动推导版本，在隔离临时目录构建核心聚合包和 PTY 包，生成 manifest 与 SHA-256，并在仓库外临时 consumer 中完成运行时导入和 TypeScript 类型冒烟。当前实现把七个内部 workspace 模块汇入两个外部分发包：核心包将 `yaml` 声明为外部纯 JS 运行时依赖，不再把其实现或 sourcemap 源码内联进 bundle；PTY 包单独承载原生依赖，构建期校验其 bundle 不得内联 `LiveBackend` 类实现（跨制品 live 判定只走契约品牌字段 `LlmBackend.liveChannel`），PTY 冒烟 consumer 刻意混装核心制品，按行为断言消费者侧 `LiveBackend` 实例经 PTY 制品驱动路径时 live 分支真实生效。严格离线安装仍须预热包含 `yaml` 的 pnpm store，或使用可达的内部 registry。稳定制品全部成功后，命令为当前 HEAD 自动补 annotated SemVer tag。
+仓库已经提供根级统一入口 `artifacts:pack`。它从 Git history 自动推导版本，在隔离临时目录构建核心聚合包和 PTY 包，生成 manifest 与 SHA-256，并在仓库外临时 consumer 中完成运行时导入和 TypeScript 类型冒烟。当前实现把十个内部 workspace 模块汇入两个外部分发包：核心包将 `yaml` 声明为外部纯 JS 运行时依赖，不再把其实现或 sourcemap 源码内联进 bundle；PTY 包单独承载原生依赖，构建期校验其 bundle 不得内联 `LiveBackend` 类实现（跨制品 live 判定只走契约品牌字段 `LlmBackend.liveChannel`），PTY 冒烟 consumer 刻意混装核心制品，按行为断言消费者侧 `LiveBackend` 实例经 PTY 制品驱动路径时 live 分支真实生效。严格离线安装仍须预热包含 `yaml` 的 pnpm store，或使用可达的内部 registry。稳定制品全部成功后，命令为当前 HEAD 自动补 annotated SemVer tag。
 
 源码 workspace 的 `0.0.0` 继续作为私有仓库占位值；可安装版本仅写入 staged package manifest，不修改源码 package。直接对单个 workspace 执行 `pnpm pack` 仍然不是合法交付流程。
 
@@ -345,12 +348,13 @@ pnpm add -D @x-agent-suite/pty-driver@0.1.0
 
 ## CLI 安装约定
 
-在路线图阶段 2 的 CLI 出现前，`x-agent-suite` 是项目内开发依赖，不提供全局安装承诺。
+`x-agent-suite` 聚合包已声明 `bin`，作为项目内开发依赖使用，不要求全局安装。
 
-CLI 落地后由同一聚合包声明 `bin`，推荐项目内执行：
+同一入口支持原 Runner 与原生 Recall：
 
 ```bash
-pnpm exec x-agent-suite run <scenario>
+pnpm exec x-agent-suite eval <config-module>
+pnpm exec x-agent-suite recall [--config <config.ts>] [YAML|目录]
 ```
 
 若以后确实需要全局软件安装，可复用同一 tarball 或 registry 包执行 `pnpm add -g`；全局安装是额外验收面，不反向改变库接口。

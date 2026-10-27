@@ -2,11 +2,7 @@
   "schemaVersion": 1,
   "status": "library-building-blocks",
   "toolsFile": "tools.json",
-  "plannedNotImplemented": [
-    "runtime-registry",
-    "scenario-dsl-runner",
-    "unified-cli"
-  ],
+  "plannedNotImplemented": [],
   "recipes": [
     {
       "id": "mock-report",
@@ -174,6 +170,21 @@
       "expected": ["exit code 0", "3 scenario reports", "aggregate coverage"]
     },
     {
+      "id": "recall",
+      "title": "原生 .recall 声明式多轮考卷",
+      "source": "examples/tutorial/17-recall.test.ts",
+      "guide": "docs/tutorial/recipes/recall.md",
+      "command": "pnpm tutorial:recall",
+      "modules": ["driver", "criteria", "runner", "recall"],
+      "mode": "offline",
+      "expected": [
+        "strict compile",
+        "two turns",
+        "Markdown report",
+        "JSON report"
+      ]
+    },
+    {
       "id": "harness-runner",
       "title": "HarnessDriver → runScenarioSpec 主链",
       "source": "examples/tutorial/14-harness-runner.test.ts",
@@ -304,10 +315,16 @@
       "recipe": "pi-live-pty"
     },
     {
+      "goal": "从 .recall 自动发现并执行声明式多轮考卷",
+      "status": "supported",
+      "modules": ["recall", "runner", "observation"],
+      "recipe": "recall"
+    },
+    {
       "goal": "通过统一 Registry/CLI 直接运行 ScenarioSpec",
-      "status": "planned",
-      "modules": ["contracts:Registry", "contracts:ScenarioSpec"],
-      "requires": ["路线图阶段 1 和阶段 2"]
+      "status": "supported",
+      "modules": ["contracts:Registry", "contracts:ScenarioSpec", "runner"],
+      "recipe": "scenario-runner"
     }
   ]
 }

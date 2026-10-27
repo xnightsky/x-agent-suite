@@ -31,9 +31,9 @@ HarnessProfile + LlmBackend + Sandbox
 
 当前版本是一组可组合的库，不是完整评测产品：
 
-- `Registry`、`ScenarioSpec`、`Criterion` 已有类型契约；框架尚未提供运行时 Registry 和通用 Scenario DSL runner。
+- `Registry`、`ScenarioSpec`、`Criterion` 已有类型契约；运行时 Registry 与通用 Scenario Runner 已落地。
 - `runMatrix` 已可运行，但 `createDriver` 和 `runScenario` 仍由消费者注入。
-- 统一的 `x-agent-suite run/matrix` CLI 仍在路线图阶段。
+- 统一 CLI 已支持 `eval/run/diff/recall`；matrix 仍由库 API 编排。
 - 源码仓各包为 private workspace 包；外部消费者当前通过本地版本化制品使用。
 
 因此，教程里的 `examples/tutorial/support.ts` 是明确的**消费者侧胶水**，不会从框架包导出。
@@ -45,6 +45,7 @@ HarnessProfile + LlmBackend + Sandbox
 | 学会 Driver、评分和报告闭环     | [Mock → Report](./recipes/mock-report.md)                   | 离线、安全                                |
 | 判据调度与聚合打分              | [Criteria → Aggregation](./recipes/criteria-aggregation.md) | 离线、安全                                |
 | 一条命令跑完整考卷              | [Scenario Runner](./recipes/scenario-runner.md)             | 离线、安全                                |
+| 用 `.recall` 写声明式多轮考卷   | [Recall](./recipes/recall.md)                               | 离线、安全                                |
 | harness driver 接 runner        | [Harness Runner](./recipes/harness-runner.md)               | 离线、安全                                |
 | 安装态能力评测（provision）     | [Provision Skill](./recipes/provision-skill.md)             | 离线、安全                                |
 | 驱动自己的 JSONL 子进程         | [Sandbox → JSONL](./recipes/sandbox-jsonl.md)               | 离线、安全                                |
@@ -80,7 +81,7 @@ pnpm tutorial
 
 默认产物位于 `.tmp/tutorial/mock-report/`。下一步通常是把 `MockDriver` 替换为自己的 Driver，保留后半段评分和报告代码。
 
-## 九条默认安全教程命令
+## 十条默认安全教程命令
 
 ```bash
 pnpm tutorial
@@ -92,6 +93,7 @@ pnpm tutorial:long-lived
 pnpm tutorial:long-lived-wire
 pnpm tutorial:pty
 pnpm tutorial:live:guard
+pnpm tutorial:recall
 
 # 一次验证全部安全教程
 pnpm tutorial:check
@@ -111,14 +113,14 @@ pnpm ittest:token:pi-pty    # 默认 skip；还需单次授权、carriers.pi 借
 
 ## 消费者需要提供什么
 
-| 接缝                        | 什么时候提供                            | 框架怎样使用                               |
-| --------------------------- | --------------------------------------- | ------------------------------------------ |
-| `AgentDriver`               | 已有结构化进程/协议适配时               | 统一调用 `start/sendPrompt/events/close`   |
-| `HarnessProfile`            | 需要框架拉起真实 CLI 时                 | 写配置、拼参数、解析 JSONL、映射工具名     |
-| `ScenarioSpec` / `Scenario` | 表达多轮输入和依赖时                    | 当前由消费者自己的 runner 解释             |
-| `Criterion`                 | 领域 pass/fail 不能由通用 checks 表达时 | 当前由消费者自己的 runner 调用             |
-| artifact collector          | 需要被测系统侧客观证据时                | 放进 `ScenarioResult.artifact` 后写报告    |
-| driver/profile registry     | 同时维护多种实现时                      | 当前由消费者持有；运行时 Registry 尚未落地 |
+| 接缝                            | 什么时候提供                            | 框架怎样使用                               |
+| ------------------------------- | --------------------------------------- | ------------------------------------------ |
+| `AgentDriver`                   | 已有结构化进程/协议适配时               | 统一调用 `start/sendPrompt/events/close`   |
+| `HarnessProfile`                | 需要框架拉起真实 CLI 时                 | 写配置、拼参数、解析 JSONL、映射工具名     |
+| `ScenarioSpec` / `.recall` YAML | 表达单轮或多轮输入与期望时              | 代码 runner 或原生 Recall 编译执行         |
+| `Criterion`                     | 领域 pass/fail 不能由通用 checks 表达时 | 由 Runner/Recall 按 expect 调度            |
+| artifact collector              | 需要被测系统侧客观证据时                | 放进 `ScenarioResult.artifact` 后写报告    |
+| driver/profile registry         | 同时维护多种实现时                      | 当前由消费者持有；运行时 Registry 尚未落地 |
 
 ## 阅读顺序
 

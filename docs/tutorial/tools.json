@@ -608,6 +608,40 @@
           "recipes": ["scenario-runner"]
         }
       ]
+    },
+    {
+      "id": "recall",
+      "purpose": "原生 .recall 考卷发现、严格 YAML 校验、ScenarioSpec 编译与执行。",
+      "tools": [
+        {
+          "name": "loadRecall",
+          "category": "primary",
+          "purpose": "发现并完成全部配置、考卷、metric、context 与 ID 前置校验。",
+          "risk": "safe",
+          "recipes": ["recall"]
+        },
+        {
+          "name": "runRecall",
+          "category": "primary",
+          "purpose": "复用 Runner 执行 case/repeat 并写出现有双格式报告。",
+          "risk": "conditional",
+          "recipes": ["recall"]
+        },
+        {
+          "name": "main",
+          "category": "primary",
+          "purpose": "Recall 子命令入口；定义错误 2、基础设施失败 1、行为失败 0。",
+          "risk": "conditional",
+          "recipes": ["recall"]
+        },
+        {
+          "name": "loadRecallConfig",
+          "category": "primitive",
+          "purpose": "加载并严格校验 Recall 代码运行配置。",
+          "risk": "safe",
+          "reason": "通常由 loadRecall 调用；直接用于自定义装载。"
+        }
+      ]
     }
   ]
 }
