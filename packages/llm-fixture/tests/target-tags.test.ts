@@ -108,6 +108,15 @@ function syntheticCatalog(instancesYaml = INSTANCES_YAML): TargetTagCatalog {
     instances: parseTargetTagInstances(instancesYaml, dictionary),
   };
 }
+function withoutLayer(
+  catalog: TargetTagCatalog,
+  layer: "providers" | "providerModels",
+): TargetTagCatalog {
+  return {
+    ...catalog,
+    instances: { ...catalog.instances, [layer]: [] },
+  };
+}
 
 function liveLoad(
   channel: {
@@ -378,6 +387,21 @@ test("live 策略：disallowed 优先，review-required 仅本次显式批准可
   const approved = firstDecision(reviewCatalog, { liveReviewApproved: true });
   assert.equal(approved.live.allowed, true);
   assert.equal(approved.candidates.length, 2);
+});
+test("live 策略：缺层不掩盖另一层 disallowed/review-required", () => {
+  for (const status of ["disallowed", "review-required"] as const) {
+    const withoutProvider = withoutLayer(
+      syntheticCatalog(withLivePolicy(undefined, `live.${status}`)),
+      "providers",
+    );
+    assert.equal(firstDecision(withoutProvider).live.status, status);
+
+    const withoutProviderModel = withoutLayer(
+      syntheticCatalog(withLivePolicy(`live.${status}`)),
+      "providerModels",
+    );
+    assert.equal(firstDecision(withoutProviderModel).live.status, status);
+  }
 });
 
 test("live 策略：unknown 与 allowed 区分，非 live 判断不被 live 门禁覆盖", () => {

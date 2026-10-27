@@ -96,10 +96,10 @@ function resolveLivePolicy(
   providerModel: ProviderModelTags | undefined,
   reviewApproved: boolean,
 ): LivePolicyDecision {
-  if (!provider || !providerModel) {
-    return { status: "unknown", allowed: false };
-  }
-  const tags = new Set([...provider.tags, ...providerModel.tags]);
+  const tags = new Set([
+    ...(provider?.tags ?? []),
+    ...(providerModel?.tags ?? []),
+  ]);
   for (const status of ["disallowed", "review-required", "allowed"] as const) {
     const hit =
       tags.has("provider.usage.live." + status) ||

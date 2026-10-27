@@ -1,3 +1,8 @@
+/**
+ * @module @x-agent-suite/judge/types
+ * Judge 公共输入、结果、客户端配置与错误类型。
+ * 不变量：AI 不出分；Judge 不建立独立渠道注册表，TargetTags 由通用层提供。
+ */
 import type { AgentDriver } from "@x-agent-suite/contracts";
 import type {
   LiveBackend,

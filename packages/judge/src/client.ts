@@ -1,3 +1,9 @@
+/**
+ * @module @x-agent-suite/judge/client
+ * Judge 客户端创建、TargetTags 候选选择与 direct/borrowed 生命周期。
+ * 不变量：仅唯一候选可创建；不按工厂字段猜选，不跨 mode fallback；
+ * live 未放行、read-only 非 borrowed 与遗留 allowedModes 均在执行前拒绝。
+ */
 import type { AgentDriver } from "@x-agent-suite/contracts";
 import {
   decideLiveTarget,
