@@ -65,6 +65,19 @@ export interface LiveChannel {
   readonly pricing?: LiveChannelPricing;
 }
 
+/** 模型与所属 provider 的引用；完整执行目标还需结合 carrier。 */
+export interface LiveTargetRef {
+  readonly provider: string;
+  readonly model: string;
+}
+
+/** 配置加载期间的非致命结构化告警。 */
+export interface LiveConfigWarning {
+  readonly code: "deprecated-carrier-model";
+  readonly carrier: string;
+  readonly message: string;
+}
+
 /** 配置区加载结果：命中文件或显式「未配置」。 */
 export type LiveConfigLoad =
   | {
@@ -75,6 +88,12 @@ export type LiveConfigLoad =
       readonly path: string;
       /** 按 carrier 索引的合法渠道声明。 */
       readonly channels: Readonly<Record<string, LiveChannel>>;
+      /** 按 carrier 索引的全部可选目标。 */
+      readonly available: Readonly<Record<string, readonly LiveChannel[]>>;
+      /** 按 carrier 索引的默认验证目标；空数组表示不默认执行。 */
+      readonly defaults: Readonly<Record<string, readonly LiveChannel[]>>;
+      /** 兼容声明产生的非致命告警。 */
+      readonly warnings: readonly LiveConfigWarning[];
       /** 非法声明的 carrier → 校验原因。 */
       readonly invalid: Readonly<Record<string, string>>;
     }
@@ -94,6 +113,28 @@ export type LiveChannelResult =
       readonly carrier: string;
       readonly reason: string;
     };
+
+/** 显式 target 选择器；model 缺省表示读取默认验证集合。 */
+export interface LiveTargetSelection {
+  readonly carrier?: string;
+  readonly provider?: string;
+  readonly model?: string;
+}
+
+/** 一个已解析的完整执行目标。 */
+export interface ResolvedLiveTarget {
+  readonly carrier: string;
+  readonly channel: LiveChannel;
+}
+
+/** 多目标选择结果；任一失败均返回可读原因而不抛异常。 */
+export type LiveTargetsResult =
+  | {
+      readonly kind: "configured";
+      readonly source: LiveConfigSource;
+      readonly targets: readonly ResolvedLiveTarget[];
+    }
+  | { readonly kind: "not-configured"; readonly reason: string };
 
 /** loadLiveConfig 的可选项（测试注入用；缺省取真实环境）。 */
 export interface LiveConfigOptions {

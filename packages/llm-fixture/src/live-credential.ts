@@ -58,7 +58,9 @@ async function verifyBorrowedChannel(
   );
   if (borrowed.kind === "missing") return { reason: borrowed.reason };
   const mismatches = BORROWED_CREDENTIAL_ENDPOINT_FIELDS.filter(
-    (field) => channel[field] !== borrowed[field],
+    (field) =>
+      !(field === "provider" && borrowed.provider === undefined) &&
+      channel[field] !== borrowed[field],
   );
   return mismatches.length > 0
     ? { reason: `借用凭据渠道与当前端点不一致：${mismatches.join(", ")}` }

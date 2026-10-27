@@ -22,15 +22,14 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
-import type { WireProtocol } from "@x-agent-suite/contracts";
+import { expandCarrier, hasExpandedCarrierFormat } from "./live-targets.ts";
+import { resolveCarrierChannel, validateChannel } from "./live-channel.ts";
 import {
   BORROWED_CREDENTIAL_ENDPOINT_FIELDS,
   resolveLiveApiKey,
 } from "./live-credential.ts";
 import type {
-  BorrowedChannelResult,
   LiveChannel,
-  LiveChannelPricing,
   LiveChannelResult,
   LiveConfigLoad,
   LiveConfigOptions,
@@ -42,6 +41,7 @@ export {
   resolveLiveCredential,
   type LiveCredentialOptions,
 } from "./live-credential.ts";
+export { resolveLiveTargets } from "./live-targets.ts";
 export type {
   BorrowedChannelResult,
   BorrowedCredentialResult,
@@ -51,6 +51,11 @@ export type {
   LiveConfigLoad,
   LiveConfigOptions,
   LiveConfigSource,
+  LiveConfigWarning,
+  LiveTargetRef,
+  LiveTargetSelection,
+  LiveTargetsResult,
+  ResolvedLiveTarget,
 } from "./live-types.ts";
 
 /** 显式配置文件路径的环境变量名。 */
@@ -58,15 +63,6 @@ export const LIVE_CONFIG_PATH_ENV = "E2E_LIVE_CONFIG_PATH";
 
 /** 私密配置文件名：repo 根、~/ 与 ~/.config/x-agent-suite/ 下同名（被 .gitignore 的 `.env*` 规则覆盖）。 */
 export const LIVE_CONFIG_FILE = ".env.e2e.yaml";
-
-/** 合法 wire 取值（历史名称；消费者可扩展，框架只负责校验已知值）。 */
-const VALID_WIRES: readonly string[] = [
-  "openai-responses",
-  "openai-chat",
-  "anthropic-messages",
-  // BOUNDARY-DEBT(harness): gemini-generate 为历史协议标识
-  "gemini-generate",
-];
 
 /** carrier 名归一为 env 变量中段：大写、非字母数字转下划线。 */
 function envInfix(carrier: string): string {
@@ -96,95 +92,6 @@ function envOverride(
   return out as Partial<LiveChannel>;
 }
 
-/** 校验并归一一份原始配置对象为 LiveChannel；不合法返回原因字符串。 */
-function validateChannel(
-  raw: unknown,
-): { channel: LiveChannel } | { reason: string } {
-  if (typeof raw !== "object" || raw === null) {
-    return { reason: "渠道声明必须是对象" };
-  }
-  const record = raw as Record<string, unknown>;
-  const missing = (["wire", "baseUrl", "model"] as const).filter(
-    (k) => typeof record[k] !== "string" || record[k] === "",
-  );
-  if (missing.length > 0) {
-    return { reason: `渠道声明缺字段: ${missing.join(", ")}` };
-  }
-  if (!VALID_WIRES.includes(record.wire as string)) {
-    return {
-      reason: `wire "${String(record.wire)}" 非法（可用: ${VALID_WIRES.join(", ")}）`,
-    };
-  }
-  const channel: LiveChannel = {
-    wire: record.wire as WireProtocol,
-    baseUrl: record.baseUrl as string,
-    model: record.model as string,
-    ...(typeof record.apiKey === "string" ? { apiKey: record.apiKey } : {}),
-    ...(typeof record.apiKeyEnv === "string"
-      ? { apiKeyEnv: record.apiKeyEnv }
-      : {}),
-    ...(record.credential !== undefined
-      ? record.credential === "harness"
-        ? { credential: "harness" as const }
-        : undefined
-      : {}),
-    ...(record.from !== undefined
-      ? record.from === "harness"
-        ? { from: "harness" as const }
-        : undefined
-      : {}),
-    ...(typeof record.provider === "string"
-      ? { provider: record.provider }
-      : {}),
-    ...(typeof record.harness === "string" && record.harness !== ""
-      ? { harness: record.harness }
-      : {}),
-    ...(typeof record.harnessBaseUrl === "string" &&
-    record.harnessBaseUrl !== ""
-      ? { harnessBaseUrl: record.harnessBaseUrl }
-      : {}),
-    ...(typeof record.pricing === "object" && record.pricing !== null
-      ? { pricing: record.pricing as LiveChannelPricing }
-      : {}),
-  };
-  if (record.credential !== undefined && channel.credential === undefined) {
-    return {
-      reason: `credential 只支持 "harness"（借用宿主登录态），实际: ${String(record.credential)}`,
-    };
-  }
-  if (record.from !== undefined && channel.from === undefined) {
-    return {
-      reason: `from 只支持 "harness"（借用宿主渠道配置），实际: ${String(record.from)}`,
-    };
-  }
-  if (channel.apiKey !== undefined && channel.apiKeyEnv !== undefined) {
-    return { reason: "apiKey 与 apiKeyEnv 不能同时声明" };
-  }
-  if (
-    channel.credential === "harness" &&
-    (channel.apiKey !== undefined || channel.apiKeyEnv !== undefined)
-  ) {
-    return { reason: "显式凭据与 credential: harness 不能同时声明" };
-  }
-  if (channel.credential === "harness" && channel.from !== "harness") {
-    return {
-      reason: '借用凭据 credential: "harness" 必须同时声明 from: "harness"',
-    };
-  }
-  return { channel };
-}
-
-/** 返回实际借用凭据时被声明覆盖的端点字段。 */
-function borrowedEndpointOverrides(
-  record: Record<string, unknown>,
-  borrowed: Extract<BorrowedChannelResult, { kind: "resolved" }>,
-): string[] {
-  if (record.apiKey !== undefined || record.apiKeyEnv !== undefined) return [];
-  return BORROWED_CREDENTIAL_ENDPOINT_FIELDS.filter(
-    (field) => record[field] !== undefined && record[field] !== borrowed[field],
-  );
-}
-
 /** 读取并解析一份配置文件；不存在返回 null，解析失败返回原因。carriers 保持原始声明（from: harness 在 load 阶段才合并借用）。 */
 async function readConfigFile(
   path: string,
@@ -212,89 +119,132 @@ async function readConfigFile(
   return { raw: carriers as Record<string, unknown> };
 }
 
-/**
- * 逐 carrier 校验原始声明；`from: harness` 的先调用 borrowChannel 钩子合并借用配置
- * （yaml 显式字段覆盖借用值，未给显式凭证时隐含 credential: "harness"），
- * 钩子未提供或借用失败进 invalid 并记原因。
- */
+/** 继承默认优先复用目录渠道；provider-less 仅在逻辑目标唯一时归一。 */
+function matchInheritedChannel(
+  available: readonly LiveChannel[],
+  inherited: LiveChannel,
+): { channel: LiveChannel } | { reason: string } {
+  const matches = available.filter(
+    (item) =>
+      item.model === inherited.model &&
+      (inherited.provider === undefined ||
+        item.provider === inherited.provider),
+  );
+  if (matches.length > 1) {
+    return {
+      reason: `继承默认模型 "${inherited.model}" 对应多个可选 provider，请显式声明 default`,
+    };
+  }
+  return { channel: matches[0] ?? inherited };
+}
+
+/** 解析新格式的全部可选目标与默认目标。 */
+async function validateExpandedCarrier(
+  carrier: string,
+  record: Record<string, unknown>,
+  options: Required<Pick<LiveConfigOptions, "homeDir" | "borrowChannel">>,
+): Promise<
+  | { available: LiveChannel[]; defaults: LiveChannel[]; channel?: LiveChannel }
+  | { reason: string }
+> {
+  const expanded = expandCarrier(record);
+  if ("reason" in expanded) return expanded;
+  const available: LiveChannel[] = [];
+  for (const item of expanded.expanded.available) {
+    const resolved = await resolveCarrierChannel(
+      carrier,
+      item.declaration,
+      options,
+    );
+    if ("reason" in resolved) return resolved;
+    available.push(resolved.channel);
+  }
+  if (expanded.expanded.inheritDefault) {
+    const inherited = await resolveCarrierChannel(
+      carrier,
+      expanded.expanded.inheritDeclaration,
+      options,
+    );
+    if ("reason" in inherited) return inherited;
+    const matched = matchInheritedChannel(available, inherited.channel);
+    if ("reason" in matched) return matched;
+    const { channel } = matched;
+    if (!available.includes(channel)) available.push(channel);
+    return { available, defaults: [channel], channel };
+  }
+  const defaults = expanded.expanded.defaults.map((target) =>
+    available.find(
+      (item) =>
+        item.provider === target.provider && item.model === target.model,
+    ),
+  );
+  if (defaults.some((channel) => channel === undefined)) {
+    return { reason: "default 目标未能归一到可选渠道" };
+  }
+  const channels = defaults as LiveChannel[];
+  return { available, defaults: channels, channel: channels[0] };
+}
+
+/** 逐 carrier 校验声明并生成可选目录、默认目标与兼容告警。 */
 async function validateCarriers(
   raw: Record<string, unknown>,
   options: Required<Pick<LiveConfigOptions, "homeDir" | "borrowChannel">>,
 ): Promise<{
   channels: Record<string, LiveChannel>;
+  available: Record<string, readonly LiveChannel[]>;
+  defaults: Record<string, readonly LiveChannel[]>;
   invalid: Record<string, string>;
+  warnings: {
+    code: "deprecated-carrier-model";
+    carrier: string;
+    message: string;
+  }[];
 }> {
   const channels: Record<string, LiveChannel> = {};
+  const available: Record<string, readonly LiveChannel[]> = {};
+  const defaults: Record<string, readonly LiveChannel[]> = {};
   const invalid: Record<string, string> = {};
+  const warnings: {
+    code: "deprecated-carrier-model";
+    carrier: string;
+    message: string;
+  }[] = [];
   for (const [carrier, decl] of Object.entries(raw)) {
-    let merged = decl;
-    if (
-      typeof decl === "object" &&
-      decl !== null &&
-      (decl as Record<string, unknown>).from === "harness"
-    ) {
-      const record = decl as Record<string, unknown>;
-      const borrowFrom =
-        typeof record.harness === "string" && record.harness !== ""
-          ? record.harness
-          : carrier;
-      const providerHint =
-        typeof record.provider === "string" && record.provider !== ""
-          ? record.provider
-          : undefined;
-      if (!options.borrowChannel) {
-        invalid[carrier] =
-          "from: harness 需要 borrowChannel 钩子；当前未注入借用能力";
-        continue;
+    const record =
+      typeof decl === "object" && decl !== null
+        ? (decl as Record<string, unknown>)
+        : undefined;
+    if (record && hasExpandedCarrierFormat(record)) {
+      const resolved = await validateExpandedCarrier(carrier, record, options);
+      if ("reason" in resolved) {
+        invalid[carrier] = resolved.reason;
+      } else {
+        available[carrier] = resolved.available;
+        defaults[carrier] = resolved.defaults;
+        if (resolved.channel) channels[carrier] = resolved.channel;
       }
-      const borrowed = await options.borrowChannel(
-        borrowFrom,
-        options.homeDir,
-        providerHint !== undefined ? { provider: providerHint } : undefined,
-      );
-      if (borrowed.kind !== "resolved") {
-        invalid[carrier] = `from: harness 借用失败：${borrowed.reason}`;
-        continue;
-      }
-      const endpointOverrides = borrowedEndpointOverrides(record, borrowed);
-      if (endpointOverrides.length > 0) {
-        invalid[carrier] =
-          `借用凭据时不能覆盖借用端点字段：${endpointOverrides.join(", ")}`;
-        continue;
-      }
-      if (
-        providerHint !== undefined &&
-        record.model === undefined &&
-        borrowed.model === undefined
-      ) {
-        invalid[carrier] =
-          `provider 借用目标 "${providerHint}" 无宿主默认 model 可借（默认 model 属于默认 provider），须显式声明 model`;
-        continue;
-      }
-      merged = {
-        // yaml 显式字段覆盖借用值
-        wire: record.wire ?? borrowed.wire,
-        baseUrl: record.baseUrl ?? borrowed.baseUrl,
-        model: record.model ?? borrowed.model,
-        provider: record.provider ?? borrowed.provider,
-        harnessBaseUrl: record.harnessBaseUrl ?? borrowed.harnessBaseUrl,
-        ...record,
-        // 未给显式凭证时隐含借用宿主登录态
-        ...(record.credential === undefined &&
-        record.apiKey === undefined &&
-        record.apiKeyEnv === undefined
-          ? { credential: "harness" }
-          : {}),
-      };
+      continue;
     }
-    const validated = validateChannel(merged);
-    if ("channel" in validated) {
-      channels[carrier] = validated.channel;
-    } else {
-      invalid[carrier] = validated.reason;
+    const resolved = await resolveCarrierChannel(carrier, decl, options);
+    if ("reason" in resolved) {
+      invalid[carrier] = resolved.reason;
+      continue;
+    }
+    channels[carrier] = resolved.channel;
+    available[carrier] = [resolved.channel];
+    defaults[carrier] = [resolved.channel];
+    if (
+      record &&
+      (record.provider !== undefined || record.model !== undefined)
+    ) {
+      warnings.push({
+        code: "deprecated-carrier-model",
+        carrier,
+        message: `carriers.${carrier}.provider/model 已弃用，请迁移到 providers 与 default；本次仍按旧格式执行`,
+      });
     }
   }
-  return { channels, invalid };
+  return { channels, available, defaults, invalid, warnings };
 }
 
 /**
@@ -333,21 +283,25 @@ export async function loadLiveConfig(
     if ("reason" in result) {
       return { kind: "not-configured", reason: result.reason };
     }
-    const { channels, invalid } = await validateCarriers(result.raw, {
-      homeDir,
-      borrowChannel:
-        options.borrowChannel ??
-        (() =>
-          Promise.resolve({
-            kind: "missing",
-            reason: "未注入 borrowChannel 钩子",
-          })),
-    });
+    const { channels, available, defaults, invalid, warnings } =
+      await validateCarriers(result.raw, {
+        homeDir,
+        borrowChannel:
+          options.borrowChannel ??
+          (() =>
+            Promise.resolve({
+              kind: "missing",
+              reason: "未注入 borrowChannel 钩子",
+            })),
+      });
     return {
       kind: "loaded",
       source: candidate.source,
       path: candidate.path,
       channels,
+      available,
+      defaults,
+      warnings,
       invalid,
     };
   }

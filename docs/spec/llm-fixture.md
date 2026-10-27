@@ -75,9 +75,87 @@ export interface FixtureProviderOptions {
 
 `LiveBackend` 直连私密配置区声明的真实 provider，从响应 usage 提取 token 数供成本估算。显式凭据与 `credential: harness` 互斥；借用凭据前必须再次通过 `borrowChannel` 取得规范渠道，并确认 `wire`、`baseUrl`、`provider` 未被重定向。它在解析渠道和凭据后提供稳定的 `Redactor` seam；transport/解析异常、`Error.cause`、`AggregateError.errors`、stack 和响应载荷在离开 backend 前均递归脱敏。脱敏同时识别任意长度的直接值、URL 归一/编码值及终端跨行值；结构化键碰撞使用无敏感信息的稳定后缀保留全部字段。
 
-### live 渠道解析优先级
+### live 多模型配置契约
 
-live 渠道按以下固定顺序解析（高优先级在前）：
+#### 概念与不变量
+
+- **carrier**：宿主 CLI，同时对应 driver/profile 标识；不是套餐。
+- **provider**：carrier 下的套餐或连接渠道，包含端点、wire 与凭据来源。
+- **model**：provider 下允许本仓选择的模型。
+- **target**：一次实际执行或验证的完整身份，即 `(carrier, provider, model)`。用户选择模型时可以省略渠道，但解析结果不得省略。
+- `carriers.*.providers.*.models` 是**可选目标目录**，不要求等于宿主全量模型；`carriers.*.default` 是该 carrier 的**默认验证集合**。两者分别回答“可以选什么”与“默认测什么”。
+- 宿主自己的默认模型与模型范围设置（例如默认 provider/model、enabled/scoped models）只属于宿主适配层，不在本仓配置中另设 `scope_models` 或全局 `validation_targets`。
+
+#### 配置结构
+
+```yaml
+carriers:
+  pi:
+    from: harness
+
+    # 未显式选择时，该 carrier 默认验证的目标。
+    default:
+      - kimi-for-coding
+      - deepseek/deepseek-v4-flash
+
+    providers:
+      kimi-coding:
+        models:
+          - kimi-for-coding
+          - k3-256k # 可手动选择，但不默认执行。
+      deepseek:
+        models:
+          - deepseek-v4-flash
+```
+
+provider 借用结果没有 provider 标识时，配置键仅作为本仓逻辑目录名，不视为端点覆盖；借用凭据仍必须校验 wire/baseUrl 一致。
+
+`default` 支持字符串、目标对象及各自的列表形式：
+
+```ts
+type DefaultDeclaration =
+  | string
+  | string[]
+  | { provider: string; model: string }
+  | Array<{ provider: string; model: string }>;
+```
+
+解析规则：
+
+1. 纯 `model` 字符串只在当前 carrier 的可选目录中查找；归一后必须恰好命中一个 `(provider, model)`，零命中或多命中均为配置错误。
+2. `provider/model` 字符串按当前 carrier 已声明的 provider 前缀解析，模型名自身允许包含 `/`。
+3. `{ provider, model }` 直接定位目标。所有显式 `default` 目标必须存在于当前 carrier 的可选目录，不得引用其他 carrier 的 provider。
+4. 配置加载后，所有写法立即归一为 `Array<{ provider, model }>`；后续执行逻辑不感知输入简写。
+5. 显式声明 `default` 会替换宿主默认目标，不与宿主默认目标合并；`default: []` 表示该 carrier 明确不参与默认验证。
+6. `from: harness` 且未声明 `default` 时，继承对应 CLI 的默认 `provider + model`，生成一个默认目标。继承目标命中显式目录时必须复用该目录已解析的完整 channel，保留 provider 级端点与凭据声明；provider-less 借用结果按模型归一到唯一逻辑 provider，多个匹配则要求显式 `default`。仅当目标不在目录中时才追加继承渠道。
+7. 非 `from: harness` 且未声明 `default` 时，该 carrier 没有默认目标；不得隐式选择第一个或全部模型。
+
+#### 显式选择与默认执行
+
+- 显式给出模型与渠道时，从可选目录定位完整 target；渠道必须能唯一确定 `carrier/provider`。
+- 只给模型时，在全部可选 target 中匹配；完整 `provider/model`（模型名自身可含 `/`）与精确模型匹配优先于模糊匹配。无论输入是否省略渠道，按完整 target 去重后必须唯一，否则返回候选并要求补充渠道。
+- 未显式选择时，按声明顺序汇总所有 carrier 的默认目标，因此默认验证可以跨 provider、跨 carrier。显式选择只执行所选 target，不追加默认目标。
+- 选择优先级固定为：**命令行显式选择 > carrier 显式 `default` > `from: harness` 的 CLI 默认 provider/model > 无默认目标**。
+
+#### 旧格式兼容与版本
+
+新格式不增加 `v` 字段，按 carrier 下的 `providers` 结构识别；旧单模型格式继续有效，不要求迁移现有 `~/.env.e2e.yaml`：
+
+```yaml
+carriers:
+  pi:
+    from: harness
+    provider: kimi-coding
+    model: kimi-for-coding
+```
+
+旧格式经兼容层归一为一个可选目标和一个默认目标；裸 `from: harness` 继续继承宿主默认 provider/model。同一文件允许不同 carrier 分别使用新旧格式，但同一 carrier 不得同时声明旧 `provider/model` 与新 `providers/default`，否则显式报“新旧格式混用”，不猜测优先级。只有未来删除旧格式或改变同名字段语义时，才需要引入配置版本号。
+
+显式使用旧 `carriers.*.provider/model` 属于**兼容但弃用**：配置加载结果必须提供结构化 warning，由调用入口统一输出；每个旧格式 carrier 每次加载至多一条，不改变执行结果、skip 或退出码，且不得包含 baseUrl、凭据等敏感值。裸 `from: harness`、新格式与 `E2E_LIVE_<CARRIER>_MODEL` 运行覆盖不触发该 warning；新旧格式混用仍是错误而非 warning。旧格式暂无明确移除版本。
+
+### live 单渠道解析优先级
+
+`resolveLiveChannel` 按以下固定顺序解析（高优先级在前）；`resolveLiveTargets` 处理多目标选择，不叠加这些 env 字段覆盖：
 
 1. **env 字段覆盖**：`E2E_LIVE_<CARRIER>_BASE_URL|MODEL|API_KEY|API_KEY_ENV|WIRE`，字段级叠加在文件声明之上（任一字段来自 env，`source` 即记为 `env`）；
 2. **显式文件**：`E2E_LIVE_CONFIG_PATH` 指向的 YAML（`source: explicit-path`）；
@@ -179,6 +257,8 @@ packages/llm-fixture/src/
 ├── fake-provider.ts          # FakeProviderBackend
 ├── live.ts                   # LiveBackend
 ├── live-config.ts            # 私密配置区加载
+├── live-channel.ts           # 单渠道校验与借用合并
+├── live-targets.ts           # 可选目录、default 与 target 选择
 ├── live-credential.ts        # 凭据解析与借用渠道验证
 ├── live-types.ts             # live 配置公开类型
 ├── redact.ts                 # secret 归一与结构化脱敏
