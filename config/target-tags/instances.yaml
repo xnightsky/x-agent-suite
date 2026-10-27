@@ -18,9 +18,12 @@ cli:
       - cli.execution.provider-select # 可显式固定 provider；与模型选择共同锁定目标。
       - cli.execution.endpoint-select # 可通过模型配置固定端点。
       - cli.session.ephemeral # --no-session：会话仅在内存，退出后不可恢复。
-      - cli.context.resources.off # 可关闭 extensions/skills/templates；不等于所有 context 都关闭。
+      - cli.context.context-files.off # -nc/--no-context-files：不发现 AGENTS.md/CLAUDE.md。
+      - cli.context.extensions.off # -ne/--no-extensions：不加载发现、配置和内建扩展。
+      - cli.context.skills.off # -ns/--no-skills：不发现或加载配置的 skills。
       - cli.context.system-prompt.replace # 可替换系统提示词，而非只能追加。
       - cli.tools.none # --no-tools：关闭内建、扩展、自定义与 MCP 工具。
+      - cli.tools.allowlist # --tools 可限制声明的工具集合；不等于命令级只读。
       - cli.io.text # 支持最终文本输出。
       - cli.io.jsonl # JSONL 事件输出可供程序逐行解析。
 
@@ -61,6 +64,16 @@ providerModels:
     tags:
       - provider-model.api.complete # OpenAI Chat Completions 支持一次补全；不等于 direct 授权。
       - provider-model.api.tools # Pi bundled catalog 明示支持会话中追加工具。
+
+  # 同一 canonical model 的另一 wire 实例；当前借用 target 已明确为 Anthropic Messages。
+  - id: kimi-coding/kimi-for-coding-anthropic
+    providerRef: kimi-coding
+    model: kimi-for-coding
+    modelRef: kimi-for-coding
+    wire: anthropic-messages
+    tags:
+      - provider-model.api.complete # Anthropic Messages 支持一次补全；不等于 direct 授权。
+      - provider-model.api.tools # Anthropic 兼容 API 支持工具声明与回传。
 
 models:
   # Pi bundled catalog 明示 type=chat、reasoning=true、input=[text,image]；不额外推断结构化输出等能力。

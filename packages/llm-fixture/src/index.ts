@@ -41,7 +41,7 @@ export {
   type BorrowedChannelResult,
   type BorrowedCredentialResult,
 } from "./live-config.ts";
-export { decideLiveTargets } from "./target-tag-decision.ts";
+export { decideLiveTarget, decideLiveTargets } from "./target-tag-decision.ts";
 export {
   loadTargetTagCatalog,
   parseTargetTagDictionary,
@@ -61,6 +61,7 @@ export type {
   ProviderModelTags,
   ProviderTags,
   TargetAccessMode,
+  TargetAccessDecisionOptions,
   TargetDecisionOptions,
   TargetModeEvaluation,
   TargetTagCatalog,

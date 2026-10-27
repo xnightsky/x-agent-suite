@@ -25,6 +25,7 @@ x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenari
 | [`spec/contracts.md`](./spec/contracts.md)                                         | 核心契约：Observation、Driver、Scenario、Criterion、Registry |
 | [`spec/scenario-dsl.md`](./spec/scenario-dsl.md)                                   | Scenario DSL 设计原则：可比性轴、分歧点、LLM 控制器禁区      |
 | [`spec/recall.md`](./spec/recall.md)                                               | 原生 `.recall` 声明式考卷、发现与执行规则                    |
+| [`spec/target-tags.md`](./spec/target-tags.md)                                     | 四层能力标签、实例与 direct/borrowed/live 决策               |
 | [`spec/driver.md`](./spec/driver.md)                                               | 子进程 / JSONL / PTY 基座                                    |
 | [`spec/sandbox.md`](./spec/sandbox.md)                                             | 无 Docker 隔离沙箱                                           |
 | [`spec/llm-fixture.md`](./spec/llm-fixture.md)                                     | 自研 fake provider 与 HarnessProfile 配置                    |

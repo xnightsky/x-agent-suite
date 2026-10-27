@@ -14,6 +14,7 @@
 | [scenario-dsl.md](./scenario-dsl.md)               | Scenario DSL 设计原则：可比性轴、分歧点、LLM 控制器禁区               |
 | [scenario-runner.md](./scenario-runner.md)         | P3 设计：Registry 运行时、DSL 执行与 CLI                              |
 | [recall.md](./recall.md)                           | 原生 `.recall`：发现、严格 YAML、ScenarioSpec 编译与执行              |
+| [target-tags.md](./target-tags.md)                 | 四层能力标签、实例与 direct/borrowed/live 决策                        |
 | [driver.md](./driver.md)                           | 子进程基座：`JsonlProcess`、`PtyProcess`、严格 LF 分帧 + 宿主适配纪律 |
 | [sandbox.md](./sandbox.md)                         | 临时 `HOME` / `cwd`、环境剥离、并发隔离与清理                         |
 | [llm-fixture.md](./llm-fixture.md)                 | `LlmBackend`、自研 fake provider、`HarnessProfile` 配置               |

@@ -202,6 +202,13 @@
           "reason": "纯本地解析，暂无独立 recipe；见 docs/spec/target-tags.md。"
         },
         {
+          "name": "decideLiveTarget",
+          "category": "live",
+          "purpose": "评估一个已解析完整 target 的 direct/borrowed 候选与 live 门禁。",
+          "risk": "safe",
+          "reason": "只返回决策，不执行调用或重新选择模型；见 docs/spec/target-tags.md。"
+        },
+        {
           "name": "decideLiveTargets",
           "category": "live",
           "purpose": "复用完整 live target 评估 direct/borrowed 候选与 live 门禁。",

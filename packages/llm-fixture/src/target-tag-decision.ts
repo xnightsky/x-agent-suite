@@ -15,6 +15,7 @@ import type {
   ProviderModelTags,
   ProviderTags,
   TargetAccessMode,
+  TargetAccessDecisionOptions,
   TargetDecisionOptions,
   TargetModeEvaluation,
   TargetTagCatalog,
@@ -278,14 +279,12 @@ function decideTarget(
   };
 }
 
-/** 复用现有 target 解析并评估全部 direct/borrowed 候选；live 默认要求放行。 */
-export function decideLiveTargets(
-  load: LiveConfigLoad,
+function normalizeRequirements(
+  options: TargetAccessDecisionOptions,
   catalog: TargetTagCatalog,
-  options: TargetDecisionOptions,
-): LiveTargetDecisionResult {
-  if (!options?.requirements) fail("decideLiveTargets requirements 必填");
-  const requirements: ModeRequirements = {
+): ModeRequirements {
+  if (!options?.requirements) fail("TargetTags requirements 必填");
+  return {
     direct: normalizeRequirement(
       options.requirements.direct,
       catalog,
@@ -297,6 +296,25 @@ export function decideLiveTargets(
       "borrowed",
     ),
   };
+}
+
+/** 评估一个已解析完整 target，不要求调用方重建 LiveConfigLoad。 */
+export function decideLiveTarget(
+  target: ResolvedLiveTarget,
+  catalog: TargetTagCatalog,
+  options: TargetAccessDecisionOptions,
+): LiveTargetDecision {
+  const requirements = normalizeRequirements(options, catalog);
+  return decideTarget(target, catalog, requirements, options);
+}
+
+/** 复用现有 target 解析并评估全部 direct/borrowed 候选；live 默认要求放行。 */
+export function decideLiveTargets(
+  load: LiveConfigLoad,
+  catalog: TargetTagCatalog,
+  options: TargetDecisionOptions,
+): LiveTargetDecisionResult {
+  const requirements = normalizeRequirements(options, catalog);
   const resolved = resolveLiveTargets(load, options.selection ?? {});
   if (resolved.kind !== "configured") return resolved;
   return {

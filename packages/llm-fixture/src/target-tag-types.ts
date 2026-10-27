@@ -122,14 +122,18 @@ export type LiveTargetDecisionResult =
     }
   | { readonly kind: "not-configured"; readonly reason: string };
 
-/** live target 决策参数；live 缺省为 true，审批缺省为 false。 */
-export interface TargetDecisionOptions {
-  readonly selection?: LiveTargetSelection;
+/** 单个完整 target 的访问决策参数；live 缺省为 true，审批缺省为 false。 */
+export interface TargetAccessDecisionOptions {
   readonly requirements: Readonly<
     Record<TargetAccessMode, TargetTagRequirement>
   >;
   readonly live?: boolean;
   readonly liveReviewApproved?: boolean;
+}
+
+/** 多目标访问决策参数；selection 继续交给现有 resolver。 */
+export interface TargetDecisionOptions extends TargetAccessDecisionOptions {
+  readonly selection?: LiveTargetSelection;
 }
 
 /** TargetTags 文件加载参数；显式路径优先，liveConfig 用于合并同文件根级私密覆盖。 */

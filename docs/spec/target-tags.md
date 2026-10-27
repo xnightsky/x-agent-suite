@@ -4,7 +4,7 @@
 
 TargetTags 用统一的 TagKey/TagValue 描述 CLI、provider、provider × model 和 canonical model 的能力，并据此评估完整 live target 的 direct / borrowed 候选与 live 门禁。
 
-它是一套独立通用能力，不隶属 Judge。本提交提供词典、公共实例、私密覆盖、解析校验和决策，不改变 Judge 的现有客户端契约。
+它是一套独立通用能力，不隶属 Judge；Judge 是其中一个消费者，通过 `decideLiveTarget` 使用相同目录和决策，不另建渠道注册表。
 
 硬约束：
 
@@ -57,18 +57,22 @@ TagKey 有三种状态：
 
 CLI 条目当前是**产品能力目录**，不是默认执行状态。例如 `cli.session.ephemeral` 和 `cli.tools.none` 只表示 CLI 能提供对应开关；borrowed 调用方仍须实际落实 no-session、禁工具等启动参数，运行失败不得自动换模式。
 
+需要干净 borrowed 启动时，上下文隔离必须精确到 `cli.context.context-files.off`、`extensions.off` 和 `skills.off`，分别对应禁止发现 AGENTS/CLAUDE 指令、禁止 extensions 和禁止 skills；不能由笼统的 `resources.off` 或单次新进程反推。
+
+工具需求由具体任务决定：纯文本判定可以要求 `cli.tools.none`；需要读取仓库证据时应要求 `cli.tools.allowlist`，并在确实具备只读工具或执行策略时另要求 `cli.tools.read-only`。allowlist 不等于命令级只读，调用方必须落实实际工具/命令策略，缺失时不得降级放行。
+
 ## 公共实例与私密覆盖
 
 ### 公共实例
 
 `instances.yaml` 只收可公开复用且有证据的条目，不镜像全部本机配置，也不收私有渠道。当前基线：
 
-| 层            | 当前实例                                        | 已声明事实                                               |
-| ------------- | ----------------------------------------------- | -------------------------------------------------------- |
-| CLI           | `pi`、`kimi`                                    | 官方文档可确认的 execution/session/context/tools/io 能力 |
-| Provider      | `kimi-coding`                                   | 仅保留公共父引用；账号 tags 为空                         |
-| ProviderModel | `kimi-coding/k3`、`kimi-coding/kimi-for-coding` | `complete`、`tools`                                      |
-| Model         | `k3`、`kimi-for-coding`                         | `chat`、`reasoning`、`vision`                            |
+| 层            | 当前实例                                                                                                | 已声明事实                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| CLI           | `pi`、`kimi`                                                                                            | 官方文档可确认的 execution/session/context/tools/io 能力             |
+| Provider      | `kimi-coding`                                                                                           | 仅保留公共父引用；账号 tags 为空                                     |
+| ProviderModel | `kimi-coding/k3`、`kimi-coding/kimi-for-coding`（OpenAI Chat）、`kimi-coding/kimi-for-coding-anthropic` | 各 wire 分别声明 `complete`、`tools`；同 canonical model 不共享 wire |
+| Model         | `k3`、`kimi-for-coding`                                                                                 | `chat`、`reasoning`、`vision`                                        |
 
 `k3` 与 `kimi-for-coding` 是不同 canonical 条目，不互相设置别名。公共实例出现不代表它必然在当前 `.env.e2e.yaml` 的可选目录或 default 中；是否可选仍由 live 配置决定。
 
@@ -143,6 +147,8 @@ const result = decideLiveTargets(live, catalog, {
 ```
 
 `decideLiveTargets` 内部调用现有 `resolveLiveTargets(load, selection)`，不重新实现模型匹配。`requirements.direct` 与 `requirements.borrowed` 都由调用方按用途声明：
+
+已有完整 `ResolvedLiveTarget` 的消费者可调用 `decideLiveTarget(target, catalog, options)`；它使用同一套 requirements/live 参数但不需要 `selection`，避免 Judge 等调用方为了决策重新构造 `LiveConfigLoad`。
 
 - `allOf`：每一项都必须满足；
 - `anyOf`：每一组至少满足一项；

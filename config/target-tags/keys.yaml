@@ -46,6 +46,9 @@ keys:
     status: maintained
     values:
       [
+        context-files.off,
+        extensions.off,
+        skills.off,
         user-config.off,
         project-config.off,
         exec-rules.off,

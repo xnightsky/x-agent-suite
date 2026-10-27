@@ -10,6 +10,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import {
+  decideLiveTarget,
   decideLiveTargets,
   loadTargetTagCatalog,
   parseTargetTagDictionary,
@@ -34,7 +35,8 @@ version: 1
 keys:
   - { key: cli.execution, scope: cli, dimension: execution, status: maintained, values: [one-shot, unattended] }
   - { key: cli.session, scope: cli, dimension: session, status: maintained, values: [ephemeral] }
-  - { key: cli.tools, scope: cli, dimension: tools, status: maintained, values: [none] }
+  - { key: cli.context, scope: cli, dimension: context, status: maintained, values: [context-files.off, extensions.off, skills.off] }
+  - { key: cli.tools, scope: cli, dimension: tools, status: maintained, values: [none, allowlist] }
   - { key: cli.io, scope: cli, dimension: io, status: maintained, values: [text] }
   - { key: provider.usage, scope: provider, dimension: usage, status: maintained, values: [api-payg, api-credit, api-free, cli-subscription, ci-subscription, third-party-subscription, cli-free, live.allowed, live.review-required, live.disallowed] }
   - { key: provider-model.api, scope: provider-model, dimension: api, status: maintained, values: [complete] }
@@ -49,7 +51,7 @@ cli:
   - id: cli-clean
     carrier: carrier-a
     wires: [openai-chat]
-    tags: [cli.execution.one-shot, cli.execution.unattended, cli.session.ephemeral, cli.tools.none, cli.io.text]
+    tags: [cli.execution.one-shot, cli.execution.unattended, cli.session.ephemeral, cli.context.context-files.off, cli.context.extensions.off, cli.context.skills.off, cli.tools.none, cli.tools.allowlist, cli.io.text]
 providers:
   - id: provider-a
     tags: [provider.usage.api-payg, provider.usage.third-party-subscription, provider.usage.live.allowed]
@@ -81,6 +83,9 @@ const REQUIREMENTS: TargetDecisionOptions["requirements"] = {
       "cli.execution.one-shot",
       "cli.execution.unattended",
       "cli.session.ephemeral",
+      "cli.context.context-files.off",
+      "cli.context.extensions.off",
+      "cli.context.skills.off",
       "cli.tools.none",
       "cli.io.text",
       "model.inference.chat",
@@ -171,6 +176,17 @@ test("正式 YAML：四层真实实例可加载，k3 与 kimi-for-coding 不共�
   assert.ok(
     !catalog.instances.providers.some((provider) => provider.id === "co"),
   );
+  const pi = catalog.instances.cli.find((instance) => instance.id === "pi");
+  assert.ok(pi);
+  for (const tag of [
+    "cli.context.context-files.off",
+    "cli.context.extensions.off",
+    "cli.context.skills.off",
+    "cli.tools.allowlist",
+  ]) {
+    assert.ok(pi.tags.includes(tag), tag);
+  }
+  assert.ok(!pi.tags.includes("cli.context.resources.off"));
   const k3 = catalog.instances.models.find((model) => model.id === "k3");
   const coding = catalog.instances.models.find(
     (model) => model.id === "kimi-for-coding",
@@ -187,6 +203,11 @@ test("正式 YAML：四层真实实例可加载，k3 与 kimi-for-coding 不共�
     (instance) => instance.id === "kimi-coding/kimi-for-coding",
   );
   assert.equal(codingProviderModel?.modelRef, "kimi-for-coding");
+  const codingAnthropic = catalog.instances.providerModels.find(
+    (instance) => instance.id === "kimi-coding/kimi-for-coding-anthropic",
+  );
+  assert.equal(codingAnthropic?.modelRef, "kimi-for-coding");
+  assert.equal(codingAnthropic?.wire, "anthropic-messages");
 });
 test("私密 targetTags：合并私有实例和账号策略，不带出 carriers 或凭据", async () => {
   const root = await mkdtemp(join(os.tmpdir(), "xas-target-tags-"));
@@ -287,8 +308,15 @@ test("实例校验：reserved、跨 scope、秘密字段与悬空 modelRef 均�
   );
 });
 
-test("决策：provider 默认 usage 生效，双模式同时满足时返回全部候选", () => {
-  const decision = firstDecision(syntheticCatalog());
+test("决策：provider 默认 usage 生效，单 target 双模式同时满足时返回全部候选", () => {
+  const load = liveLoad();
+  assert.equal(load.kind, "loaded");
+  if (load.kind !== "loaded") return;
+  const decision = decideLiveTarget(
+    { carrier: "carrier-a", channel: load.channels["carrier-a"]! },
+    syntheticCatalog(),
+    { requirements: REQUIREMENTS },
+  );
   assert.equal(decision.live.status, "allowed");
   assert.equal(decision.live.allowed, true);
   assert.deepEqual(
@@ -299,8 +327,8 @@ test("决策：provider 默认 usage 生效，双模式同时满足时返回全�
 });
 
 test("决策：direct 不依赖 CliTags，borrowed 缺 CLI 能力时不允许", () => {
-  const yaml = INSTANCES_YAML.replace(
-    "cli.session.ephemeral, cli.tools.none, ",
+  const yaml = INSTANCES_YAML.replace("cli.session.ephemeral, ", "").replace(
+    "cli.tools.none, ",
     "",
   );
   const decision = firstDecision(syntheticCatalog(yaml));
