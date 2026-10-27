@@ -133,13 +133,18 @@ Harness Driver 已经组合 sandbox；只有直接使用 `JsonlProcess`/`PtyProc
 
 Matrix 不加载 scenario、不创建 profile、不解释 criterion。它只编排消费者传入的四个函数：carrier 列表、variant discovery、driver factory、scenario runner。
 
-## 8. recall：声明式考卷
+## 8. recall：显式执行与场景资源
 
-| 工具               | 分类     | 用法                                                       |
-| ------------------ | -------- | ---------------------------------------------------------- |
-| `loadRecall`       | 主路径   | 自动/显式发现 config 与 YAML，并在执行前完成全部严格校验   |
-| `runRecall`        | 主路径   | 复用 Runner 执行独立 case/repeat 并写 Markdown + JSON 报告 |
-| `main`             | 主路径   | 接入 `x-agent-suite recall` 子命令                         |
-| `loadRecallConfig` | 底层原语 | 自定义装载时单独读取代码运行配置                           |
+| 工具                         | 分类     | 用法                                                       |
+| ---------------------------- | -------- | ---------------------------------------------------------- |
+| `loadRecall`                 | 主路径   | 全量校验显式 target、registry、effects Plan 与 Recall YAML |
+| `runRecall`                  | 主路径   | 单 Runner 逐 target/case/repeat 执行并写双格式报告         |
+| `main`                       | 主路径   | 接入 `x-agent-suite recall`；无 target 参数拒绝            |
+| `loadRecallRegistry`         | live     | 加载独立 Criterion/profile/EffectsProfile 注册表           |
+| `emptyRecallRegistry`        | 底层原语 | 创建无判据、无 profile 的安全空注册表                      |
+| `loadRecallEffectsPlan`      | live     | 加载仅含 effects 的执行 Plan，解析 none/use/inline         |
+| `isRecallCommandAllowed`     | 底层原语 | 精确命令匹配，deny 优先、默认拒绝                          |
+| `readRecallResources`        | 高级     | 校验场景资源 source realpath、逃逸与类型                   |
+| `materializeRecallProvision` | 高级     | 把 ScenarioSpec.provision 只读物化到隔离 cwd               |
 
-Recall 只负责发现、读取、校验和编译；模型、渠道、凭证与 sandbox 物化仍由消费者提供。完整契约见[原生 Recall 规范](../spec/recall.md)，可运行示例见 [Recall recipe](./recipes/recall.md)。
+Recall 不读取 `x-agent-suite.config.ts`。Recall YAML 管场景资源，执行 Plan 只管 effects，独立 registry 管实现；没有执行级 ProvisionPlan，Runner 不合并 provision。完整契约见[原生 Recall 规范](../spec/recall.md)，可运行示例见 [Recall recipe](./recipes/recall.md)。

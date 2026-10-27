@@ -1,6 +1,6 @@
-# Recall：`.recall/` 声明式考卷
+# Recall：显式 target、场景 plans 与 effects-only Plan
 
-这一教程用临时目录、`MockDriver` 和文本判据跑通“自动发现 → 全量校验 → 多轮 ScenarioSpec → Markdown + JSON 报告”，零真实 token。
+这一教程用临时 live 配置、独立 registry 和 MockDriver 跑通“target 选择 → 文件内 plans → borrowed profile → 单 Runner → 双格式报告”，零真实 token。
 
 ## 运行
 
@@ -8,34 +8,79 @@
 pnpm tutorial:recall
 ```
 
-源码：[`examples/tutorial/17-recall.test.ts`](../../../examples/tutorial/17-recall.test.ts)，运行配置：[`examples/tutorial/fixtures/tutorial-recall.config.ts`](../../../examples/tutorial/fixtures/tutorial-recall.config.ts)。示例中的临时 config 只是教程接线；消费者直接在已有 `.recall/x-agent-suite.config.ts` default 导出配置即可。
+源码：[`examples/tutorial/17-recall.test.ts`](../../../examples/tutorial/17-recall.test.ts)，独立注册表：[`examples/tutorial/fixtures/tutorial-recall.registry.ts`](../../../examples/tutorial/fixtures/tutorial-recall.registry.ts)。不再读取或生成 `x-agent-suite.config.ts`。
 
-## 最小目录
+## 最小输入
 
 ```text
 .recall/
-├── x-agent-suite.config.ts
-└── project-rules.yaml
+├── project-rules.yaml   # case 与文件内 plans/context
+└── execution.yaml       # 可选：仅 effects；有场景 provision 时显式提供
+registry.ts              # 独立 Criterion/profile/EffectsProfile 注册表
+private-live.yaml        # 私密 target/凭据/TargetTags，不入库
 ```
 
-运行：
+Recall YAML 只在当前文档内注册资源计划：
+
+```yaml
+version: 1
+id: project-rules
+plans:
+  local:
+    resources:
+      - source: CONTEXT.md
+        destination: CONTEXT.md
+context:
+  plan: local
+cases:
+  - id: multi-turn
+    turns:
+      - send: first
+        expect:
+          text-contains: [first]
+      - send: second
+        expect:
+          text-contains: [second]
+```
+
+全局 `context.plan` 默认作用于全部 case；case context 可整块覆盖，`plan: none` 清空，`files` 与 `plan` 互斥。不得跨 YAML 引用 plans，也没有执行级 ProvisionPlan。
+
+执行 Plan 只声明 effects：
+
+```yaml
+version: 1
+effects: none
+```
+
+显式执行：
 
 ```bash
-x-agent-suite recall
-x-agent-suite recall .recall/project-rules.yaml
-x-agent-suite recall --config .recall/x-agent-suite.config.ts .recall/project-rules.yaml
-x-agent-suite recall path/to/existing-directory
+x-agent-suite recall   --carrier consumer-carrier   --live-config private-live.yaml   --registry registry.ts   --plan .recall/execution.yaml   --out-dir .tmp/recall   .recall/project-rules.yaml
 ```
 
-目录只读第一层 YAML，多份考卷按路径排序；缺配置或缺考卷会报错，不会显示“0 个 case 成功”。`files`、`rootDir`、报告标识和严格 Schema 的完整约定见[原生 Recall 规范](../../spec/recall.md)。
+- 无 `--carrier/--provider/--model` 时拒绝，不运行任何 default。
+- `--carrier` 可展开多个 defaults；`--provider/--model` 继续过滤，不追加其他 default。
+- 无 Plan 且全部场景无 provision 时才允许 direct 纯文本。这里有场景 provision，因此必须显式 `--plan` 并由唯一 borrowed profile 执行。
+- `--config`、`--mode`、`--cli-ref` 均不是合法 Recall 参数。
+
+## 实际执行链
+
+```text
+.env.e2e.yaml → 显式 target/default 集合 → TargetTags/live
+  → effects-only Plan + 唯一 borrowed profile
+  → Recall YAML 编译出的 ScenarioSpec.provision
+  → 既有 runScenarioRepeat → metadata.recallExecution
+```
+
+Runner 只消费场景 provision，不做执行 provision 合并。资源 source/destination 经过 realpath 与逃逸校验；profile 负责物化和 finally cleanup。挂载不等于模型实际读取，行为仍由 Observation/Criterion 验证。
 
 ## 教程断言
 
 `TUTORIAL_SUMMARY` 包含：
 
-- `exitCode: 0` 与 `reports: 1`；
-- `scenario: tutorial-recall/multi-turn`；
-- `turns: 2`，两轮在同一个 case 会话内执行；
-- `contextPath: CONTEXT.md`，源文件以只读 provision 数据交给消费者。
+- `exitCode: 0`、`reports: 1`；
+- `scenario: tutorial-recall/multi-turn`、`turns: 2`；
+- `contextPath: CONTEXT.md`；
+- 报告 mode 为 `borrowed`、provision 为 `plan:local`、effects 为 `none`。
 
-把教程的 `createDriver` 换成消费者工厂、`criteria` 换成注册判据即可。context 内容由消费者在 sandbox 物化；Recall 不选择模型、不读取凭证，也不直接写工作区。
+完整 CLI、effects.use/inline、TargetTags、报告分目录和失败语义见[原生 Recall 规范](../../spec/recall.md)。默认教程、单测和 CI 不调用真实 provider；本次没有新增 Recall token 测试。

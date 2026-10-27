@@ -96,8 +96,8 @@ export default {
 ```
 
 **选「代码模块」而非 YAML/独立 config 格式**：判据与 driver 工厂本就是代码，
-YAML 放不下函数。`eval` 继续显式加载上述 config；固定 `.recall/x-agent-suite.config.ts`
-发现与 YAML 考卷由 [原生 Recall](./recall.md) 承担。CLI 逐场景执行并写报告，任一场景基础设施失败即非零退出。
+YAML 放不下函数。`eval` 继续显式加载上述 config；原生 [Recall](./recall.md) 则使用独立 registry 与 effects-only Plan，不共享或发现 `x-agent-suite.config.ts`。
+CLI 逐场景执行并写报告，任一场景基础设施失败即非零退出。
 
 ## 验收
 

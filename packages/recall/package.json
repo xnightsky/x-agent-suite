@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@x-agent-suite/contracts": "workspace:*",
+    "@x-agent-suite/harness": "workspace:*",
+    "@x-agent-suite/llm-fixture": "workspace:*",
     "@x-agent-suite/observation": "workspace:*",
     "@x-agent-suite/runner": "workspace:*",
     "yaml": "^2.9.0"
@@ -26,6 +28,7 @@
     "@types/node": "^25.6.0",
     "@x-agent-suite/criteria": "workspace:*",
     "@x-agent-suite/driver": "workspace:*",
+    "@x-agent-suite/sandbox": "workspace:*",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   }

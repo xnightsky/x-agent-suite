@@ -56,7 +56,7 @@ pnpm tutorial:pty:pi  # 真实 Pi + fake provider；默认 skip，零 token
 
 真实 provider 对照文件为 `examples/tutorial/10-live-smoke.token.ittest.ts`，只允许通过精确的 `pnpm ittest:token:tutorial` 显式运行，且测试内部仍要求单次授权值。
 
-运行入口已落地为库级 + CLI 双形态：`@x-agent-suite/runner` 提供 `runScenarioSpec` 与 `x-agent-suite eval <config>`；`@x-agent-suite/recall` 提供原生 `.recall` 发现、严格 YAML 编译和 `x-agent-suite recall`。矩阵对照继续由 `@x-agent-suite/matrix` 自持。
+运行入口已落地为库级 + CLI 双形态：`@x-agent-suite/runner` 提供 `runScenarioSpec` 与 `x-agent-suite eval <config>`；`@x-agent-suite/recall` 提供显式 carrier/provider/model、独立 registry、effects-only Plan、文件内场景 plans 和 `x-agent-suite recall`，不读取 `x-agent-suite.config.ts`。矩阵对照继续由 `@x-agent-suite/matrix` 自持。
 
 兄弟仓库的本地 tarball、git 源码自构建、远程 GET、未来 registry 安装配置，以及固定版本重打方式，见 [`docs/spec/packaging.md`](docs/spec/packaging.md)。`artifacts/` 是本地交付输出并已加入 `.gitignore`。
 

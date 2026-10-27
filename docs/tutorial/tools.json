@@ -691,11 +691,46 @@
           "recipes": ["recall"]
         },
         {
-          "name": "loadRecallConfig",
+          "name": "loadRecallRegistry",
+          "category": "live",
+          "purpose": "加载独立 Criterion、borrowed profile、EffectsProfile 与 transport 注册表。",
+          "risk": "high",
+          "recipes": ["recall"]
+        },
+        {
+          "name": "emptyRecallRegistry",
           "category": "primitive",
-          "purpose": "加载并严格校验 Recall 代码运行配置。",
+          "purpose": "创建无判据、无 profile、无 EffectsProfile 的安全空注册表。",
           "risk": "safe",
-          "reason": "通常由 loadRecall 调用；直接用于自定义装载。"
+          "reason": "供程序化组合与测试使用。"
+        },
+        {
+          "name": "loadRecallEffectsPlan",
+          "category": "live",
+          "purpose": "加载仅含 effects 的执行 Plan，解析 none/use/inline 与安全缺省。",
+          "risk": "high",
+          "recipes": ["recall"]
+        },
+        {
+          "name": "isRecallCommandAllowed",
+          "category": "primitive",
+          "purpose": "完整命令字符串精确匹配，deny 优先、默认拒绝。",
+          "risk": "safe",
+          "recipes": ["recall"]
+        },
+        {
+          "name": "readRecallResources",
+          "category": "advanced",
+          "purpose": "校验场景资源 source realpath、rootDir 逃逸与 file/directory 类型。",
+          "risk": "conditional",
+          "recipes": ["recall"]
+        },
+        {
+          "name": "materializeRecallProvision",
+          "category": "advanced",
+          "purpose": "把 ScenarioSpec.provision 禁止覆盖地只读物化到隔离 cwd。",
+          "risk": "conditional",
+          "recipes": ["recall"]
         }
       ]
     }

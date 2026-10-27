@@ -1,11 +1,12 @@
 /**
  * @module @x-agent-suite/recall
- * 原生 .recall 公共入口：加载、执行与 CLI；YAML 编译器保持内部可替换边界。
+ * 原生 Recall：显式 target、独立 registry、effects-only Plan、场景 DSL 与单 Runner。
  */
 export {
   loadRecall,
   type LoadedRecall,
   type LoadRecallOptions,
+  type RecallExecutionPlan,
 } from "./load.ts";
 export {
   runRecall,
@@ -14,4 +15,23 @@ export {
   type RecallRunResult,
 } from "./run.ts";
 export { main } from "./cli.ts";
-export { loadRecallConfig, type RecallConfig } from "./config.ts";
+export {
+  emptyRecallRegistry,
+  loadRecallRegistry,
+  type RecallExecutionProfile,
+  type RecallProfileDriverContext,
+  type RecallRegistry,
+} from "./registry.ts";
+export {
+  isRecallCommandAllowed,
+  loadRecallEffectsPlan,
+  type RecallCommandsPolicy,
+  type RecallEffects,
+  type RecallEffectsProfile,
+  type RecallToolsPolicy,
+} from "./effects.ts";
+export {
+  materializeRecallProvision,
+  readRecallResources,
+  type RecallCompiledResource,
+} from "./resources.ts";

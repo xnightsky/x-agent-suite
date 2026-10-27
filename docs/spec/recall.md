@@ -1,114 +1,207 @@
 # 原生 Recall 声明式评测
 
-## 目的与边界
+## 目的与信任边界
 
-`@x-agent-suite/recall` 把 `.recall/` 中的代码运行配置和 YAML 考卷编译为现有 `ScenarioSpec[]`，再复用 Runner 的 repeat、判据调度和报告。它是一套 x-agent-suite 原生格式：不兼容、不转换、不依赖外部 recall 实现，也不引入第二套执行抽象。
+`@x-agent-suite/recall` 把 Recall YAML 编译为现有 `ScenarioSpec[]`，再复用同一个 Runner 的 repeat、判据调度和报告。**没有执行级 ProvisionPlan，也不做执行 provision 与场景 provision 合并。**
 
-Recall 不认识模型目录、PTY profile、真实渠道或凭证；这些由消费者的 driver/backend 工厂负责。包内不预置 metric，不直接写被测工作区，也不会自动创建 `.recall/`。
+四种输入职责固定：
 
-## 命令与发现
+| 输入                  | 职责                                                                                                      |
+| --------------------- | --------------------------------------------------------------------------------------------------------- |
+| Recall YAML           | case 测试意图、文件内 `plans`、全局/case `context`，最终只编译为 `ScenarioSpec.provision`。               |
+| 执行 Plan YAML        | 只声明 `version: 1` 与 `effects: none/use/inline`。不得包含 driver、mode、cliRef、criteria 或 provision。 |
+| 独立 registry TS 模块 | 注册 Criterion、borrowed execution profiles、EffectsProfile 与可选 transport；不是 Recall config 闭包。   |
+| `.env.e2e.yaml`       | 复用现有 carrier/provider/model、凭据与私密 TargetTags，不建立第二套模型配置。                            |
+
+不读取、发现或兼容 `x-agent-suite.config.ts`。旧 `--config` 会返回定义错误。包内不预置 metric、具体宿主 profile 或领域 EffectsProfile。
+
+## CLI 与 target 选择
 
 ```bash
-x-agent-suite recall
-x-agent-suite recall .recall/project-rules.yaml
-x-agent-suite recall --config .recall/x-agent-suite.config.ts .recall/project-rules.yaml
-x-agent-suite recall path/to/existing-directory
+x-agent-suite recall \
+  --carrier <id> [--provider <id>] [--model <id>] \
+  [--live-config <path>] [--registry <module.ts>] [--plan <yaml>] \
+  [--approve-live] [--repeat <n>] [--out-dir <path>] [--root-dir <path>] \
+  [YAML|目录]
 ```
 
-发现顺序固定如下：
+- 三个 target 参数至少出现一个；无参数直接返回用法/定义错误，**即使只有一个 default 也不执行**。
+- `--carrier` 展开该 carrier 的 default targets，保持声明顺序，可多个，由外层逐 target 执行。
+- `--provider` 在已选范围继续过滤 defaults；`--model` 从可选目录继续定位具体模型，歧义时失败。显式选择不追加其他 default。
+- `--live-config` 映射为本次 `E2E_LIVE_CONFIG_PATH`；省略时沿用既有配置发现链。
+- CLI 不提供 `--mode/--cli-ref`。direct/borrowed 由 effects、场景 provision、TargetTags 和注册实现共同决定。
+- 考卷显式目标优先；否则读取 cwd 下 `.recall/*.{yaml,yml}` 第一层，不递归。显式 `--plan` 位于该目录时从默认考卷发现中排除。
 
-1. `--config` 指定运行配置；否则读取调用 cwd 下 `.recall/x-agent-suite.config.ts`。
-2. 显式考卷目标优先：单个 `.yaml/.yml` 文件，或已有目录的第一层 YAML；目录不递归。
-3. 未给目标时，config 的可选 `files` 覆盖默认发现；其中相对路径按 config 所在目录解析。
-4. 两者都未给时，读取调用 cwd 下 `.recall/*.{yaml,yml}` 第一层。
-5. 所有考卷按解析后的绝对路径排序。缺配置、缺考卷、目标不存在和配置导入失败都在执行前报错。
+## 实际执行链
 
-`eval <config>`、`run <config>` 和 `diff` 仍走原 Runner 路径，语义不变。
+```text
+--carrier/--provider/--model + --live-config
+  → loadLiveConfig / resolveLiveTargets
+  → loadTargetTagCatalog（含同文件私密 overlay）
+  → 每个 target 经 TargetTags/live 审批
+  → 根据 effects 与场景 provision 选择 direct 或唯一 borrowed profile
+  → 原有 ScenarioSpec / runScenarioRepeat
+  → metadata.recallExecution 报告归因
+```
 
-## 运行配置
+独立 `--registry` 和 `--plan` 在 Driver 前加载；所有考卷、metric、plans、context、资源、target 和候选均先校验。未配置、选择歧义、live 未审批、实现不唯一或 effects 非法均 fail-closed，不创建 Driver，不 fallback。
+
+## 无 Plan、direct 与 borrowed
+
+- 无 Plan 等价于 `effects: none`。只有**所有场景均无 provision**时，才允许内置 direct 多轮纯文本 Driver；不声明 tools，返回工具调用会失败。
+- 任一场景有 provision 而没有 `--plan`：定义错误，direct 不得隐式挂载。
+- 显式 Plan 为 `effects: none` 且场景有 provision：允许 borrowed，由注册 profile 物化 `ScenarioSpec.provision`。
+- effects 为 inline/use：要求 borrowed。TargetTags borrowed 候选与 registry 中同 carrier profile 的交集必须恰好一个；cliRef 由此归因，不靠 CLI 或 Plan 猜选。
+- `review-required` 只有当前命令带 `--approve-live` 才放行；`disallowed/unknown` 不因审批放行。direct 与 borrowed 之间不降级、不回退。
+
+## 独立 registry
+
+`--registry` 是显式模块路径；无路径时使用空注册表，不读取任何默认 TS 文件。考卷引用 metric、使用 borrowed 或 `effects.use` 时，必须在 registry 注册对应实现。
 
 ```ts
-import type { RecallConfig } from "x-agent-suite/recall";
+import type { RecallRegistry } from "x-agent-suite/recall";
 
-const config: RecallConfig = {
-  createDriver: (spec) => createConsumerDriver(spec),
+const registry: RecallRegistry = {
   criteria: consumerCriteria,
-  repeat: 1,
-  outDir: ".tmp/x-agent-suite",
-  rootDir: "..",
-  files: ["project-rules.yaml"],
-  carrier: "consumer-carrier",
+  profiles: {
+    "consumer-cli-profile": {
+      carrier: "consumer-carrier",
+      createDriver: ({ spec, backend, target, cliRef, effects }) =>
+        createConsumerDriver({
+          backend,
+          target,
+          cliRef,
+          effects,
+          scenarioProvision: spec.provision,
+        }),
+    },
+  },
+  effectsProfiles: {
+    "read-only-v1": {
+      tools: "read-only",
+      commands: { allow: ["read-file"], deny: [] },
+      maxSteps: 2,
+      timeoutMs: 30_000,
+      workspace: "isolated",
+      cleanup: "required",
+    },
+  },
+  // transport 仅用于自定义/测试传输；生产缺省为现有 fetch。
 };
-export default config;
+
+export default registry;
 ```
 
-- `createDriver` 与 `criteria` 必填，类型复用 `RunScenarioSpecDeps`。
-- `repeat` 缺省 1，必须是正整数。
-- `outDir` 缺省 `.tmp/x-agent-suite`；相对路径按调用 cwd 解析。
-- `rootDir` 缺省调用 cwd；显式相对路径按 config 所在目录解析。
-- `files` 可选，只接受非空路径字符串数组。
-- `carrier` 可选，用于显式覆盖报告行；未配置时优先采用 driver 的 `Observation.carrier`，最后缺省 `default`。provider/model 等目标信息由消费者写入 `Observation.metadata`，报告原样保留。Recall 不解析多目标配置，也不调用 live 目标选择器。
-- 配置只接受上述字段；未知字段、非法 repeat、重复 scope/name 判据和导入错误属于定义错误，均在创建 driver 前拒绝。
+重复判据、非法 profile、未知 registry 字段均在执行前拒绝。registry 只注册实现，不参与 model/default 选择。
 
-## YAML v1
+## 执行 Plan DSL：仅 effects
+
+顶层只接受 `version` 和必填 `effects`；`provision/plans` 或其他字段均拒绝。
+
+```yaml
+version: 1
+effects: none
+```
+
+使用独立 EffectsProfile：
+
+```yaml
+version: 1
+effects:
+  use: read-only-v1
+```
+
+inline：
+
+```yaml
+version: 1
+effects:
+  tools: read-only
+  commands:
+    allow: [read-file]
+    deny: [read-file]
+  maxSteps: 1
+  timeoutMs: 30000
+  workspace: isolated
+  cleanup: required
+```
+
+规则：
+
+- `effects: none` 使用安全缺省，无额外模型工具或命令副作用。
+- `effects.use` 只查当前显式 registry 的 `effectsProfiles`，未注册即失败；与任何 inline 字段互斥，不继承、不深合并。
+- `tools` 默认 `none`，可选 `read-only/allowlist`；TargetTags 分别要求相应 CLI 能力，注册 profile 必须实际兑现。
+- `commands.allow/deny` 默认 `[]`，只支持**完整命令字符串精确匹配**；deny 优先，未命中 allow 即拒绝，未引入 glob 语义。
+- `maxSteps=1`、`timeoutMs=30000` 默认且必须为正整数；`workspace` 当前仅 `isolated`，`cleanup` 当前仅 `required`。
+- 权限只来自这个受信任执行 Plan；case YAML 不能声明 tools、commands 或其他提权字段。
+
+## Recall YAML：场景与文件内 plans
 
 ```yaml
 version: 1
 id: project-rules
+plans:
+  local:
+    resources:
+      - source: fixtures
+        destination: fixtures
+        kind: directory
+      - source: CONTEXT.md
+        destination: docs/CONTEXT.md
 context:
-  files:
-    - AGENTS.md
-    - AGENTS.ai.md
+  plan: local
 cases:
-  - id: local-address
+  - id: inherit
     turns:
-      - send: 本项目访问本地服务应该使用什么地址？
-        expect:
-          text-contains: [127.0.0.1]
-    metadata:
-      source: AGENTS.md#local-rules
-  - id: multi-turn-example
-    timeoutMs: 120000
-    turns:
-      - send: 第一轮输入
+      - send: 第一轮
         expect:
           text-contains: [first]
-      - send: 第二轮输入
-        timeoutMs: 30000
-        expect:
-          text-contains: [second]
+  - id: clear-resources
+    context:
+      plan: none
+    turns:
+      - send: 无资源回答
+  - id: use-files
+    context:
+      files: [OTHER.md]
+    turns:
+      - send: 改用文件资源
 ```
 
-只允许以下形状：
+- 顶层字段为 `version/id/context/plans/cases`；case 可另含 `context`，与 `id/turns/timeoutMs/metadata` 并列。
+- `plans.<name>.resources` 只是**当前 Recall YAML 文档内部**的资源别名注册表；禁止覆盖内置 `none`，不支持 extends、继承、深合并或跨 YAML 引用。
+- 全局 `context.plan` 是所有 case 的默认；case 未声明 context 时继承，声明时整块覆盖。`context.plan: none` 清空全局资源；case 也可改用 `context.files`。
+- 同一 context 的 `files` 与 `plan` 互斥。未注册 plan 或跨文件引用在 Driver 前失败。
+- `context.files` 仍编译为 `{ context: { files: [{ path, content }] } }`；`context.plan` 编译为 `{ plan: <name>, resources: [...] }`。两者都是 `ScenarioSpec.provision`，Runner 不再合并其他资源层。
 
-| 层级 | 字段                                             |
-| ---- | ------------------------------------------------ |
-| 顶层 | `version`、`id`、可选 `context.files`、`cases`   |
-| case | `id`、`turns`、可选 `timeoutMs`、可选 `metadata` |
-| turn | `send`、可选 `expect`、可选 `timeoutMs`          |
+### resources 字段与路径
 
-`version` 必须为 1；ID 非空；`cases/turns` 非空；`send` 不得为空字符串；timeout 必须是正整数。`expect` 的键必须匹配运行配置中的 turn-scope Criterion 名，值原样透传给判据。未知字段、YAML 解析错误和未注册 metric 都在创建 driver 前失败。
+| 字段          | 缺省   | 规则                                                                                                                 |
+| ------------- | ------ | -------------------------------------------------------------------------------------------------------------------- |
+| `source`      | 必填   | 相对 `--root-dir`，realpath 后仍须在 rootDir 内；缺失、绝对路径、`..`/符号链接逃逸和 file/directory 类型不符均失败。 |
+| `destination` | 必填   | 相对隔离 `sandbox.cwd` 的归一化路径；绝对路径、逃逸及任意前缀冲突均失败。                                            |
+| `kind`        | `file` | `file` 或 `directory`。                                                                                              |
+| `readOnly`    | `true` | 当前仅允许 `true`；物化禁止覆盖并设置只读。                                                                          |
 
-v1 不支持 judge、decision、variants、自然语言 score_rule、case 依赖、共享 setup、条件分支或跨 case 输入/输出引用。
+`materializeRecallProvision` 可供注册 profile 在 `sandboxSetup` 等 hook 中物化上述 provision。`cleanup: required` 由隔离 Driver 的 close/finally 兑现。**无执行级 ProvisionPlan**；挂载/物化成功也不等于模型实际读取，行为证据仍由 Observation/Criterion 提供。
 
-## 编译与 context
+## 报告、退出码与验证
 
-每个 case 编译为一个独立 `ScenarioSpec`：
+每次 case/repeat 都创建独立 backend/Driver，同一 case 内 direct 多轮保留消息历史。报告写入：
 
-- ID 为 `<recall-file-id>/<case-id>`，同一运行内不得重复。
-- turns 与 case/turn timeout 映射到同名字段。
-- case metadata 原样保留，并写入保留键 `metadata.recall = { file, fileId, caseId }`；来源路径也合入报告 Observation metadata。
-- context 编译为 `provision.context.files = [{ path, content }]`。每个 case 得到独立 provision 对象，消费者 driver/provision 负责把内容物化到 sandbox。
+```text
+metadata.recallExecution = {
+  target: { carrier, provider, model },
+  mode,
+  cliRef?,
+  provision,   // none | files | plan:<name>
+  effects      // none | inline | use:<name>
+}
+```
 
-context 只接受 rootDir 内的相对路径。Recall 同时检查词法路径与 realpath，拒绝绝对路径、`..` 逃逸、符号链接逃逸、缺失文件和非普通文件。源文件只读；Recall 不写被测工作区。
+多 default target 使用 `<outDir>/<carrier>/<provider>/<model>/` 分目录，避免报告覆盖。provision/effects 是配置归因，不是实际读取或权限执行证据。
 
-## 执行、退出码与扩展
-
-全部 config、所有考卷、metric、context 和跨文件 ID 校验通过后，才开始创建 driver。执行逐 case、逐 repeat 顺序调用 `runScenarioRepeat`：每次执行重新调用工厂并由 Runner 关闭 driver；同一 case 内多轮共享该次会话，不同 case 不共享执行状态。
-
-- 用法、配置、YAML、引用和发现错误：退出码 2。
-- driver、超时、报告写入等基础设施错误：退出码 1。
-- 行为判据不通过：报告中 `hardPass=false`，退出码仍为 0。
-- 每个 case 写出现有 Markdown + JSON 报告；repeat>1 时带稳定率统计。
-
-扩展通过显式版本演进、`metadata`、`provision` 和消费者 Criterion 注册完成。新增 YAML 能力必须先定义通用价值、严格 Schema 与编译语义；v1 不放置无行为的“保留字段”。
+- 用法、registry、Plan、YAML、资源、target 和候选定义错误：退出码 2。
+- Driver、超时、报告写入等基础设施错误：退出码 1。
+- 行为判据不通过：`hardPass=false`，退出码仍为 0。
+- 默认测试使用临时配置、合成 TargetTags、fake transport 和 MockDriver，零 token；真实 provider 没有默认 Recall token 入口。

@@ -321,6 +321,20 @@
       "recipe": "recall"
     },
     {
+      "goal": "显式执行 Recall target 与 effects-only Plan，不归并执行 provision",
+      "status": "conditional",
+      "modules": [
+        "recall:loadRecallRegistry",
+        "llm-fixture:resolveLiveTargets"
+      ],
+      "requires": [
+        "私密 live 配置与 TargetTags",
+        "独立 registry 与场景内 plans/context（无执行级 ProvisionPlan）",
+        "单次 live 审批与费用/出站限制"
+      ],
+      "recipe": "recall"
+    },
+    {
       "goal": "通过统一 Registry/CLI 直接运行 ScenarioSpec",
       "status": "supported",
       "modules": ["contracts:Registry", "contracts:ScenarioSpec", "runner"],

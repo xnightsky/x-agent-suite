@@ -1,63 +1,49 @@
 /**
  * @module @x-agent-suite/recall/discovery
- * 固定 .recall 发现规则；不创建目录、不递归、按绝对路径排序。
+ * Recall 考卷发现：显式目标优先，否则读取 .recall 第一层 YAML；不发现 TS config。
  */
 import { readdir, stat } from "node:fs/promises";
-import { dirname, extname, resolve } from "node:path";
+import { extname, resolve } from "node:path";
 
 const DEFAULT_DIRECTORY = ".recall";
-const DEFAULT_CONFIG = "x-agent-suite.config.ts";
 
-/** 考卷发现入参；显式 target 优先于 config.files。 */
+/** 考卷发现入参；excludePath 仅用于默认目录中的显式执行 Plan。 */
 export interface FindRecallFilesOptions {
+  /** 调用工作目录。 */
   readonly cwd: string;
-  readonly configPath: string;
+  /** 显式 YAML 文件或目录。 */
   readonly target?: string;
-  readonly configuredFiles?: readonly string[];
+  /** 默认或显式目录发现时排除的执行 Plan 文件。 */
+  readonly excludePath?: string;
 }
 
-/** 解析显式配置或 cwd/.recall/x-agent-suite.config.ts。 */
-export async function findRecallConfig(
-  cwd: string,
-  explicitPath?: string,
-): Promise<string> {
-  const configPath = explicitPath
-    ? resolve(cwd, explicitPath)
-    : resolve(cwd, DEFAULT_DIRECTORY, DEFAULT_CONFIG);
-  if (!(await isFile(configPath))) {
-    throw new Error("未发现 Recall 运行配置：" + configPath);
-  }
-  return configPath;
-}
-
-/** 发现考卷：显式文件/目录 > config.files > 默认 .recall 第一层。 */
+/** 发现考卷：显式文件/目录 > 默认 .recall 第一层；不递归。 */
 export async function findRecallFiles(
   options: FindRecallFilesOptions,
 ): Promise<string[]> {
+  const excludePath = options.excludePath
+    ? resolve(options.cwd, options.excludePath)
+    : undefined;
   if (options.target) {
     const target = resolve(options.cwd, options.target);
     const info = await statTarget(target);
     const files = info.isDirectory()
-      ? await readYamlDirectory(target)
+      ? await readYamlDirectory(target, excludePath)
       : [assertYamlFile(target)];
     return requireFiles(files);
   }
-  if (options.configuredFiles !== undefined) {
-    const base = dirname(options.configPath);
-    const files = options.configuredFiles.map((file) =>
-      assertYamlFile(resolve(base, file)),
-    );
-    for (const file of files) {
-      if (!(await isFile(file))) throw new Error("Recall 考卷不存在：" + file);
-    }
-    return requireFiles(files);
-  }
   return requireFiles(
-    await readYamlDirectory(resolve(options.cwd, DEFAULT_DIRECTORY)),
+    await readYamlDirectory(
+      resolve(options.cwd, DEFAULT_DIRECTORY),
+      excludePath,
+    ),
   );
 }
 
-async function readYamlDirectory(directory: string): Promise<string[]> {
+async function readYamlDirectory(
+  directory: string,
+  excludePath?: string,
+): Promise<string[]> {
   let entries;
   try {
     entries = await readdir(directory, { withFileTypes: true });
@@ -71,6 +57,7 @@ async function readYamlDirectory(directory: string): Promise<string[]> {
   return entries
     .filter((entry) => entry.isFile() && isYaml(entry.name))
     .map((entry) => resolve(directory, entry.name))
+    .filter((path) => path !== excludePath)
     .sort();
 }
 
@@ -95,13 +82,5 @@ async function statTarget(target: string) {
     return await stat(target);
   } catch (cause) {
     throw new Error("Recall 目标不存在：" + target, { cause });
-  }
-}
-
-async function isFile(file: string): Promise<boolean> {
-  try {
-    return (await stat(file)).isFile();
-  } catch {
-    return false;
   }
 }

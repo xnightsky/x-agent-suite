@@ -34,6 +34,12 @@ pnpm check  # boundary + typecheck + test + ittest
 
 PTY、headless、sandbox 是机制，smoke 是抽样范围，contract 是验证目的：这些词可以出现在文件 stem、测试标题和 catalog，但不形成新的终止后缀。为何不继续细分，见[测试文件命名调研](../research/test-file-naming-taxonomy.md)。
 
+## Recall 显式执行验证
+
+`packages/recall/tests/effects.test.ts`、`compile.test.ts`、`discovery.test.ts` 与 `recall.test.ts` 都属于单元测试：临时 live YAML、合成 TargetTags、fake transport 和 MockDriver 不访问真实 provider，也不读取真实 home 配置。它们覆盖无参数拒绝、carrier 多 default、provider/model 过滤、默认无 effects、文件内 plans/context 继承覆盖、inline 权限、direct/borrowed、live 审批、资源清理和报告归因，进入 `pnpm test` 与 `pnpm check`。
+
+真实 Recall live 调用会消耗 token，只能在显式 live 配置和 `--approve-live`（策略为 review-required 时）下执行。本次没有新增 `*.token.ittest.ts` 或 `ittest:token:recall`，不得以 fake transport 的成功推断真实 direct/borrowed 已获 live 验证。
+
 ## token 级安全门
 
 token 测试必须同时满足：

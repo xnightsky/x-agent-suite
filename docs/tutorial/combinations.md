@@ -12,30 +12,31 @@
 | 评分    | dry / hard / fuzzy / enumerate / 自定义 Criterion       | 通用函数 + 消费者        |
 | 输出    | Observation / ScenarioResult / Markdown+JSON            | driver、runner、reporter |
 
-Backend 不属于 `MockDriver` 或底层 `JsonlProcess` 本身；Scenario Runner 与 Recall 也不负责选择 backend。把“不适用”与“尚未实现”区分开，能避免产生不存在的组合。
+Backend 不属于 `MockDriver` 或底层 `JsonlProcess` 本身；Scenario Runner 不负责选择 backend。Recall 通过显式 target 参数复用 live target 选择器，并由 effects-only Plan、场景 provision 和注册实现决定 direct/borrowed。把“不适用”与“尚未实现”区分开，能避免产生不存在的组合。
 
 ## 支持矩阵
 
-| 目标                              | 组合                                                  | 状态           | recipe / 详细教程                                                                      |
-| --------------------------------- | ----------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------- |
-| 学习完整数据链                    | Mock + checks + report                                | 支持           | [mock-report](./recipes/mock-report.md)（`pnpm tutorial`）                             |
-| 判据调度与聚合打分                | runCriteria + resolveAggregate + report               | 支持           | [criteria-aggregation](./recipes/criteria-aggregation.md)（`pnpm tutorial:aggregate`） |
-| 一条命令跑完整考卷                | runner CLI（eval）+ config 模块                       | 支持           | [scenario-runner](./recipes/scenario-runner.md)（`pnpm tutorial:runner`）              |
-| `.recall` 声明式多轮考卷          | recall + YAML + runner                                | 支持           | [recall](./recipes/recall.md)（`pnpm tutorial:recall`）                                |
-| harness driver 接 runner          | createHarnessDriver + runScenarioSpec                 | 支持           | [harness-runner](./recipes/harness-runner.md)（`pnpm tutorial:harness-runner`）        |
-| 真实宿主 PTY 接 runner            | createPtyAgentDriver + runScenarioSpec                | 支持（门控）   | [pi-pty-runner](./recipes/pi-pty-runner.md)（`pnpm tutorial:runner:pi`）               |
-| 安装态能力评测（provision）       | sandboxSetup + provisionSandbox + runner              | 支持           | [provision-skill](./recipes/provision-skill.md)（`pnpm tutorial:provision`）           |
-| 自定义 JSONL driver               | sandbox + JsonlProcess                                | 支持           | [sandbox-jsonl](./recipes/sandbox-jsonl.md)（`pnpm tutorial:sandbox`）                 |
-| 测试模型 wire                     | FakeProviderBackend                                   | 支持           | [fixture-backend](./recipes/fixture-backend.md)（`pnpm tutorial:fixture`）             |
-| 横向比较                          | Driver factory + runMatrix + report                   | 支持           | [matrix-report](./recipes/matrix-report.md)（`pnpm tutorial:matrix`）                  |
-| 真实 headless CLI，零 token       | profile + fixture + sandbox + harness                 | 有条件         | [headless-fixture](./recipes/headless-fixture.md)；合成链可直接运行                    |
-| 长驻与入站                        | LongLivedAgentDriver + consumer runner                | 有条件         | [long-lived](./recipes/long-lived.md)；内存参考实现可直接运行                          |
-| JSON-RPC 长驻 wire                | JsonRpcPeer + LongLivedJsonRpcDriver + 消费者 adapter | 有条件         | [long-lived-wire](./recipes/long-lived-wire.md)；假 peer 链可直接运行                  |
-| TUI 审批                          | PTY profile + PtyAgentDriver                          | 有条件、高风险 | [pty](./recipes/pty.md)；含合成单测与真实宿主 ittest 分层                              |
-| Pi 真实 PTY                       | Pi profile + fake backend + PTY                       | 有条件         | [pi-pty-integration](./recipes/pi-pty-integration.md)；默认 skip，零 token             |
-| Pi 真实 PTY 打真实 provider/model | Pi profile + LiveBackend + 借用渠道注入               | 有条件、高风险 | [pi-live-pty](./recipes/pi-live-pty.md)；仅显式 token 入口                             |
-| live 默认安全门                   | authorization + redact                                | 支持           | [live-guard](./recipes/live-guard.md)；默认零网络                                      |
-| 真实模型最小对照                  | live config + sniff                                   | 有条件、高风险 | [live-token-smoke](./recipes/live-token-smoke.md)；仅显式 token 入口                   |
+| 目标                              | 组合                                                          | 状态           | recipe / 详细教程                                                                      |
+| --------------------------------- | ------------------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------- |
+| 学习完整数据链                    | Mock + checks + report                                        | 支持           | [mock-report](./recipes/mock-report.md)（`pnpm tutorial`）                             |
+| 判据调度与聚合打分                | runCriteria + resolveAggregate + report                       | 支持           | [criteria-aggregation](./recipes/criteria-aggregation.md)（`pnpm tutorial:aggregate`） |
+| 一条命令跑完整考卷                | runner CLI（eval）+ config 模块                               | 支持           | [scenario-runner](./recipes/scenario-runner.md)（`pnpm tutorial:runner`）              |
+| `.recall` 声明式多轮考卷          | recall + YAML + runner                                        | 支持           | [recall](./recipes/recall.md)（`pnpm tutorial:recall`）                                |
+| 显式执行 Recall live              | 显式 target + effects-only Plan + 独立 registry + 同一 Runner | 有条件、高风险 | [recall](./recipes/recall.md)；fake 单测默认零 token，真实调用需单次审批               |
+| harness driver 接 runner          | createHarnessDriver + runScenarioSpec                         | 支持           | [harness-runner](./recipes/harness-runner.md)（`pnpm tutorial:harness-runner`）        |
+| 真实宿主 PTY 接 runner            | createPtyAgentDriver + runScenarioSpec                        | 支持（门控）   | [pi-pty-runner](./recipes/pi-pty-runner.md)（`pnpm tutorial:runner:pi`）               |
+| 安装态能力评测（provision）       | sandboxSetup + provisionSandbox + runner                      | 支持           | [provision-skill](./recipes/provision-skill.md)（`pnpm tutorial:provision`）           |
+| 自定义 JSONL driver               | sandbox + JsonlProcess                                        | 支持           | [sandbox-jsonl](./recipes/sandbox-jsonl.md)（`pnpm tutorial:sandbox`）                 |
+| 测试模型 wire                     | FakeProviderBackend                                           | 支持           | [fixture-backend](./recipes/fixture-backend.md)（`pnpm tutorial:fixture`）             |
+| 横向比较                          | Driver factory + runMatrix + report                           | 支持           | [matrix-report](./recipes/matrix-report.md)（`pnpm tutorial:matrix`）                  |
+| 真实 headless CLI，零 token       | profile + fixture + sandbox + harness                         | 有条件         | [headless-fixture](./recipes/headless-fixture.md)；合成链可直接运行                    |
+| 长驻与入站                        | LongLivedAgentDriver + consumer runner                        | 有条件         | [long-lived](./recipes/long-lived.md)；内存参考实现可直接运行                          |
+| JSON-RPC 长驻 wire                | JsonRpcPeer + LongLivedJsonRpcDriver + 消费者 adapter         | 有条件         | [long-lived-wire](./recipes/long-lived-wire.md)；假 peer 链可直接运行                  |
+| TUI 审批                          | PTY profile + PtyAgentDriver                                  | 有条件、高风险 | [pty](./recipes/pty.md)；含合成单测与真实宿主 ittest 分层                              |
+| Pi 真实 PTY                       | Pi profile + fake backend + PTY                               | 有条件         | [pi-pty-integration](./recipes/pi-pty-integration.md)；默认 skip，零 token             |
+| Pi 真实 PTY 打真实 provider/model | Pi profile + LiveBackend + 借用渠道注入                       | 有条件、高风险 | [pi-live-pty](./recipes/pi-live-pty.md)；仅显式 token 入口                             |
+| live 默认安全门                   | authorization + redact                                        | 支持           | [live-guard](./recipes/live-guard.md)；默认零网络                                      |
+| 真实模型最小对照                  | live config + sniff                                           | 有条件、高风险 | [live-token-smoke](./recipes/live-token-smoke.md)；仅显式 token 入口                   |
 
 ## 真实 headless CLI + fixture
 

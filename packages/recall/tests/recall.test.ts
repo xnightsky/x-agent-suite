@@ -1,6 +1,6 @@
 /**
  * @module @x-agent-suite/recall/tests/recall
- * 原生 .recall 端到端：全量前置校验、case/repeat 隔离、退出码和报告。
+ * 新 Recall CLI/Runner：显式 target、独立 registry、effects Plan 与报告归因。
  */
 import assert from "node:assert/strict";
 import {
@@ -13,14 +13,14 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import test from "node:test";
-import { loadRecall } from "../src/load.ts";
+import test, { type TestContext } from "node:test";
+import { parse, stringify } from "yaml";
 import { main } from "../src/cli.ts";
-import { main as unifiedMain } from "../../../packaging/cli.ts";
-import type { RecallTestState } from "./fixtures/recall.config.ts";
+import "./fixtures/recall.registry.ts";
+import type { RecallRegistryTestState } from "./fixtures/recall.registry.ts";
 
-const CONFIG_FIXTURE_URL = new URL(
-  "./fixtures/recall.config.ts",
+const REGISTRY_FIXTURE_URL = new URL(
+  "./fixtures/recall.registry.ts",
   import.meta.url,
 ).href;
 const PASS_FILE = `version: 1
@@ -32,235 +32,368 @@ cases:
         expect:
           text-contains: [hello]
 `;
+const PROVISION_FILE = `version: 1
+id: alpha
+plans:
+  shared:
+    resources:
+      - source: input.txt
+        destination: nested/input.txt
+context:
+  plan: shared
+cases:
+  - id: pass
+    turns:
+      - send: hello
+        expect:
+          text-contains: [hello]
+`;
+
+interface WorkspaceOptions {
+  readonly targetCount?: number;
+  readonly livePolicy?: "allowed" | "review-required";
+  readonly provision?: boolean;
+}
+
+interface Workspace {
+  readonly cwd: string;
+  readonly livePath: string;
+  readonly registryPath: string;
+  readonly recallPath: string;
+}
 
 interface TestGlobal {
-  __xasRecallTest?: RecallTestState;
+  __xasRecallRegistryTest?: RecallRegistryTestState;
 }
 
-async function workspace(): Promise<string> {
-  const cwd = await mkdtemp(join(tmpdir(), "xas-recall-run-"));
-  await writeFile(join(cwd, "package.json"), '{"type":"module"}\n');
-  await mkdir(join(cwd, ".recall"));
-  await writeFile(
-    join(cwd, ".recall", "x-agent-suite.config.ts"),
-    "export { default } from " + JSON.stringify(CONFIG_FIXTURE_URL) + ";\n",
-  );
-  (globalThis as TestGlobal).__xasRecallTest = {
-    created: [],
-    closed: [],
-    drivers: [],
-  };
-  return cwd;
-}
-
-function state(): RecallTestState {
-  const value = (globalThis as TestGlobal).__xasRecallTest;
+function state(): RecallRegistryTestState {
+  const value = (globalThis as TestGlobal).__xasRecallRegistryTest;
   assert.ok(value);
   return value;
 }
 
-async function withOutDir<T>(run: () => Promise<T>): Promise<T> {
-  const outDir = await mkdtemp(join(tmpdir(), "xas-recall-reports-"));
-  const previous = process.env.XAS_RECALL_TEST_OUT_DIR;
-  process.env.XAS_RECALL_TEST_OUT_DIR = outDir;
-  try {
-    return await run();
-  } finally {
-    if (previous === undefined) delete process.env.XAS_RECALL_TEST_OUT_DIR;
-    else process.env.XAS_RECALL_TEST_OUT_DIR = previous;
-    await rm(outDir, { recursive: true, force: true });
-  }
+function resetState(): void {
+  state().transports = [];
+  state().profiles = [];
 }
 
-test("自动发现多份考卷；多 case × repeat 每次独立创建并关闭 driver", async () => {
-  const cwd = await workspace();
-  await writeFile(join(cwd, ".recall", "a.yaml"), PASS_FILE);
-  await writeFile(
-    join(cwd, ".recall", "b.yaml"),
-    PASS_FILE.replace("alpha", "beta").replace("pass", "second"),
-  );
-  try {
-    await withOutDir(async () => {
-      assert.equal(await main([], { cwd }), 0);
-      assert.deepEqual(state().created, [
-        "alpha/pass",
-        "alpha/pass",
-        "beta/second",
-        "beta/second",
-      ]);
-      assert.equal(new Set(state().drivers).size, 4);
-      assert.equal(state().closed.length, 4);
-    });
-  } finally {
-    await rm(cwd, { recursive: true, force: true });
-  }
-});
-
-test("CLI 显式 config + 单 YAML，生成含来源、case、carrier 与 model 的 md/json 报告", async () => {
-  const cwd = await workspace();
-  const configPath = join(cwd, ".recall", "x-agent-suite.config.ts");
-  const recallPath = join(cwd, ".recall", "one.yaml");
-  await writeFile(recallPath, PASS_FILE);
-  const outDir = await mkdtemp(join(tmpdir(), "xas-recall-explicit-reports-"));
-  const previous = process.env.XAS_RECALL_TEST_OUT_DIR;
-  process.env.XAS_RECALL_TEST_OUT_DIR = outDir;
-  try {
-    assert.equal(
-      await unifiedMain(["recall", "--config", configPath, recallPath], {
-        cwd,
-      }),
-      0,
-    );
-    const files = await readdir(outDir);
-    assert.equal(files.filter((file) => file.endsWith("-report.md")).length, 1);
-    const jsonName = files.find((file) => file.endsWith("-report.json"));
-    assert.ok(jsonName);
-    const report = JSON.parse(await readFile(join(outDir, jsonName), "utf8"));
-    assert.equal(report.scenario, "alpha/pass");
-    assert.equal(report.rows[0].carrier, "fixture-carrier");
-    assert.equal(
-      report.rows[0].result.observation.metadata.model,
-      "fixture-model",
-    );
-    assert.equal(
-      report.rows[0].result.observation.metadata.provider,
-      "fixture-provider",
-    );
-    assert.equal(
-      report.rows[0].result.observation.metadata.recall.file,
-      recallPath,
-    );
-    assert.match(
-      report.rows[0].result.artifact.outcomes[0].name,
-      /text-contains/,
-    );
-    const mdName = files.find((file) => file.endsWith("-report.md"));
-    const markdown = await readFile(join(outDir, mdName!), "utf8");
-    assert.match(markdown, /alpha\/pass/);
-    assert.match(markdown, /fixture-carrier/);
-    const loaded = await loadRecall({ cwd, configPath, target: recallPath });
-    const source = loaded.scenarios[0]!.metadata!.recall as { file: string };
-    assert.equal(source.file, recallPath);
-  } finally {
-    if (previous === undefined) delete process.env.XAS_RECALL_TEST_OUT_DIR;
-    else process.env.XAS_RECALL_TEST_OUT_DIR = previous;
-    await rm(outDir, { recursive: true, force: true });
-    await rm(cwd, { recursive: true, force: true });
-  }
-});
-
-test("任何考卷存在未注册 metric 时返回定义错误且 createDriver 从未调用", async () => {
-  const cwd = await workspace();
-  await writeFile(join(cwd, ".recall", "a.yaml"), PASS_FILE);
-  await writeFile(
-    join(cwd, ".recall", "b.yaml"),
-    PASS_FILE.replace("text-contains", "not-registered"),
-  );
-  try {
-    assert.equal(await main([], { cwd }), 2);
-    assert.equal(state().created.length, 0);
-  } finally {
-    await rm(cwd, { recursive: true, force: true });
-  }
-});
-
-test("重复注册判据在执行前返回定义错误且 createDriver 从未调用", async () => {
-  const cwd = await workspace();
+async function workspace(
+  t: TestContext,
+  options: WorkspaceOptions = {},
+): Promise<Workspace> {
+  const cwd = await mkdtemp(join(tmpdir(), "xas-recall-cli-"));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  await mkdir(join(cwd, ".recall"));
+  await writeFile(join(cwd, "package.json"), '{"type":"module"}\n');
   await writeFile(
     join(cwd, ".recall", "x-agent-suite.config.ts"),
-    "import config from " +
-      JSON.stringify(CONFIG_FIXTURE_URL) +
-      "; export default { ...config, criteria: [...config.criteria, config.criteria[0]] };\n",
+    'throw new Error("obsolete config must not be imported");\n',
   );
-  await writeFile(join(cwd, ".recall", "a.yaml"), PASS_FILE);
-  try {
-    assert.equal(await main([], { cwd }), 2);
-    assert.equal(state().created.length, 0);
-  } finally {
-    await rm(cwd, { recursive: true, force: true });
-  }
-});
-
-test("同一运行中重复 Scenario ID 在执行前失败", async () => {
-  const cwd = await workspace();
-  await writeFile(join(cwd, ".recall", "a.yaml"), PASS_FILE);
-  await writeFile(join(cwd, ".recall", "b.yaml"), PASS_FILE);
-  try {
-    await assert.rejects(
-      loadRecall({ cwd }),
-      /重复.*alpha\/pass|alpha\/pass.*重复/,
-    );
-    assert.equal(state().created.length, 0);
-  } finally {
-    await rm(cwd, { recursive: true, force: true });
-  }
-});
-
-test("非法 repeat、未知配置字段与配置导入错误均返回定义错误", async (t) => {
-  const configs = [
-    [
-      "repeat: 0",
-      "export default { createDriver() {}, criteria: [], repeat: 0 };",
-    ],
-    [
-      "unknown",
-      "export default { createDriver() {}, criteria: [], unknown: true };",
-    ],
-    ["import", "import './missing.ts'; export default {};"],
-  ] as const;
-  for (const [name, source] of configs) {
-    await t.test(name, async () => {
-      const cwd = await workspace();
-      const configPath = join(cwd, ".recall", "x-agent-suite.config.ts");
-      await writeFile(configPath, source);
-      await writeFile(join(cwd, ".recall", "a.yaml"), PASS_FILE);
-      try {
-        assert.equal(await main([], { cwd }), 2);
-      } finally {
-        await rm(cwd, { recursive: true, force: true });
-      }
-    });
-  }
-});
-
-test("行为判据失败退出 0；driver 基础设施失败退出 1；用法错误退出 2", async () => {
-  const behavior = await workspace();
+  const registryPath = join(cwd, "registry.ts");
   await writeFile(
-    join(behavior, ".recall", "a.yaml"),
-    PASS_FILE.replace("text-contains: [hello]", "text-contains: [absent]"),
+    registryPath,
+    "export { default } from " + JSON.stringify(REGISTRY_FIXTURE_URL) + ";\n",
   );
-  try {
-    await withOutDir(async () =>
-      assert.equal(await main([], { cwd: behavior }), 0),
-    );
-  } finally {
-    await rm(behavior, { recursive: true, force: true });
-  }
+  const recallPath = join(cwd, ".recall", "suite.yaml");
+  await writeFile(recallPath, options.provision ? PROVISION_FILE : PASS_FILE);
+  if (options.provision) await writeFile(join(cwd, "input.txt"), "read only");
 
-  const infrastructure = await workspace();
-  const infraConfig =
-    "import { textContains } from " +
-    JSON.stringify(
-      new URL("../../criteria/src/index.ts", import.meta.url).href,
-    ) +
-    ";\n" +
-    "export default {\n" +
-    '  createDriver() { throw new Error("driver unavailable"); },\n' +
-    "  criteria: [textContains],\n" +
-    "  outDir: " +
-    JSON.stringify(join(infrastructure, "reports")) +
-    ",\n" +
-    "};\n";
-  await writeFile(
-    join(infrastructure, ".recall", "x-agent-suite.config.ts"),
-    infraConfig,
+  const targetCount = options.targetCount ?? 1;
+  const providers =
+    targetCount === 1
+      ? { "fixture-provider": ["fixture-model-0"] }
+      : {
+          "fixture-provider": ["fixture-model-0"],
+          "other-provider": ["fixture-model-1"],
+        };
+  const carrierProviders = Object.fromEntries(
+    Object.entries(providers).map(([provider, models]) => [
+      provider,
+      {
+        models,
+        wire: "openai-chat",
+        baseUrl: "https://fixture.invalid/v1",
+        apiKey: "fixture-key",
+      },
+    ]),
   );
-  await writeFile(join(infrastructure, ".recall", "a.yaml"), PASS_FILE);
-  try {
-    assert.equal(await main([], { cwd: infrastructure }), 1);
-  } finally {
-    await rm(infrastructure, { recursive: true, force: true });
-  }
-  assert.equal(await main(["--config"], { cwd: process.cwd() }), 2);
-  assert.equal(await main(["--unknown"], { cwd: process.cwd() }), 2);
+  const defaults = Object.entries(providers).flatMap(([provider, models]) =>
+    models.map((model: string) => `${provider}/${model}`),
+  );
+  const livePath = join(cwd, "private-live.yaml");
+  await writeFile(
+    livePath,
+    stringify({
+      carriers: {
+        "fixture-carrier": {
+          providers: carrierProviders,
+          default: defaults,
+        },
+      },
+      targetTags: {
+        version: 1,
+        cli: [
+          {
+            id: "fixture-cli-0",
+            carrier: "fixture-carrier",
+            wires: ["openai-chat"],
+            tags: [
+              "cli.execution.one-shot",
+              "cli.execution.unattended",
+              "cli.session.ephemeral",
+              "cli.context.context-files.off",
+              "cli.context.extensions.off",
+              "cli.context.skills.off",
+              "cli.tools.none",
+              "cli.tools.allowlist",
+              "cli.tools.read-only",
+              "cli.io.text",
+              "cli.io.jsonl",
+            ],
+          },
+        ],
+        providers: Object.keys(providers).map((id) => ({
+          id,
+          tags: [
+            "provider.usage.api-payg",
+            "provider.usage.cli-subscription",
+            `provider.usage.live.${options.livePolicy ?? "allowed"}`,
+          ],
+        })),
+        providerModels: Object.entries(providers).flatMap(
+          ([provider, models]) =>
+            models.map((model: string) => ({
+              id: `${provider}/${model}`,
+              providerRef: provider,
+              model,
+              modelRef: model,
+              wire: "openai-chat",
+              tags: ["provider-model.api.complete"],
+            })),
+        ),
+        models: Object.values(providers)
+          .flat()
+          .map((model) => ({ id: model, tags: ["model.inference.chat"] })),
+      },
+    }),
+  );
+  resetState();
+  return { cwd, livePath, registryPath, recallPath };
+}
+
+function args(
+  ws: Workspace,
+  outDir: string,
+  extra: readonly string[] = [],
+  includeCarrier = true,
+): string[] {
+  return [
+    ...(includeCarrier ? ["--carrier", "fixture-carrier"] : []),
+    "--live-config",
+    ws.livePath,
+    "--registry",
+    ws.registryPath,
+    "--out-dir",
+    outDir,
+    ...extra,
+    ws.recallPath,
+  ];
+}
+
+async function reportFiles(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const nested = await Promise.all(
+    entries.map(async (entry) => {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) return reportFiles(path);
+      return entry.name.endsWith("-report.json") ? [path] : [];
+    }),
+  );
+  return nested.flat().sort();
+}
+
+async function readReports(directory: string) {
+  return Promise.all(
+    (await reportFiles(directory)).map(async (path) =>
+      JSON.parse(await readFile(path, "utf8")),
+    ),
+  );
+}
+
+test("无 target 参数与旧 --config 均在 Driver 前返回定义错误", async (t) => {
+  const ws = await workspace(t);
+  assert.equal(
+    await main(args(ws, join(ws.cwd, "reports"), [], false), { cwd: ws.cwd }),
+    2,
+  );
+  assert.equal(
+    await main(
+      args(ws, join(ws.cwd, "reports"), [
+        "--config",
+        join(ws.cwd, ".recall", "x-agent-suite.config.ts"),
+      ]),
+      { cwd: ws.cwd },
+    ),
+    2,
+  );
+  assert.equal(state().transports.length, 0);
+  assert.equal(state().profiles.length, 0);
+});
+
+test("direct 默认无 effects，复用单 Runner 并保留多轮与执行归因", async (t) => {
+  const ws = await workspace(t);
+  const outDir = join(ws.cwd, "reports");
+  assert.equal(
+    await main(args(ws, outDir, ["--repeat", "2"]), { cwd: ws.cwd }),
+    0,
+  );
+  assert.equal(state().transports.length, 2);
+  assert.equal(state().profiles.length, 0);
+  const reports = await readReports(outDir);
+  assert.equal(reports.length, 1);
+  const metadata = reports[0].rows[0].result.observation.metadata;
+  assert.deepEqual(metadata.recallExecution, {
+    target: {
+      carrier: "fixture-carrier",
+      provider: "fixture-provider",
+      model: "fixture-model-0",
+    },
+    mode: "direct",
+    provision: "none",
+    effects: "none",
+  });
+});
+
+test("carrier 展开多个 default 并逐 target 出报告，provider 过滤不追加其他 default", async (t) => {
+  const ws = await workspace(t, { targetCount: 2 });
+  const allDir = join(ws.cwd, "reports-all");
+  assert.equal(await main(args(ws, allDir), { cwd: ws.cwd }), 0);
+  assert.equal(state().transports.length, 2);
+  const allReports = await readReports(allDir);
+  assert.equal(allReports.length, 2);
+  assert.deepEqual(
+    new Set(
+      allReports.map(
+        (report) =>
+          report.rows[0].result.observation.metadata.recallExecution.target
+            .model,
+      ),
+    ),
+    new Set(["fixture-model-0", "fixture-model-1"]),
+  );
+
+  resetState();
+  const filteredDir = join(ws.cwd, "reports-filtered");
+  assert.equal(
+    await main(args(ws, filteredDir, ["--provider", "other-provider"]), {
+      cwd: ws.cwd,
+    }),
+    0,
+  );
+  assert.equal(state().transports.length, 1);
+  assert.equal(state().transports[0]!.model, "fixture-model-1");
+  assert.equal((await readReports(filteredDir)).length, 1);
+});
+
+test("场景 provision 无 Plan 拒绝，显式 effects:none 才经唯一 borrowed profile", async (t) => {
+  const ws = await workspace(t, { provision: true });
+  assert.equal(
+    await main(args(ws, join(ws.cwd, "reports-denied")), { cwd: ws.cwd }),
+    2,
+  );
+  assert.equal(state().profiles.length, 0);
+  assert.equal(state().transports.length, 0);
+
+  const planPath = join(ws.cwd, "execution.yaml");
+  await writeFile(planPath, "version: 1\neffects: none\n");
+  const outDir = join(ws.cwd, "reports-borrowed");
+  assert.equal(
+    await main(args(ws, outDir, ["--plan", planPath]), { cwd: ws.cwd }),
+    0,
+  );
+  assert.equal(state().profiles.length, 1);
+  assert.equal(state().transports.length, 0);
+  assert.equal(state().profiles[0]!.effects, "none");
+  const [report] = await readReports(outDir);
+  const execution = report.rows[0].result.observation.metadata.recallExecution;
+  assert.equal(execution.mode, "borrowed");
+  assert.equal(execution.cliRef, "fixture-cli-0");
+  assert.equal(execution.provision, "plan:shared");
+  assert.equal(execution.effects, "none");
+});
+
+test("非 none inline effects 显式选择 borrowed，EffectsProfile 不归并不猜 mode", async (t) => {
+  const ws = await workspace(t);
+  const planPath = join(ws.cwd, "execution.yaml");
+  await writeFile(
+    planPath,
+    `version: 1
+effects:
+  tools: read-only
+  commands:
+    allow: [read-file]
+    deny: [read-file]
+`,
+  );
+  const outDir = join(ws.cwd, "reports");
+  assert.equal(
+    await main(args(ws, outDir, ["--plan", planPath]), { cwd: ws.cwd }),
+    0,
+  );
+  assert.equal(state().profiles.length, 1);
+  assert.equal(state().profiles[0]!.effects, "inline");
+  assert.equal(state().transports.length, 0);
+  const [report] = await readReports(outDir);
+  assert.equal(
+    report.rows[0].result.observation.metadata.recallExecution.effects,
+    "inline",
+  );
+});
+
+test("live review-required 未审批拒绝，--approve-live 仅放行当前调用", async (t) => {
+  const ws = await workspace(t, { livePolicy: "review-required" });
+  assert.equal(
+    await main(args(ws, join(ws.cwd, "reports-denied")), { cwd: ws.cwd }),
+    2,
+  );
+  assert.equal(state().transports.length, 0);
+  assert.equal(
+    await main(args(ws, join(ws.cwd, "reports-approved"), ["--approve-live"]), {
+      cwd: ws.cwd,
+    }),
+    0,
+  );
+  assert.equal(state().transports.length, 1);
+});
+
+test("borrowed 多 profile 未唯一时在 Driver 前拒绝且不 fallback", async (t) => {
+  const ws = await workspace(t, { provision: true });
+  const planPath = join(ws.cwd, "execution.yaml");
+  await writeFile(planPath, "version: 1\neffects: none\n");
+  const live = parse(await readFile(ws.livePath, "utf8"));
+  live.targetTags.cli.push({
+    ...live.targetTags.cli[0],
+    id: "fixture-cli-1",
+  });
+  await writeFile(ws.livePath, stringify(live));
+  await writeFile(
+    ws.registryPath,
+    `import base from ${JSON.stringify(REGISTRY_FIXTURE_URL)};
+export default {
+  ...base,
+  profiles: {
+    ...base.profiles,
+    "fixture-cli-1": base.profiles["fixture-cli-0"],
+  },
+};
+`,
+  );
+  assert.equal(
+    await main(args(ws, join(ws.cwd, "reports"), ["--plan", planPath]), {
+      cwd: ws.cwd,
+    }),
+    2,
+  );
+  assert.equal(state().profiles.length, 0);
+  assert.equal(state().transports.length, 0);
 });

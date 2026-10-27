@@ -225,6 +225,12 @@ importers:
       '@x-agent-suite/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@x-agent-suite/harness':
+        specifier: workspace:*
+        version: link:../harness
+      '@x-agent-suite/llm-fixture':
+        specifier: workspace:*
+        version: link:../llm-fixture
       '@x-agent-suite/observation':
         specifier: workspace:*
         version: link:../observation
@@ -244,6 +250,9 @@ importers:
       '@x-agent-suite/driver':
         specifier: workspace:*
         version: link:../driver
+      '@x-agent-suite/sandbox':
+        specifier: workspace:*
+        version: link:../sandbox
       tsx:
         specifier: ^4.21.0
         version: 4.23.12

@@ -44,7 +44,7 @@ x-agent-suite 已拆为 11 个 workspace 包：
 | `@x-agent-suite/matrix`      | `runMatrix` / 报告落盘                          | workspace 包           | 无                 |
 | `@x-agent-suite/criteria`    | 可选通用判据插件                                | workspace 包           | 无                 |
 | `@x-agent-suite/runner`      | ScenarioSpec 执行 / repeat / eval CLI           | workspace 包           | 无                 |
-| `@x-agent-suite/recall`      | 原生 `.recall` 发现 / YAML 编译 / CLI           | `yaml`、workspace 包   | 无                 |
+| `@x-agent-suite/recall`      | 原生 `.recall` / ExecutionPlan / CLI            | `yaml`、workspace 包   | 无                 |
 | `@x-agent-suite/judge`       | 通用 AI Judge / 具名 verdict / direct、borrowed | workspace 包           | 无                 |
 
 `@x-agent-suite/driver` 的问题：它同时包含 `JsonlProcess`（零原生）和 `PtyProcess`（需 `node-pty`）。这意味着即使 consumer 只用 headless JSONL，也要背 `node-pty` 及其编译代价。
@@ -355,8 +355,10 @@ pnpm add -D @x-agent-suite/pty-driver@0.1.0
 
 ```bash
 pnpm exec x-agent-suite eval <config-module>
-pnpm exec x-agent-suite recall [--config <config.ts>] [YAML|目录]
+pnpm exec x-agent-suite recall (--carrier <id> | --provider <id> | --model <id>) [--live-config <yaml>] [--registry <module.ts>] [--plan <yaml>] [YAML|目录]
 ```
+
+`x-agent-suite/recall` 同一子路径导出显式 target 装载/执行、独立 registry、effects-only Plan 和场景资源物化 API，并复用聚合包内现有 llm-fixture live resolver/TargetTags 与 harness hooks。统一 CLI 不再读取 `x-agent-suite.config.ts`；没有新增子路径、制品种类或 token 冒烟入口，消费者 Criterion/profile/EffectsProfile 仍通过显式 `--registry` 提供。
 
 若以后确实需要全局软件安装，可复用同一 tarball 或 registry 包执行 `pnpm add -g`；全局安装是额外验收面，不反向改变库接口。
 

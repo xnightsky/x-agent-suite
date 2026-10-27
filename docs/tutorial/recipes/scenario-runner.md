@@ -55,7 +55,7 @@ config 加 `repeat: N` 后每个场景顺序执行 N 次（本教程 config 即 
 ## config 为什么是代码模块
 
 判据与 driver 工厂本就是函数，YAML 放不下（promptfoo 被迫逃向 `.mjs` 的前车之鉴）。
-需要 YAML 声明考卷时使用原生 [Recall](./recall.md)；其 `.recall/x-agent-suite.config.ts` 与本文 `eval` config 各自显式加载，不改变本文语义。
+需要 YAML 声明考卷时使用原生 [Recall](./recall.md)；它通过显式 `--registry` 与 effects-only `--plan` 接线，不读取本文 `eval` config，也不使用 `x-agent-suite.config.ts`。
 
 ## 换成消费者实现
 

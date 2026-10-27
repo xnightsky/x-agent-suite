@@ -7,6 +7,7 @@
 ### Added
 
 - 原生 `@x-agent-suite/recall`：复用 `.recall/` 目录，提供确定发现、严格 YAML v1、context 只读 provision、全量前置校验、case/repeat 独立执行和 `x-agent-suite recall` CLI；聚合包新增 `x-agent-suite/recall` 子路径与统一 `bin`。
+- Recall 显式执行收敛：移除 `x-agent-suite.config.ts` 依赖，新增显式 carrier/provider/model 选择、独立 Criterion/profile/EffectsProfile registry、effects-only Plan、文件内 `plans/context.plan`、direct 纯文本与唯一 borrowed profile；无执行级 ProvisionPlan，Runner 不合并 provision，并保留 target/mode/cliRef/provision/effects 报告归因。
 
 ## 0.6.1 - 2026-10-19
 
