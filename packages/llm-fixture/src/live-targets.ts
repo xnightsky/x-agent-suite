@@ -214,14 +214,17 @@ function explicitCandidates(
   ];
 }
 
-/** 解析显式 target 或汇总默认验证目标；不叠加 env 字段覆盖。 */
+/** 解析显式 target 或在已选范围内展开 defaults；无选择参数拒绝，不叠加 env 字段覆盖。 */
 export function resolveLiveTargets(
   load: LiveConfigLoad,
   selection: LiveTargetSelection = {},
 ): LiveTargetsResult {
   if (load.kind !== "loaded") return load;
-  if (selection.provider && !selection.model) {
-    return { kind: "not-configured", reason: "只指定 provider 无法确定模型" };
+  if (!selection.carrier && !selection.provider && !selection.model) {
+    return {
+      kind: "not-configured",
+      reason: "必须显式选择 carrier/provider/model，拒绝隐式执行默认目标",
+    };
   }
   if (selection.model !== undefined) {
     if (selection.model === "") {
@@ -258,9 +261,14 @@ export function resolveLiveTargets(
   const carriers = selection.carrier
     ? [selection.carrier]
     : Object.keys(load.available);
-  const targets = carriers.flatMap((carrier) =>
-    (load.defaults[carrier] ?? []).map((channel) => ({ carrier, channel })),
-  );
+  const targets = carriers
+    .flatMap((carrier) =>
+      (load.defaults[carrier] ?? []).map((channel) => ({ carrier, channel })),
+    )
+    .filter(
+      ({ channel }) =>
+        !selection.provider || channel.provider === selection.provider,
+    );
   if (targets.length === 0) {
     return { kind: "not-configured", reason: "未配置默认验证目标" };
   }

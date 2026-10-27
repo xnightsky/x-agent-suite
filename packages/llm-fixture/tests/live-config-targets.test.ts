@@ -390,7 +390,7 @@ test("旧 provider/model 保留行为并产生结构化 warning；裸 harness �
   }
 });
 
-test("target 选择：默认跨 carrier 汇总，显式模型忽略 default 并做唯一性校验", async () => {
+test("target 选择：无参数拒绝，carrier 展开 defaults，provider/model 继续过滤", async () => {
   const { root, cleanup } = await makeDirs();
   try {
     const repoRoot = join(root, "repo");
@@ -404,7 +404,7 @@ test("target 选择：默认跨 carrier 汇总，显式模型忽略 default 并�
           ]),
           "provider-b": directProvider(["shared", "model-b"]),
         },
-        default: "provider-a/model-a",
+        default: ["provider-a/model-a", "provider-b/model-b"],
       },
       "carrier-b": {
         providers: { "provider-c": directProvider(["model-c"]) },
@@ -418,7 +418,10 @@ test("target 选择：默认跨 carrier 汇总，显式模型忽略 default 并�
     });
     assert.equal(load.kind, "loaded");
 
-    const defaults = resolveLiveTargets(load);
+    const noSelection = resolveLiveTargets(load);
+    assert.equal(noSelection.kind, "not-configured");
+
+    const defaults = resolveLiveTargets(load, { carrier: "carrier-a" });
     assert.equal(defaults.kind, "configured");
     if (defaults.kind === "configured") {
       assert.deepEqual(
@@ -428,8 +431,20 @@ test("target 选择：默认跨 carrier 汇总，显式模型忽略 default 并�
         ]),
         [
           ["carrier-a", "model-a"],
-          ["carrier-b", "model-c"],
+          ["carrier-a", "model-b"],
         ],
+      );
+    }
+
+    const providerOnly = resolveLiveTargets(load, { provider: "provider-b" });
+    assert.equal(providerOnly.kind, "configured");
+    if (providerOnly.kind === "configured") {
+      assert.deepEqual(
+        providerOnly.targets.map(({ carrier, channel }) => [
+          carrier,
+          channel.model,
+        ]),
+        [["carrier-a", "model-b"]],
       );
     }
 
@@ -478,7 +493,7 @@ test("target 选择：默认跨 carrier 汇总，显式模型忽略 default 并�
   }
 });
 
-test("target 选择：default: [] 无默认目标，但仍可显式选择可选模型", async () => {
+test("target 选择：无参数即使唯一 default 也拒绝，default: [] 仍可显式选模型", async () => {
   const { root, cleanup } = await makeDirs();
   try {
     const repoRoot = join(root, "repo");
@@ -486,6 +501,10 @@ test("target 选择：default: [] 无默认目标，但仍可显式选择可选�
       "carrier-a": {
         providers: { "provider-a": directProvider(["model-a"]) },
         default: [],
+      },
+      "carrier-b": {
+        providers: { "provider-b": directProvider(["model-b"]) },
+        default: "provider-b/model-b",
       },
     });
     const load = await loadLiveConfig({

@@ -151,6 +151,9 @@ function firstDecision(
   load: LiveConfigLoad = liveLoad(),
 ): LiveTargetDecision {
   const result = decideLiveTargets(load, catalog, {
+    selection: {
+      carrier: Object.keys(load.kind === "loaded" ? load.defaults : {})[0]!,
+    },
     requirements: REQUIREMENTS,
     ...options,
   });

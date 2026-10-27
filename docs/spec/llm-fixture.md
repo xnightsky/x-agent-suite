@@ -85,7 +85,7 @@ export interface FixtureProviderOptions {
 - **provider**：carrier 下的套餐或连接渠道，包含端点、wire 与凭据来源。
 - **model**：provider 下允许本仓选择的模型。
 - **target**：一次实际执行或验证的完整身份，即 `(carrier, provider, model)`。用户选择模型时可以省略渠道，但解析结果不得省略。
-- `carriers.*.providers.*.models` 是**可选目标目录**，不要求等于宿主全量模型；`carriers.*.default` 是该 carrier 的**默认验证集合**。两者分别回答“可以选什么”与“默认测什么”。
+- `carriers.*.providers.*.models` 是**可选目标目录**，不要求等于宿主全量模型；`carriers.*.default` 是**显式选择该 carrier 后可展开的默认目标集合**。两者分别回答“可以选什么”与“选中该范围后默认展开什么”，default 不是无参数执行授权。
 - 宿主自己的默认模型与模型范围设置（例如默认 provider/model、enabled/scoped models）只属于宿主适配层，不在本仓配置中另设 `scope_models` 或全局 `validation_targets`。
 
 #### 配置结构
@@ -95,7 +95,7 @@ carriers:
   pi:
     from: harness
 
-    # 未显式选择时，该 carrier 默认验证的目标。
+    # 显式选择该 carrier 时默认展开的目标。
     default:
       - kimi-for-coding
       - deepseek/deepseek-v4-flash
@@ -128,16 +128,17 @@ type DefaultDeclaration =
 2. `provider/model` 字符串按当前 carrier 已声明的 provider 前缀解析，模型名自身允许包含 `/`。
 3. `{ provider, model }` 直接定位目标。所有显式 `default` 目标必须存在于当前 carrier 的可选目录，不得引用其他 carrier 的 provider。
 4. 配置加载后，所有写法立即归一为 `Array<{ provider, model }>`；后续执行逻辑不感知输入简写。
-5. 显式声明 `default` 会替换宿主默认目标，不与宿主默认目标合并；`default: []` 表示该 carrier 明确不参与默认验证。
+5. 显式声明 `default` 会替换宿主默认目标，不与宿主默认目标合并；`default: []` 表示即使显式选中该 carrier 也没有可展开的默认目标，但仍可显式选择可选模型。
 6. `from: harness` 且未声明 `default` 时，继承对应 CLI 的默认 `provider + model`，生成一个默认目标。继承目标命中显式目录时必须复用该目录已解析的完整 channel，保留 provider 级端点与凭据声明；provider-less 借用结果按模型归一到唯一逻辑 provider，多个匹配则要求显式 `default`。仅当目标不在目录中时才追加继承渠道。
 7. 非 `from: harness` 且未声明 `default` 时，该 carrier 没有默认目标；不得隐式选择第一个或全部模型。
 
-#### 显式选择与默认执行
+#### 显式选择与范围内默认展开
 
-- 显式给出模型与渠道时，从可选目录定位完整 target；渠道必须能唯一确定 `carrier/provider`。
-- 只给模型时，在全部可选 target 中匹配；完整 `provider/model`（模型名自身可含 `/`）与精确模型匹配优先于模糊匹配。无论输入是否省略渠道，按完整 target 去重后必须唯一，否则返回候选并要求补充渠道。
-- 未显式选择时，按声明顺序汇总所有 carrier 的默认目标，因此默认验证可以跨 provider、跨 carrier。显式选择只执行所选 target，不追加默认目标。
-- 选择优先级固定为：**命令行显式选择 > carrier 显式 `default` > `from: harness` 的 CLI 默认 provider/model > 无默认目标**。
+- 未提供 carrier/provider/model 任何选择参数时直接返回未配置/定义错误；即使配置只有一个 default，也不得隐式执行。
+- 只选择 carrier 时，按声明顺序展开该 carrier 的 defaults，可返回多个 target，由调用方逐个编排。
+- 选择 provider 时，在已选范围内继续过滤 defaults，不要求必须同时给 model；只给 provider 时可从所有 carrier 的 defaults 过滤，但不追加其他 available/default。
+- 显式给出模型与渠道时，从可选目录定位完整 target；渠道必须能唯一确定 `carrier/provider`。只给模型时，完整 `provider/model`（模型名自身可含 `/`）与精确模型匹配优先于模糊匹配；按完整 target 去重后必须唯一，否则返回候选并要求补充渠道。
+- 选择优先级固定为：**命令行显式选择 > 已选范围内 `default` > `from: harness` 的 CLI 默认 provider/model > 无默认目标**。任何路径都不允许“无参数执行全部 defaults”。
 
 #### 旧格式兼容与版本
 

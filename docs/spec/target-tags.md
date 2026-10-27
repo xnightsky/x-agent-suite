@@ -146,7 +146,7 @@ const result = decideLiveTargets(live, catalog, {
 });
 ```
 
-`decideLiveTargets` 内部调用现有 `resolveLiveTargets(load, selection)`，不重新实现模型匹配。`requirements.direct` 与 `requirements.borrowed` 都由调用方按用途声明：
+`decideLiveTargets` 内部调用现有 `resolveLiveTargets(load, selection)`，不重新实现模型匹配。selection 至少包含 carrier/provider/model 之一；无参数会拒绝，carrier-only 可展开多个 defaults，provider/model 继续过滤。`requirements.direct` 与 `requirements.borrowed` 都由调用方按用途声明：
 
 已有完整 `ResolvedLiveTarget` 的消费者可调用 `decideLiveTarget(target, catalog, options)`；它使用同一套 requirements/live 参数但不需要 `selection`，避免 Judge 等调用方为了决策重新构造 `LiveConfigLoad`。
 
