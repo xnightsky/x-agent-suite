@@ -61,6 +61,7 @@
     "@x-agent-suite/matrix": "workspace:*",
     "@x-agent-suite/observation": "workspace:*",
     "@x-agent-suite/sandbox": "workspace:*",
+    "@x-agent-suite/recall": "workspace:*",
     "@x-agent-suite/runner": "workspace:*"
   },
   "devDependencies": {

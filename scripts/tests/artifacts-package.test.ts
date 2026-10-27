@@ -13,7 +13,7 @@ import {
   rewriteDeclarationSpecifiers,
 } from "../artifacts-package.ts";
 
-test("核心聚合包导出七个稳定子路径并外置 YAML/TSX 依赖", async () => {
+test("核心聚合包导出全部稳定子路径并外置 YAML/TSX 依赖", async () => {
   const manifest = createCorePackageManifest("0.1.0");
   const rootManifest = JSON.parse(
     await readFile(new URL("../../package.json", import.meta.url), "utf8"),
@@ -26,6 +26,8 @@ test("核心聚合包导出七个稳定子路径并外置 YAML/TSX 依赖", asyn
   ) as { dependencies: Record<string, string> };
   assert.equal(manifest.name, "x-agent-suite");
   assert.equal(manifest.version, "0.1.0");
+  assert.ok(CORE_EXPORT_NAMES.includes("recall"));
+  assert.equal(manifest.bin?.["x-agent-suite"], "./dist/cli.js");
   assert.deepEqual(
     Object.keys(manifest.exports),
     CORE_EXPORT_NAMES.map((name) => `./${name}`),

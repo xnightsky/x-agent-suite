@@ -1,0 +1,32 @@
+{
+  "name": "@x-agent-suite/recall",
+  "version": "0.0.0",
+  "private": true,
+  "description": "x-agent-suite 原生 .recall 声明式考卷发现、校验、编译与执行。",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test \"tests/*.test.ts\""
+  },
+  "dependencies": {
+    "@x-agent-suite/contracts": "workspace:*",
+    "@x-agent-suite/observation": "workspace:*",
+    "@x-agent-suite/runner": "workspace:*",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@x-agent-suite/criteria": "workspace:*",
+    "@x-agent-suite/driver": "workspace:*",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}

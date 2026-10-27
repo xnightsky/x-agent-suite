@@ -227,17 +227,3 @@ export async function main(argv: readonly string[]): Promise<number> {
   }
   return infraFailures > 0 ? 1 : 0;
 }
-
-const invokedAsScript =
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
-if (invokedAsScript) {
-  main(process.argv.slice(2))
-    .then((code) => {
-      process.exitCode = code;
-    })
-    .catch((error: unknown) => {
-      console.error(error instanceof Error ? error.message : String(error));
-      process.exitCode = 2;
-    });
-}

@@ -15,6 +15,7 @@ export const CORE_EXPORT_NAMES = [
   "criteria",
   "matrix",
   "runner",
+  "recall",
 ] as const;
 
 /** 核心聚合包保持外置的标准运行时依赖及其精确版本范围。 */
@@ -39,6 +40,7 @@ interface PackageManifest {
   readonly license: "MIT";
   readonly engines: { readonly node: ">=24.0.0" };
   readonly exports: Readonly<Record<string, ExportTarget>>;
+  readonly bin?: Readonly<Record<string, string>>;
   readonly files: readonly string[];
   readonly sideEffects: false;
   readonly dependencies?: Readonly<Record<string, string>>;
@@ -77,6 +79,7 @@ export function createCorePackageManifest(version: string): PackageManifest {
     license: "MIT",
     engines: { node: ">=24.0.0" },
     exports,
+    bin: { "x-agent-suite": "./dist/cli.js" },
     files: ["dist", "types", "README.md", "LICENSE"],
     sideEffects: false,
     dependencies: CORE_EXTERNAL_DEPENDENCIES,

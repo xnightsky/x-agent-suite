@@ -34,6 +34,9 @@ importers:
       '@x-agent-suite/observation':
         specifier: workspace:*
         version: link:packages/observation
+      '@x-agent-suite/recall':
+        specifier: workspace:*
+        version: link:packages/recall
       '@x-agent-suite/runner':
         specifier: workspace:*
         version: link:packages/runner
@@ -188,6 +191,37 @@ importers:
       '@types/node':
         specifier: ^25.6.0
         version: 25.9.5
+      tsx:
+        specifier: ^4.21.0
+        version: 4.23.12
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/recall:
+    dependencies:
+      '@x-agent-suite/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@x-agent-suite/observation':
+        specifier: workspace:*
+        version: link:../observation
+      '@x-agent-suite/runner':
+        specifier: workspace:*
+        version: link:../runner
+      yaml:
+        specifier: ^2.9.0
+        version: 2.9.0
+    devDependencies:
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.9.5
+      '@x-agent-suite/criteria':
+        specifier: workspace:*
+        version: link:../criteria
+      '@x-agent-suite/driver':
+        specifier: workspace:*
+        version: link:../driver
       tsx:
         specifier: ^4.21.0
         version: 4.23.12
