@@ -67,6 +67,7 @@ Harness Driver 已经组合 sandbox；只有直接使用 `JsonlProcess`/`PtyProc
 | `sniffLiveChannel`                            | live | 正式运行前验证连通、鉴权和工具调用 |
 | `loadLiveConfig`                              | live | 加载 YAML/env 配置                 |
 | `resolveLiveChannel`                          | live | 解析 carrier 渠道                  |
+| `resolveLiveTargets`                          | live | 解析显式模型或汇总默认多目标       |
 | `resolveLiveApiKey` / `resolveLiveCredential` | live | 解析凭据，调用方不得写入日志       |
 | `redactLiveSecrets`                           | live | 脱敏诊断文本                       |
 | `createSecretRedactor`                        | 高级 | 用已解析秘密创建通用文本脱敏器     |

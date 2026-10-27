@@ -174,6 +174,13 @@
           "recipes": ["live-token-smoke"]
         },
         {
+          "name": "resolveLiveTargets",
+          "category": "live",
+          "purpose": "解析显式模型选择或汇总 carrier 默认验证目标。",
+          "risk": "conditional",
+          "recipes": ["live-token-smoke"]
+        },
+        {
           "name": "resolveLiveCredential",
           "category": "live",
           "purpose": "按显式配置或借用钩子解析凭据。",

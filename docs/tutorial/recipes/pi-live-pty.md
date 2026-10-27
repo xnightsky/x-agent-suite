@@ -11,7 +11,7 @@ pnpm ittest:token:pi-pty
 直接运行仍会 skip。测试必须同时获得：
 
 1. `XAS_TUTORIAL_LIVE_AUTHORIZATION=I_ACCEPT_LIVE_COST_AND_DATA_EGRESS` 单次授权值；
-2. 真实 home 的 `~/.env.e2e.yaml` 里 `carriers.pi` 声明（`from: harness` 借用宿主渠道；多 provider 宿主可用 `provider` 字段选择借用目标，此时须显式声明 `model`）；
+2. 真实 home 的 `~/.env.e2e.yaml` 里 `carriers.pi` 声明；新格式用 `providers.*.models` 维护可选模型、`default` 维护默认验证目标，旧 `provider/model` 仍兼容但会产生弃用 warning；
 3. 宿主 CLI（Pi）已安装且对应 provider 登录态有效（如 OAuth 未过期）。
 
 显式运行形如：
@@ -21,14 +21,23 @@ XAS_TUTORIAL_LIVE_AUTHORIZATION=I_ACCEPT_LIVE_COST_AND_DATA_EGRESS \
 pnpm ittest:token:pi-pty
 ```
 
+默认执行 `carriers.pi.default`；未声明 `default` 的 `from: harness` 继承 Pi 默认 provider/model。可用 `--model` 只运行一个可选模型，模型在当前可选目录中唯一时可省略 provider：
+
+```bash
+XAS_TUTORIAL_LIVE_AUTHORIZATION=I_ACCEPT_LIVE_COST_AND_DATA_EGRESS \
+pnpm ittest:token:pi-pty -- --model k3-256k
+```
+
+模型 ID 自身包含 `/` 时，也可通过完整 `provider/model` 精确选择，例如 `--model co/default/glm5-3-flash`。
+
 ## 执行链
 
 1. runner 精确选中单个 `*.token.ittest.ts` 文件；默认 `pnpm test/itest/check` 均不会加载它。
 2. 文件级测试再次检查单次授权值；缺失时连测试回调都不执行。
-3. `loadLiveConfig` 读真实 home 的 `~/.env.e2e.yaml`，经 `createHarnessLiveConfigHooks` 借用宿主渠道；`carriers.pi` 未配置或借用失败显式 skip。
-4. `LiveBackend`（mode live）作为 PTY driver 的 backend：start 时解析借用凭据（OAuth access，过期显式 missing）。
+3. `loadLiveConfig` 读取真实 home 配置并借用渠道，`resolveLiveTargets` 解析 `--model` 或汇总 `carriers.pi.default`；未配置或借用失败显式 skip，显式模型无匹配/有歧义则失败。入口启动器将 `--model` 注入 Node 测试子进程，非法或重复参数直接失败，不回退默认集合。
+4. 每个 target 创建独立 `LiveBackend` 与 PTY 子测试，显式复用同一份已解析 channel；start 时解析借用凭据（OAuth access，过期显式 missing）。
 5. driver 建沙盒 HOME，`piProfile.writeConfig` 按 `live` 渠道写沙盒 `models.json`（baseUrl 取 `harnessBaseUrl` 宿主原值）与 `settings.json`；PTY 启动真实 Pi。
-6. footer 出现声明的模型 id 后发 "hi"，等待一轮真实回复；关闭后沙盒 home/cwd（含借用 token 副本）一并删除。
+6. footer 出现所选模型 id 后发 "hi"，等待一轮真实回复；每个 target 关闭后即清理其沙盒 home/cwd（含借用 token 副本）。
 
 ## 它实际证明什么
 

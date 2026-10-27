@@ -9,7 +9,7 @@ import { test } from "node:test";
 import {
   loadLiveConfig,
   redactLiveSecrets,
-  resolveLiveChannel,
+  resolveLiveTargets,
   sniffLiveChannel,
 } from "@x-agent-suite/llm-fixture";
 import { cleanupSandbox, createSandbox } from "@x-agent-suite/sandbox";
@@ -21,12 +21,11 @@ const CARRIER_ENV = "XAS_TUTORIAL_LIVE_CARRIER";
 const authorized = process.env[AUTHORIZATION_ENV] === AUTHORIZATION_VALUE;
 
 test(
-  "live smoke：真实渠道完成一次最小 tool-calling 嗅探",
+  "live smoke：默认 target 完成最小 tool-calling 嗅探",
   {
     skip: authorized
       ? false
       : `需要显式设置 ${AUTHORIZATION_ENV}=${AUTHORIZATION_VALUE}`,
-    timeout: 30_000,
   },
   async (t) => {
     const carrier = process.env[CARRIER_ENV];
@@ -42,31 +41,44 @@ test(
         repoRoot: ROOT,
         homeDir: sandbox.homeDir,
       });
-      const resolved = resolveLiveChannel(loaded, carrier, {});
+      if (loaded.kind === "loaded") {
+        for (const warning of loaded.warnings) {
+          t.diagnostic(`[${warning.code}] ${warning.message}`);
+        }
+      }
+      const resolved = resolveLiveTargets(loaded, { carrier });
       if (resolved.kind === "not-configured") {
         t.skip(redactLiveSecrets(resolved.reason, []));
         return;
       }
 
-      const result = await sniffLiveChannel(carrier, resolved.channel, {
-        timeoutMs: 20_000,
-      });
-      assert.equal(
-        result.ok,
-        true,
-        result.ok
-          ? undefined
-          : redactLiveSecrets(`${result.stage}: ${result.reason}`, [
-              resolved.channel,
-            ]),
-      );
-      t.diagnostic(
-        JSON.stringify({
-          carrier: result.carrier,
-          latencyMs: result.ok ? result.latencyMs : undefined,
-          modelReported: result.ok ? result.modelReported : undefined,
-        }),
-      );
+      for (const target of resolved.targets) {
+        const { channel } = target;
+        const name = `${channel.provider ?? "-"}/${channel.model}`;
+        await t.test(name, { timeout: 30_000 }, async (subtest) => {
+          const result = await sniffLiveChannel(carrier, channel, {
+            timeoutMs: 20_000,
+          });
+          assert.equal(
+            result.ok,
+            true,
+            result.ok
+              ? undefined
+              : redactLiveSecrets(`${result.stage}: ${result.reason}`, [
+                  channel,
+                ]),
+          );
+          subtest.diagnostic(
+            JSON.stringify({
+              carrier: result.carrier,
+              provider: channel.provider,
+              model: channel.model,
+              latencyMs: result.ok ? result.latencyMs : undefined,
+              modelReported: result.ok ? result.modelReported : undefined,
+            }),
+          );
+        });
+      }
     } finally {
       await cleanupSandbox(sandbox);
     }

@@ -49,4 +49,8 @@ test("默认回归包含零 token 集成测试且 token 只有精确入口", asy
     packageJson.scripts["ittest:token:tutorial"],
     "tsx --test examples/tutorial/10-live-smoke.token.ittest.ts",
   );
+  assert.equal(
+    packageJson.scripts["ittest:token:pi-pty"],
+    "tsx scripts/run-pi-token-ittest.ts",
+  );
 });
