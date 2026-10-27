@@ -16,6 +16,7 @@ export const CORE_EXPORT_NAMES = [
   "matrix",
   "runner",
   "recall",
+  "judge",
 ] as const;
 
 /** 核心聚合包保持外置的标准运行时依赖及其精确版本范围。 */

@@ -171,11 +171,11 @@ provision（铺安装态，消费者写）
 - **实现**：`@x-agent-suite/observation` 新增 `resolveAggregate` 纯函数——该包已是「判据结果 → 报告」的汇聚点。
 - **spec 载体**：当前框架无通用 runner（P3 未交付），聚合声明由消费者放在自己的场景文件 / `metadata` 自由区，调用 `resolveAggregate` 后把 `AggregateResult` 塞进 `ScenarioResult.evidence` 进报告。runner 落地时再定官方载体，本设计不预设。
 
-## judge 接入面（不内建 judge）
+## judge 接入面（通用执行器，不内建领域判据）
 
-- judge 是**消费者判据**：它调用模型产出具名布尔裁定（`pass`/`fail`），以普通 `CriterionOutcome` 进入聚合机。框架自始至终不认识 judge——「AI 只产具名裁定，分数恒由静态机出口」在框架层自然成立。
-- **grader 渠道复用 live 基建（借用载体，不自建 AI）**：judge 判据的模型调用复用 `@x-agent-suite/llm-fixture` 的 live 渠道机制——`~/.env.e2e.yaml` 等五级配置加载、`E2E_LIVE_*` 覆盖、`borrowCredential` 借用宿主登录态、缺配置显式「未配置」不抛异常、`redactLiveSecrets` 脱敏。缺省与被测同渠道，需要异渠道裁判时按 carrier 名另配。judge 调用属 token 消耗，只能在 `*.token.ittest.ts` 层显式运行。
-- **失败分层**：grader 未配置 / 调用失败 / 回答不可解析 = 环境失败，对应判据不产出结果 → 该维按 absent 处理并进 coverage，不压分（沿用 `FailureCategory` 的 `owner: kit|domain` 区分）。
+- `@x-agent-suite/judge` 提供通用批量裁定执行器，输出 `JudgeVerdict`，不是 `CriterionOutcome`。消费者自行把具名布尔裁定适配为判据结果，再进入聚合机；框架仍不内建任何领域判据，分数恒由静态机出口。完整契约见 [judge.md](./judge.md)。
+- Judge 复用 live 配置与 `LiveBackend`，通过通用 TargetTags 决策 direct/borrowed；唯一候选可自动选择，多候选必须显式 mode/cliRef，借用凭据不等于 direct 授权，失败不跨 mode fallback。真实裁判调用属于 token 消耗，只能在显式 token 测试层运行。
+- **失败分层**：单项缺失或无法识别是 `completed + absent`，由消费者决定 absent 映射；整体未配置、调用失败或不可解析是 `not-evaluated`，不得直接压成内容零分。
 
 ## 依赖决策记录
 

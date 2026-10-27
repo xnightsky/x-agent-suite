@@ -75,6 +75,8 @@ export interface FixtureProviderOptions {
 
 `LiveBackend` 直连私密配置区声明的真实 provider，从响应 usage 提取 token 数供成本估算。显式凭据与 `credential: harness` 互斥；借用凭据前必须再次通过 `borrowChannel` 取得规范渠道，并确认 `wire`、`baseUrl`、`provider` 未被重定向。它在解析渠道和凭据后提供稳定的 `Redactor` seam；transport/解析异常、`Error.cause`、`AggregateError.errors`、stack 和响应载荷在离开 backend 前均递归脱敏。脱敏同时识别任意长度的直接值、URL 归一/编码值及终端跨行值；结构化键碰撞使用无敏感信息的稳定后缀保留全部字段。
 
+`LiveCompleteInput.signal?: AbortSignal` 会经 `buildLiveRequest` 透传到 `LiveRequest.signal`，默认 `createFetchTransport` 再传给 fetch；既有不传 signal 的调用不变。`@x-agent-suite/judge` 的 direct 模式复用这条取消链实现 per-attempt 真超时，borrowed 模式则由消费者 driver 工厂兑现 no-session、工具策略和 close 隔离。direct/borrowed 由通用 TargetTags 决策：唯一候选可自动选择，多候选必须显式 mode/cliRef；`from: harness` / `credential: harness` 只描述来源，不等于 direct 授权，失败不跨模式回退。详见 [judge.md](./judge.md) 与 [target-tags.md](./target-tags.md)。
+
 ### live 多模型配置契约
 
 #### 概念与不变量

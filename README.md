@@ -25,6 +25,7 @@ packages/
   matrix/         # 矩阵对照 CLI / API
   runner/         # Registry 运行时 + ScenarioSpec 执行 + eval CLI
   recall/         # 原生 .recall 发现 + YAML 编译 + 声明式评测 CLI
+  judge/          # 通用 AI Judge：批量 rubric → 具名 boolean verdict
 ```
 
 ## 开发

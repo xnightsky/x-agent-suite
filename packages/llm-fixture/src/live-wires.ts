@@ -52,6 +52,8 @@ export interface LiveRequest {
   readonly headers: Record<string, string>;
   /** 请求体（JSON 序列化前）。 */
   readonly body: unknown;
+  /** 可选取消信号；默认 transport 透传给 fetch。 */
+  readonly signal?: AbortSignal;
 }
 
 /** 一次响应（状态码 + 原文；SSE 与 JSON 均按原文返回，解析在 live-parse）。 */
@@ -70,6 +72,7 @@ export function createFetchTransport(): LiveTransport {
       method: req.method,
       headers: { "content-type": "application/json", ...req.headers },
       body: JSON.stringify(req.body),
+      signal: req.signal,
     });
     return { status: response.status, text: await response.text() };
   };
@@ -118,6 +121,8 @@ export interface LiveRequestInput {
   readonly tools?: readonly LiveToolSpec[];
   /** 最大输出 token（anthropic 必填，其余可选）。 */
   readonly maxTokens?: number;
+  /** 可选取消信号。 */
+  readonly signal?: AbortSignal;
 }
 
 /** 鉴权头（按 wire 分派；apiKey 缺省时不带）。 */
@@ -355,5 +360,6 @@ export function buildLiveRequest(
     url: `${input.baseUrl.replace(/\/+$/, "")}${endpointPath(wire, input.model)}`,
     headers: authHeaders(wire, input.apiKey),
     body,
+    signal: input.signal,
   };
 }

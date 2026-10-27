@@ -42,16 +42,18 @@ export interface ScenarioResult {
 
 借鉴评测实践的分层评分：先硬判，后模糊，最后才 LLM judge。
 
-| 层               | 例子                                                                  | 实现                 |
-| ---------------- | --------------------------------------------------------------------- | -------------------- |
-| **Dry contract** | fixture 结构合法、fake provider 能启动、工具 schema 正确              | `dryChecks()`        |
-| **Hard**         | 期望工具被调用**且 `status === "completed"`**、入参正确、外部证据匹配 | `hardChecks()`       |
-| **Fuzzy**        | 返回文本包含 `done=true`                                              | regex / contains     |
-| **LLM judge**    | 模型回复是否自然                                                      | 可选，`--judge` 模式 |
+| 层               | 例子                                                                  | 实现                         |
+| ---------------- | --------------------------------------------------------------------- | ---------------------------- |
+| **Dry contract** | fixture 结构合法、fake provider 能启动、工具 schema 正确              | `dryChecks()`                |
+| **Hard**         | 期望工具被调用**且 `status === "completed"`**、入参正确、外部证据匹配 | `hardChecks()`               |
+| **Fuzzy**        | 返回文本包含 `done=true`                                              | regex / contains             |
+| **LLM judge**    | 模型回复是否满足自然语言 rubric                                       | 可选，`@x-agent-suite/judge` |
 
 默认 Dry + Hard 必须全过；Fuzzy 兜底；LLM judge 仅人工评估时开启。
 
 各判据的具名结果如何加权汇总成出口分（weight / knockout / absent / threshold），见 [scoring-aggregation.md](./scoring-aggregation.md)。
+
+通用 AI 裁定执行、absent 与 not-evaluated 分层见 [judge.md](./judge.md)；Judge 只产具名布尔 verdict，不替代上述确定性层或静态聚合。
 
 ## 执行不变量
 

@@ -150,6 +150,17 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 await Promise.all([${runtimeImports.join(",")}]);
+const { judge } = await import("x-agent-suite/judge");
+const judgeOutcome = await judge(
+  { output: "smoke", rubrics: [{ name: "fact", rubric: "Is the answer factual?" }] },
+  { client: { complete: async () => ({ text: '{\"fact\":true}' }) }, maxRetries: 0 },
+);
+assert.deepEqual(judgeOutcome, {
+  status: "completed",
+  verdicts: [{ name: "fact", pass: true, reason: "" }],
+  absent: [],
+  attempts: 1,
+});
 const harnessUrl = import.meta.resolve("x-agent-suite/harness");
 const require = createRequire(harnessUrl);
 const { buildMcpServerSpec } = await import(harnessUrl);

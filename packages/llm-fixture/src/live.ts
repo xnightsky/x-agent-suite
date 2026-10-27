@@ -70,6 +70,8 @@ export interface LiveCompleteInput {
   readonly tools?: readonly LiveToolSpec[];
   /** 最大输出 token（可选）。 */
   readonly maxTokens?: number;
+  /** 可选取消信号；透传到底层 transport。 */
+  readonly signal?: AbortSignal;
 }
 
 /**
@@ -198,6 +200,7 @@ export class LiveBackend implements LlmBackend {
         messages: input.messages,
         tools: input.tools,
         maxTokens: input.maxTokens,
+        signal: input.signal,
       });
       const response = await this.transport(request);
       const completion = parseLiveResponse(
