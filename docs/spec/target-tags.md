@@ -78,7 +78,7 @@ CLI 条目当前是**产品能力目录**，不是默认执行状态。例如 `c
 
 大部分实例 tag 使用行内后缀注释记录证据和边界。ModelTags 只映射 Pi bundled catalog 中明确的 `type/reasoning/input` 字段，不从模型名、价格或 CLI 功能猜测其他能力。当前未做各 CLI 参数组合的运行验证。
 
-空 `tags` 表示未声明，不表示官方禁止。账号 auth、usage 和 live 不得从 `from/credential/apiKey` 或历史调用成功推断。
+空 `tags` 表示未声明，不表示官方禁止。账号 auth、usage 和 live 不得从 `from/credential/apiKey`、`.env.auth.yaml`、`auth.provider` 或历史调用成功推断。`provider.auth.*` / `provider-model.auth.*` 均可省略；只有消费者把某 auth 标签列入 requirements 时，未声明才表现为能力缺失。
 
 ### 私密 `targetTags`
 
@@ -112,6 +112,8 @@ targetTags:
 这样，非规范模型别名可以在本机声明自己的 canonical `modelRef`，无需把私有渠道写进仓库。真实 `~/.env.e2e.yaml` 不由框架自动修改。
 
 调用 `loadTargetTagCatalog({ liveConfig })` 且 `liveConfig.kind === "loaded"` 时，加载器复用已经发现的 `liveConfig.path`，读取同文件根级 `targetTags` 并与公共实例合并；不另建配置发现顺序，也不把 `carriers` 或凭据返回在 catalog 中。
+
+`loadTargetTagCatalog` 不读取 `.env.auth.yaml`；认证条目、显式 `auth.provider` 和实际 secret 均不进入 catalog。
 
 合并规则：
 

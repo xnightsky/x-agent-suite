@@ -66,6 +66,7 @@ Harness Driver 已经组合 sandbox；只有直接使用 `JsonlProcess`/`PtyProc
 | `LiveNotConfiguredError`                      | live | 让未配置 carrier 显式降级          |
 | `sniffLiveChannel`                            | live | 正式运行前验证连通、鉴权和工具调用 |
 | `loadLiveConfig`                              | live | 加载 YAML/env 配置                 |
+| `loadLiveAuthConfig` / `parseLiveAuthConfig` | live | 加载/校验可选 `.env.auth.yaml`     |
 | `resolveLiveChannel`                          | live | 解析 carrier 渠道                  |
 | `resolveLiveTargets`                          | live | 解析显式模型或汇总默认多目标       |
 | `resolveLiveApiKey` / `resolveLiveCredential` | live | 解析凭据，调用方不得写入日志       |
@@ -73,6 +74,7 @@ Harness Driver 已经组合 sandbox；只有直接使用 `JsonlProcess`/`PtyProc
 | `createSecretRedactor`                        | 高级 | 用已解析秘密创建通用文本脱敏器     |
 | `redactLiveError` / `redactValue`             | 高级 | 递归脱敏异常图与结构化值           |
 | `LIVE_CONFIG_PATH_ENV` / `LIVE_CONFIG_FILE`   | live | 配置入口常量                       |
+| `LIVE_AUTH_CONFIG_PATH_ENV` / `LIVE_AUTH_CONFIG_FILE` | live | 可选认证文件入口常量               |
 | `estimateCostUsd`                             | live | 按 usage 估算成本                  |
 | `buildLiveRequest` / `parseLiveResponse`      | 高级 | 自定义 wire transport              |
 | `createFetchTransport`                        | live | 创建真实 HTTP transport            |

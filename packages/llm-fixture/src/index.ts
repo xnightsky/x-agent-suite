@@ -41,6 +41,18 @@ export {
   type BorrowedChannelResult,
   type BorrowedCredentialResult,
 } from "./live-config.ts";
+export {
+  LIVE_AUTH_CONFIG_FILE,
+  LIVE_AUTH_CONFIG_PATH_ENV,
+  LiveAuthConfigError,
+  loadLiveAuthConfig,
+  parseLiveAuthConfig,
+  type LiveAuthConfig,
+  type LiveAuthConfigLoad,
+  type LiveAuthConfigOptions,
+  type LiveAuthConfigSource,
+  type LiveAuthEntry,
+} from "./live-auth-config.ts";
 export { decideLiveTarget, decideLiveTargets } from "./target-tag-decision.ts";
 export {
   loadTargetTagCatalog,

@@ -24,6 +24,24 @@ const VALID_WIRES: readonly string[] = [
 export type CarrierChannelResult =
   { readonly channel: LiveChannel } | { readonly reason: string };
 
+/** 校验可选认证文件绑定。 */
+function validateAuth(raw: unknown):
+  | { readonly auth: { readonly provider: string } }
+  | { readonly reason: string } {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return { reason: "auth 必须是对象" };
+  }
+  const record = raw as Record<string, unknown>;
+  const unknown = Object.keys(record).filter((key) => key !== "provider");
+  if (unknown.length > 0) {
+    return { reason: `auth 含未知字段：${unknown.join(", ")}` };
+  }
+  if (typeof record.provider !== "string" || record.provider.trim() === "") {
+    return { reason: "auth.provider 必须是非空字符串" };
+  }
+  return { auth: { provider: record.provider } };
+}
+
 /** 校验并归一一份原始配置对象为 LiveChannel；不合法返回原因字符串。 */
 export function validateChannel(raw: unknown): CarrierChannelResult {
   if (typeof raw !== "object" || raw === null) {
@@ -41,7 +59,11 @@ export function validateChannel(raw: unknown): CarrierChannelResult {
       reason: `wire "${String(record.wire)}" 非法（可用: ${VALID_WIRES.join(", ")}）`,
     };
   }
+  const parsedAuth = record.auth === undefined ? undefined : validateAuth(record.auth);
+  if (parsedAuth && "reason" in parsedAuth) return parsedAuth;
   const channel: LiveChannel = {
+    credentialSource: "model-config",
+    ...(parsedAuth && "auth" in parsedAuth ? { auth: parsedAuth.auth } : {}),
     wire: record.wire as WireProtocol,
     baseUrl: record.baseUrl as string,
     model: record.model as string,
@@ -87,6 +109,14 @@ export function validateChannel(raw: unknown): CarrierChannelResult {
     return { reason: "apiKey 与 apiKeyEnv 不能同时声明" };
   }
   if (
+    record.auth !== undefined &&
+    (record.apiKey !== undefined ||
+      record.apiKeyEnv !== undefined ||
+      record.credential !== undefined)
+  ) {
+    return { reason: "auth.provider 不能与内联 apiKey/apiKeyEnv/credential 同时声明" };
+  }
+  if (
     channel.credential === "harness" &&
     (channel.apiKey !== undefined || channel.apiKeyEnv !== undefined)
   ) {
@@ -105,7 +135,12 @@ function borrowedEndpointOverrides(
   record: Record<string, unknown>,
   borrowed: Extract<BorrowedChannelResult, { kind: "resolved" }>,
 ): string[] {
-  if (record.apiKey !== undefined || record.apiKeyEnv !== undefined) return [];
+  if (
+    record.apiKey !== undefined ||
+    record.apiKeyEnv !== undefined ||
+    record.auth !== undefined
+  )
+    return [];
   return BORROWED_CREDENTIAL_ENDPOINT_FIELDS.filter(
     // provider-less 宿主的配置键只是逻辑目录名；wire/baseUrl 仍必须一致。
     (field) =>
@@ -171,9 +206,10 @@ export async function resolveCarrierChannel(
       provider: record.provider ?? borrowed.provider,
       harnessBaseUrl: record.harnessBaseUrl ?? borrowed.harnessBaseUrl,
       ...record,
-      ...(record.credential === undefined &&
-      record.apiKey === undefined &&
-      record.apiKeyEnv === undefined
+      ...(record.auth === undefined &&
+        record.credential === undefined &&
+        record.apiKey === undefined &&
+        record.apiKeyEnv === undefined
         ? { credential: "harness" }
         : {}),
     };

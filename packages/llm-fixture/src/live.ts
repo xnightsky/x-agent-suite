@@ -111,13 +111,15 @@ export class LiveBackend implements LlmBackend {
           carrier: this.carrier,
           env: this.options.config?.env ?? process.env,
           homeDir: this.options.config?.homeDir,
+          repoRoot: this.options.config?.repoRoot,
           borrowChannel: this.options.config?.borrowChannel,
           borrowCredential: this.options.config?.borrowCredential,
         },
       );
       if (
         credential.kind === "missing" &&
-        this.channelValue!.credential === "harness"
+        (credential.required ||
+          this.channelValue!.credential === "harness")
       ) {
         throw new LiveNotConfiguredError(this.carrier, credential.reason);
       }

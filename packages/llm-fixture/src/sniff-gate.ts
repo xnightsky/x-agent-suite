@@ -8,7 +8,11 @@
  * - transport 可注入：单元测试用 FakeProviderBackend 或桩当被嗅探端，不烧 token；
  * - 与 preflight 并列：preflight 验 harness 可用性，sniff 验渠道/模型可用性与能力。
  */
-import { resolveLiveCredential, type LiveChannel } from "./live-config.ts";
+import {
+  resolveLiveCredential,
+  type BorrowedCredentialResult,
+  type LiveChannel,
+} from "./live-config.ts";
 import { redactLiveSecrets } from "./redact.ts";
 import { parseLiveResponse } from "./live-parse.ts";
 import {
@@ -47,6 +51,10 @@ export interface SniffOptions {
   readonly timeoutMs?: number;
   /** 环境变量表（apiKeyEnv 解析用）；缺省 process.env。 */
   readonly env?: NodeJS.ProcessEnv;
+  /** 仓库根目录（repo-local 认证文件查找基点）。 */
+  readonly repoRoot?: string;
+  /** 用户 home 目录（home 级认证文件查找基点）。 */
+  readonly homeDir?: string;
   /** 渠道借用钩子（借用凭据前用于验证端点归属）。 */
   readonly borrowChannel?: import("./live-config.ts").LiveConfigOptions["borrowChannel"];
   /** 凭证借用钩子（credential: harness 时使用）。 */
@@ -104,21 +112,34 @@ export async function sniffLiveChannel(
   const started = Date.now();
   const transport = options.transport ?? createFetchTransport();
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const credential = await resolveLiveCredential(channel, {
-    carrier,
-    env: options.env ?? process.env,
-    borrowChannel: options.borrowChannel,
-    borrowCredential: options.borrowCredential,
-  });
-  const resolvedSecrets =
-    credential.kind === "resolved" ? [credential.apiKey] : [];
+  let credential: BorrowedCredentialResult;
+  const resolvedSecrets: string[] = [];
   const fail = (stage: SniffStage, reason: string): SniffResult => ({
     ok: false,
     carrier,
     stage,
     reason: redactLiveSecrets(reason, [channel], resolvedSecrets),
   });
-  if (credential.kind === "missing" && channel.credential === "harness") {
+  try {
+    credential = await resolveLiveCredential(channel, {
+      carrier,
+      env: options.env ?? process.env,
+      repoRoot: options.repoRoot,
+      homeDir: options.homeDir,
+      borrowChannel: options.borrowChannel,
+      borrowCredential: options.borrowCredential,
+    });
+    if (credential.kind === "resolved") resolvedSecrets.push(credential.apiKey);
+  } catch (error) {
+    return fail(
+      "auth",
+      `认证配置失败：${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  if (
+    credential.kind === "missing" &&
+    (credential.required || channel.credential === "harness")
+  ) {
     return fail("auth", credential.reason);
   }
   const request = buildLiveRequest(channel.wire, {

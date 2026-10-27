@@ -85,7 +85,7 @@ function envOverride(
   };
   for (const [suffix, field] of Object.entries(map)) {
     const value = env[`${prefix}${suffix}`];
-    if (value !== undefined && value !== "") {
+    if (value !== undefined) {
       out[field] = value;
     }
   }
@@ -355,7 +355,12 @@ export function resolveLiveChannel(
       reason: "覆盖借用渠道的显式凭据不可用，拒绝回退到借用凭据",
     };
   }
-  if (hasCredentialOverride) delete overridden.credential;
+  if (hasCredentialOverride) {
+    delete overridden.auth;
+    delete overridden.credential;
+    if (override.apiKey !== undefined) delete overridden.apiKeyEnv;
+    if (override.apiKeyEnv !== undefined) delete overridden.apiKey;
+  }
   const merged = overridden;
   const validated = validateChannel(merged);
   if ("reason" in validated) {
@@ -378,7 +383,9 @@ export function resolveLiveChannel(
   return {
     kind: "configured",
     carrier,
-    channel: validated.channel,
+    channel: hasCredentialOverride
+      ? { ...validated.channel, credentialSource: "runtime" as const }
+      : validated.channel,
     source: fromEnv ? "env" : load.kind === "loaded" ? load.source : "env",
   };
 }

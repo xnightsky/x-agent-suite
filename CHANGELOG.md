@@ -8,6 +8,7 @@
 
 - 原生 `@x-agent-suite/recall`：复用 `.recall/` 目录，提供确定发现、严格 YAML v1、context 只读 provision、全量前置校验、case/repeat 独立执行和 `x-agent-suite recall` CLI；聚合包新增 `x-agent-suite/recall` 子路径与统一 `bin`。
 - Recall 显式执行收敛：移除 `x-agent-suite.config.ts` 依赖，新增显式 carrier/provider/model 选择、独立 Criterion/profile/EffectsProfile registry、effects-only Plan、文件内 `plans/context.plan`、direct 纯文本与唯一 borrowed profile；无执行级 ProvisionPlan，Runner 不合并 provision，并保留 target/mode/cliRef/provision/effects 报告归因。
+- live 新增可选 `.env.auth.yaml`：按 provider ID 或 `auth.provider` 显式绑定 API key，支持 `E2E_AUTH_CONFIG_PATH`、repo/home 发现、runtime > auth-file > model-config 优先级、失败不回退及 backend/sniff 统一脱敏；配置参考与教程同步。
 
 ## 0.6.1 - 2026-10-19
 

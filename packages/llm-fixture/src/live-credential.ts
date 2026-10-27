@@ -3,6 +3,11 @@
  * 解析显式或借用凭据，并在借用前验证渠道端点归属。
  */
 import { homedir } from "node:os";
+import {
+  LiveAuthConfigError,
+  loadLiveAuthConfig,
+  type LiveAuthEntry,
+} from "./live-auth-config.ts";
 import type {
   BorrowedCredentialResult,
   LiveChannel,
@@ -34,6 +39,8 @@ export interface LiveCredentialOptions {
   readonly env?: NodeJS.ProcessEnv;
   /** 用户 home 目录；缺省 os.homedir()。 */
   readonly homeDir?: string;
+  /** 仓库根目录（repo-local 认证文件查找基点）。 */
+  readonly repoRoot?: string;
   /** 当前时刻（epoch ms）；缺省 Date.now()。 */
   readonly now?: number;
   /** 渠道借用钩子；借用凭据前用于验证端点归属。 */
@@ -68,10 +75,105 @@ async function verifyBorrowedChannel(
 }
 
 /**
- * 按显式配置、环境变量、已验证借用渠道的顺序解析凭据。
- * @returns 解析出的凭据，或不满足安全前置条件时的显式 missing。
+ * 按 runtime > auth-file > model-config 选择来源；来源存在但失败时不切换身份。
+ * 代码显式/legacy channel 没有 credentialSource，继续旁路认证文件发现。
  */
 export async function resolveLiveCredential(
+  channel: LiveChannel,
+  options: LiveCredentialOptions,
+): Promise<BorrowedCredentialResult> {
+  if (channel.credentialSource === "runtime") {
+    return resolveRuntimeCredential(channel, options.env ?? process.env);
+  }
+  if (channel.credentialSource === "model-config") {
+    const fromAuth = await resolveAuthFileCredential(channel, options);
+    if (fromAuth) return fromAuth;
+  }
+  return resolveConfiguredCredential(channel, options);
+}
+
+/** 解析运行时覆盖；缺失不得回退到持久凭据。 */
+function resolveRuntimeCredential(
+  channel: LiveChannel,
+  env: NodeJS.ProcessEnv,
+): BorrowedCredentialResult {
+  const direct = resolveLiveApiKey(channel, env);
+  if (direct) {
+    return {
+      kind: "resolved",
+      apiKey: direct,
+      source: channel.apiKey
+        ? "runtime apiKey 字面量"
+        : `runtime env ${channel.apiKeyEnv}`,
+    };
+  }
+  return {
+    kind: "missing",
+    required: true,
+    reason: "runtime 凭据覆盖已声明，但 API key 不可用",
+  };
+}
+
+/** 解析认证文件条目；返回 undefined 表示默认同名条目不存在，可回退内联。 */
+async function resolveAuthFileCredential(
+  channel: LiveChannel,
+  options: LiveCredentialOptions,
+): Promise<BorrowedCredentialResult | undefined> {
+  const explicitProvider = channel.auth?.provider;
+  const provider = explicitProvider ?? channel.provider;
+  if (!provider) return undefined;
+  const load = await loadLiveAuthConfig({
+    env: options.env ?? process.env,
+    repoRoot: options.repoRoot,
+    homeDir: options.homeDir,
+  });
+  if (load.kind === "not-configured") {
+    if (explicitProvider) {
+      throw new LiveAuthConfigError(
+        `provider "${provider}" 的 auth.provider 显式绑定没有认证文件`,
+      );
+    }
+    return undefined;
+  }
+  const entry = Object.hasOwn(load.config.providers, provider)
+    ? load.config.providers[provider]
+    : undefined;
+  if (!entry) {
+    if (explicitProvider) {
+      throw new LiveAuthConfigError(
+        `provider "${provider}" 的 auth.provider 显式绑定条目不存在`,
+      );
+    }
+    return undefined;
+  }
+  return resolveAuthEntry(provider, entry, options.env ?? process.env);
+}
+
+/** 解析已选认证文件条目；缺值必须显式 missing。 */
+function resolveAuthEntry(
+  provider: string,
+  entry: LiveAuthEntry,
+  env: NodeJS.ProcessEnv,
+): BorrowedCredentialResult {
+  const apiKey = entry.apiKey ?? (entry.apiKeyEnv ? env[entry.apiKeyEnv] : "");
+  if (apiKey) {
+    return {
+      kind: "resolved",
+      apiKey,
+      source: entry.apiKey
+        ? "auth file apiKey 字面量"
+        : `auth file env ${entry.apiKeyEnv}`,
+    };
+  }
+  return {
+    kind: "missing",
+    required: true,
+    reason: `provider "${provider}" 的 auth file 环境变量 ${entry.apiKeyEnv} 未设置`,
+  };
+}
+
+/** 既有内联与宿主借用解析。 */
+async function resolveConfiguredCredential(
   channel: LiveChannel,
   options: LiveCredentialOptions,
 ): Promise<BorrowedCredentialResult> {

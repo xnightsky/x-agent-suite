@@ -58,6 +58,8 @@ test(
         await t.test(name, { timeout: 30_000 }, async (subtest) => {
           const result = await sniffLiveChannel(carrier, channel, {
             timeoutMs: 20_000,
+            repoRoot: ROOT,
+            homeDir: sandbox.homeDir,
           });
           assert.equal(
             result.ok,

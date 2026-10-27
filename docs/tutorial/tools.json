@@ -132,6 +132,13 @@
           "reason": "仅用于显式授权的 live 路径，不进入安全离线教程。"
         },
         {
+          "name": "LiveAuthConfigError",
+          "category": "advanced",
+          "purpose": "标识认证文件读取、YAML 或 schema 配置错误。",
+          "risk": "safe",
+          "reason": "错误类型不含 secret；配置格式见 docs/spec/live-auth-config.md。"
+        },
+        {
           "name": "estimateCostUsd",
           "category": "live",
           "purpose": "按 usage 和价格配置估算成本。",
@@ -158,6 +165,20 @@
           "purpose": "按优先级加载 live 配置。",
           "risk": "conditional",
           "recipes": ["live-token-smoke"]
+        },
+        {
+          "name": "loadLiveAuthConfig",
+          "category": "live",
+          "purpose": "按 explicit/repo/home 顺序发现并严格加载可选认证文件。",
+          "risk": "conditional",
+          "recipes": ["live-token-smoke"]
+        },
+        {
+          "name": "parseLiveAuthConfig",
+          "category": "advanced",
+          "purpose": "严格解析认证 YAML，校验 API-key 条目和互斥字段。",
+          "risk": "safe",
+          "reason": "纯本地解析，不发起请求；配置格式见 docs/spec/live-auth-config.md。"
         },
         {
           "name": "resolveLiveApiKey",
@@ -239,7 +260,7 @@
         {
           "name": "resolveLiveCredential",
           "category": "live",
-          "purpose": "按显式配置或借用钩子解析凭据。",
+          "purpose": "按 runtime、认证文件、内联配置或借用钩子解析凭据。",
           "risk": "high",
           "reason": "仅用于显式授权的 live 路径，不进入安全离线教程。"
         },
@@ -284,6 +305,20 @@
           "purpose": "默认 live 配置文件名。",
           "risk": "safe",
           "reason": "仅用于显式授权的 live 路径，不进入安全离线教程。"
+        },
+        {
+          "name": "LIVE_AUTH_CONFIG_PATH_ENV",
+          "category": "live",
+          "purpose": "可选认证文件显式路径的环境变量名。",
+          "risk": "safe",
+          "reason": "配置常量，见 docs/spec/live-auth-config.md。"
+        },
+        {
+          "name": "LIVE_AUTH_CONFIG_FILE",
+          "category": "live",
+          "purpose": "默认可选认证文件名。",
+          "risk": "safe",
+          "reason": "配置常量，见 docs/spec/live-auth-config.md。"
         },
         {
           "name": "buildLiveRequest",

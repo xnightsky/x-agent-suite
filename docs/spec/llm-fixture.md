@@ -174,6 +174,106 @@ carriers:
 
 1–5 是 `loadLiveConfig` / `resolveLiveChannel` 的文件发现与覆盖链（命中即停）；6 发生在文件声明内部；7 不经过文件链。缺文件、缺 carrier 或借用失败均返回显式「未配置」结果（不抛异常），live 用例据此 skip，不判红。
 
+### live 可选认证文件
+
+`.env.auth.yaml` 是可选的 provider 凭据存储。`.env.e2e.yaml` 可以只声明模型与端点；`loadLiveConfig`、`resolveLiveTargets` 和 TargetTags 加载均不读取认证文件，只有执行前的 `resolveLiveCredential` 才按 provider 解析凭据。
+
+默认通过完全相同的 provider ID 关联（区分大小写）：
+
+```yaml
+# .env.e2e.yaml
+carriers:
+  example-carrier:
+    default:
+      - provider: provider-a
+        model: model-a
+    providers:
+      provider-a:
+        baseUrl: https://provider.example.com/v1
+        wire: openai-chat
+        models: [model-a]
+```
+
+```yaml
+# .env.auth.yaml
+version: 1
+providers:
+  provider-a:
+    type: api_key
+    apiKeyEnv: PROVIDER_A_API_KEY
+
+  # 也支持 apiKey 字面量，但不推荐写入或共享真实 secret。
+  provider-b:
+    type: api_key
+    apiKey: "replace-with-your-secret"
+```
+
+每个认证条目必须声明 `type: api_key`，且 `apiKey` / `apiKeyEnv` 必须恰好出现一个。顶层与条目级未知字段、空 provider/key 名、重复 YAML key、错误 version 和其他 type 都是配置错误。v1 不支持 OAuth、`!command` 或 ambient 声明。
+
+多个模型 provider/profile 需要复用同一认证条目时，使用显式 `auth.provider`：
+
+```yaml
+# .env.e2e.yaml
+carriers:
+  example-carrier:
+    default:
+      - provider: provider-a-account-1
+        model: model-a
+    providers:
+      provider-a-account-1:
+        auth:
+          provider: shared-provider-auth
+        baseUrl: https://provider.example.com/v1
+        wire: openai-chat
+        models: [model-a]
+
+      provider-a-account-2:
+        auth:
+          provider: shared-provider-auth
+        baseUrl: https://provider.example.com/v1
+        wire: openai-chat
+        models: [model-a]
+```
+
+```yaml
+# .env.auth.yaml
+version: 1
+providers:
+  shared-provider-auth:
+    type: api_key
+    apiKeyEnv: SHARED_PROVIDER_API_KEY
+```
+
+`auth.provider` 只选择认证文件条目，不是 TargetTags 的 auth 标签或 OAuth handler。它不得与内联 `apiKey/apiKeyEnv/credential` 同时声明；`from: harness` 使用该绑定时不再隐含 `credential: harness`。
+
+认证文件发现顺序（命中即停，不合并）：
+
+1. `E2E_AUTH_CONFIG_PATH` 显式文件；
+2. repo 根 `.env.auth.yaml`；
+3. `~/.env.auth.yaml`。
+
+默认文件均不存在表示没有独立认证配置。显式路径不存在、默认路径不可读、YAML/schema 错误均抛 `LiveAuthConfigError`，不得换文件或沿用陈旧秘密快照。
+
+凭据来源优先级（高优先级在前）：
+
+1. `E2E_LIVE_<CARRIER>_API_KEY` / `API_KEY_ENV` 运行时覆盖；
+2. `.env.auth.yaml` 中默认同名或 `auth.provider` 指定的条目；
+3. `.env.e2e.yaml` 内联 `apiKey/apiKeyEnv/credential: harness`（含 `from: harness` 的既有隐含借用）；
+4. 无凭据。
+
+代码显式 `new LiveBackend({ channel })` 没有配置来源标记，继续旁路文件与环境发现。只有来源不存在才向下回退；来源存在但失败不得切换身份：
+
+| 情况 | 结果 |
+| --- | --- |
+| 默认关联条目不存在 | 回退内联凭据 |
+| 显式绑定缺文件或指定条目 | `LiveAuthConfigError`，不回退 |
+| runtime/auth 条目环境变量缺值 | required missing；backend 抛未配置错误，sniff 返回 auth 失败，不发无 key 请求 |
+| 内联借用失败 | 保留既有 missing，不换身份 |
+| 所有来源均不存在 | 允许无凭据请求；需要认证的端点在 sniff/请求阶段失败 |
+| 上游返回 401/403 | 不自动换另一凭据来源 |
+
+认证字面量和环境变量解析值统一进入 `redactLiveSecrets`；诊断只保留 runtime/auth-file/model-config/harness 等非秘密来源标签。认证文件不生成 `provider.auth.*` 标签，也不改变 live 审批门禁。完整设计见 [live-auth-config.md](./live-auth-config.md)。
+
 ## createLlmBackend
 
 ```ts
@@ -260,6 +360,7 @@ packages/llm-fixture/src/
 ├── fake-provider.ts          # FakeProviderBackend
 ├── live.ts                   # LiveBackend
 ├── live-config.ts            # 私密配置区加载
+├── live-auth-config.ts       # 可选认证文件校验与发现
 ├── live-channel.ts           # 单渠道校验与借用合并
 ├── live-targets.ts           # 可选目录、default 与 target 选择
 ├── live-credential.ts        # 凭据解析与借用渠道验证

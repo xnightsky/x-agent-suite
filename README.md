@@ -103,8 +103,10 @@ fake 是减少对真实环境访问的降噪机制，不是验收终点；最终
 live 组合的凭证按三级阶梯解析，有下级就不用上级：
 
 1. **无**：fake 后端不需要任何凭证。
-2. **第二套专用凭证（推荐）**：用户显式提供的测试专用 API key / 测试账号，独立配额、可吊销；经 `.env.e2e.yaml`（repo 根或 home 级 `~/`，repo 内那份已 gitignore）注入。
+2. **第二套专用凭证（推荐）**：用户显式提供的测试专用 API key / 测试账号，独立配额、可吊销；经 `.env.e2e.yaml` 内联声明，或可选 `.env.auth.yaml`（repo 根或 home 级 `~/`）按 provider 注入。
 3. **借用本机登录态（兜底）**：宿主仅订阅制 OAuth、无 API key 可发时的唯一选择；属高风险路径，必须显式配置与授权，借用结果只读、带 source 审计、输出一律脱敏。
+
+认证文件默认按同名 provider 关联，也可用渠道 `auth.provider` 显式复用另一认证条目。实际优先级为 runtime env 覆盖 > `.env.auth.yaml` > `.env.e2e.yaml` 内联凭据；来源不存在才回退，已选来源失败不换身份。完整配置见 [live 认证配置](docs/spec/live-auth-config.md)。
 
 ## 状态
 

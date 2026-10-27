@@ -37,7 +37,12 @@ export type BorrowedCredentialResult =
       readonly source: string;
       readonly expiresAt?: number;
     }
-  | { readonly kind: "missing"; readonly reason: string };
+  | {
+      readonly kind: "missing";
+      readonly reason: string;
+      /** 已选来源必须解析成功；执行层不得继续发无凭据请求。 */
+      readonly required?: boolean;
+    };
 
 /** 一个 carrier 的渠道声明（baseUrl 含版本前缀，如 "https://host/v1"）。 */
 export interface LiveChannel {
@@ -47,6 +52,10 @@ export interface LiveChannel {
   readonly baseUrl: string;
   /** 模型标识。 */
   readonly model: string;
+  /** 可选认证文件条目绑定；与内联凭据互斥。 */
+  readonly auth?: { readonly provider: string };
+  /** 非秘密凭据来源标记；缺省表示代码显式或 legacy channel。 */
+  readonly credentialSource?: "model-config" | "runtime";
   /** API key 字面量（私密；与 apiKeyEnv 恰居其一或均缺省）。 */
   readonly apiKey?: string;
   /** 存放 API key 的环境变量名。 */

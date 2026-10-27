@@ -94,6 +94,7 @@ flowchart TB
 | `E2E_LLM_MODE`         | `fixture` / `live`                                                                  | `fixture` |
 | `E2E_FAKE_DUMP_DIR`    | 假端点请求体落盘目录（诊断用）                                                      | 不落盘    |
 | `E2E_LIVE_CONFIG_PATH` | live 私密配置区显式文件路径（优先级最高）                                           | -         |
+| `E2E_AUTH_CONFIG_PATH` | 可选 live 认证文件显式路径；默认发现 repo 根与 `~/` 的 `.env.auth.yaml`             | -         |
 | `E2E_LIVE_<CARRIER>_*` | live 渠道字段级 env 覆盖：`BASE_URL` / `MODEL` / `API_KEY` / `API_KEY_ENV` / `WIRE` | -         |
 | `E2E_KEEP_SANDBOX`     | 测试失败后是否保留临时目录用于诊断                                                  | `0`       |
 
@@ -118,6 +119,8 @@ carriers:
 上述单模型声明持续兼容，但显式旧 `provider/model` 会产生弃用 warning。多 provider 可选目录、carrier 级 `default` 多目标验证及旧格式归一规则，见 [live 多模型配置契约](./llm-fixture.md#live-多模型配置契约)。
 
 加载顺序：env 字段覆盖 > `E2E_LIVE_CONFIG_PATH` 显式文件 > repo 内 `.env.e2e.yaml` > `~/.env.e2e.yaml`（home 级，跨仓库共享）> `~/.config/x-agent-suite/.env.e2e.yaml`（历史路径）。缺文件/缺 carrier 时 live 用例按「未配置」skip，不判红。
+
+可选 `.env.auth.yaml` 按 provider ID 或渠道 `auth.provider` 显式绑定提供 API key，发现顺序为 `E2E_AUTH_CONFIG_PATH` > repo `.env.auth.yaml` > `~/.env.auth.yaml`。模型加载不依赖认证文件；实际凭据按 runtime 覆盖 > auth 文件 > `.env.e2e.yaml` 内联凭据解析。完整双文件格式和失败语义见 [live 认证配置](./live-auth-config.md)。
 
 ## 验收标准
 
