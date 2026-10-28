@@ -5,6 +5,7 @@
  */
 import {
   decideLiveTarget,
+  type LiveTargetDecision,
   type ResolvedLiveTarget,
   type TargetAccessDecisionOptions,
   type TargetAccessMode,
@@ -102,43 +103,11 @@ function decisionError(
   );
 }
 
-function selectDirect(
-  target: ResolvedLiveTarget,
-  catalog: TargetTagCatalog,
-  effects: RecallEffects,
-  liveReviewApproved: boolean,
-): RecallResolvedExecution {
-  const decision = decideLiveTarget(target, catalog, {
-    requirements: requirements(effects),
-    live: true,
-    liveReviewApproved,
-  });
-  const candidates = decision.candidates.filter(
-    ({ mode }) => mode === "direct",
-  );
-  if (candidates.length !== 1) {
-    throw decisionError(
-      target,
-      decision.live.status,
-      "direct",
-      decision.evaluations,
-    );
-  }
-  return { target, mode: "direct" };
-}
-
 function selectBorrowed(
   target: ResolvedLiveTarget,
-  catalog: TargetTagCatalog,
-  effects: RecallEffects,
+  decision: LiveTargetDecision,
   registry: RecallRegistry,
-  liveReviewApproved: boolean,
 ): RecallResolvedExecution {
-  const decision = decideLiveTarget(target, catalog, {
-    requirements: requirements(effects),
-    live: true,
-    liveReviewApproved,
-  });
   const candidates = decision.candidates.filter(
     (candidate) =>
       candidate.mode === "borrowed" &&
@@ -162,24 +131,30 @@ function selectBorrowed(
       })),
     );
   }
-  const selected = candidates[0]!;
+  const cliRef = candidates[0]!.cliRef!;
   return {
     target,
     mode: "borrowed",
-    cliRef: selected.cliRef!,
-    profile: registry.profiles[selected.cliRef!]!,
+    cliRef,
+    profile: registry.profiles[cliRef]!,
   };
 }
 
-/** 选择 ephemeral-client 的自定义 direct Adapter；不得回退其他实现。 */
+/** ephemeral-client 直接产出完整 direct Adapter；不得回退其他实现。 */
 function selectEphemeralClient(
   target: ResolvedLiveTarget,
-  catalog: TargetTagCatalog,
-  effects: RecallEffects,
+  decision: LiveTargetDecision,
   registry: RecallRegistry,
-  liveReviewApproved: boolean,
 ): RecallResolvedExecution {
-  const selected = selectDirect(target, catalog, effects, liveReviewApproved);
+  const direct = decision.candidates.filter(({ mode }) => mode === "direct");
+  if (direct.length !== 1) {
+    throw decisionError(
+      target,
+      decision.live.status,
+      "direct",
+      decision.evaluations,
+    );
+  }
   const clientRef = target.clientRef;
   const profile = clientRef ? registry.profiles[clientRef] : undefined;
   if (!clientRef || profile?.carrier !== target.carrier) {
@@ -188,7 +163,7 @@ function selectEphemeralClient(
         JSON.stringify({ carrier: target.carrier, clientRef }),
     );
   }
-  return { ...selected, clientRef, profile };
+  return { target, mode: "direct", clientRef, profile };
 }
 
 /** 按 Carrier kind 解析一个 target；effects 只约束能力，不切换执行路径。 */
@@ -199,20 +174,12 @@ export function resolveRecallExecution(options: {
   readonly registry: RecallRegistry;
   readonly liveReviewApproved: boolean;
 }): RecallResolvedExecution {
-  if (options.target.kind === "ephemeral-client") {
-    return selectEphemeralClient(
-      options.target,
-      options.catalog,
-      options.effects,
-      options.registry,
-      options.liveReviewApproved,
-    );
-  }
-  return selectBorrowed(
-    options.target,
-    options.catalog,
-    options.effects,
-    options.registry,
-    options.liveReviewApproved,
-  );
+  const decision = decideLiveTarget(options.target, options.catalog, {
+    requirements: requirements(options.effects),
+    live: true,
+    liveReviewApproved: options.liveReviewApproved,
+  });
+  return options.target.kind === "ephemeral-client"
+    ? selectEphemeralClient(options.target, decision, options.registry)
+    : selectBorrowed(options.target, decision, options.registry);
 }
