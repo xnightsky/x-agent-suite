@@ -205,7 +205,9 @@ pnpm ittest:token:judge
 
 每个 attempt 以新 backend 调用消费者 `createDriver`：
 
-- `driver.start()` 后只调用一次 `sendPrompt(prompt)`；
+- 预先 abort 的 attempt 在 factory/start/send 之前直接拒绝，不创建 driver、不产生副作用；
+- `driver.start()` 后只调用一次 `sendPrompt(prompt)`；start 挂起期间 abort 仍会 close，start 返回后必须再次检查 `signal`，已取消 attempt 不得再 `sendPrompt`；
+- 已进入 `sendPrompt` 后 abort 只做 `close`，不回退也不隐式重试；
 - `toolPolicy: "none"` 时，`toolCallsCount > 0` 或 `toolCalls` 非空按 `protocol` 失败；
 - `toolPolicy: "read-only"` 时允许保留工具证据，`createDriver` 接收本次 `cliRef + toolPolicy` 并必须兑现实际只读策略；
 - 成功、失败和 abort 都在 `finally close()`；

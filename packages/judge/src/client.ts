@@ -2,7 +2,9 @@
  * @module @x-agent-suite/judge/client
  * Judge 客户端创建、TargetTags 候选选择与 direct/borrowed 生命周期。
  * 不变量：仅唯一候选可创建；不按工厂字段猜选，不跨 mode fallback；
- * live 未放行、read-only 非 borrowed 与遗留 allowedModes 均在执行前拒绝。
+ * live 未放行、read-only 非 borrowed 与遗留 allowedModes 均在执行前拒绝；
+ * borrowed 已 abort 时拒绝于 factory/start/send 之前，start 完成后再次检查 signal，
+ * 已取消 attempt 不得继续 sendPrompt；取消与清理均保留显式错误。
  */
 import type { AgentDriver } from "@x-agent-suite/contracts";
 import {
@@ -208,6 +210,11 @@ async function completeDirect(
   }
 }
 
+/** borrowed 取消的显式失败：保持 transport 类别与既有诊断。 */
+function abortTransportError(): JudgeModelError {
+  return new JudgeModelError("transport", "borrowed Judge 已中止");
+}
+
 /** 构造 abort 竞争 Promise，并返回监听器清理函数。 */
 function abortRace(signal: AbortSignal): {
   promise: Promise<never>;
@@ -215,8 +222,7 @@ function abortRace(signal: AbortSignal): {
 } {
   let listener: () => void;
   const promise = new Promise<never>((_resolve, reject) => {
-    listener = () =>
-      reject(new JudgeModelError("transport", "borrowed Judge 已中止"));
+    listener = () => reject(abortTransportError());
     if (signal.aborted) listener();
     else signal.addEventListener("abort", listener, { once: true });
   });
@@ -231,6 +237,9 @@ async function completeBorrowed(
   options: BorrowedJudgeClientOptions,
   request: JudgeModelRequest,
 ): Promise<JudgeModelResponse> {
+  if (request.signal.aborted) {
+    throw abortTransportError();
+  }
   const backend = createBackend(options);
   const driver: AgentDriver = options.createDriver({
     target: options.target,
@@ -242,6 +251,9 @@ async function completeBorrowed(
   try {
     const operation = (async () => {
       await driver.start();
+      if (request.signal.aborted) {
+        throw abortTransportError();
+      }
       const observation = await driver.sendPrompt(request.prompt);
       if (
         (options.toolPolicy ?? "none") === "none" &&
