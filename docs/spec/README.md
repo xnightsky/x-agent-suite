@@ -19,8 +19,8 @@
 | [driver.md](./driver.md)                           | 子进程基座：`JsonlProcess`、`PtyProcess`、严格 LF 分帧 + 宿主适配纪律 |
 | [sandbox.md](./sandbox.md)                         | 临时 `HOME` / `cwd`、环境剥离、并发隔离与清理                         |
 | [llm-fixture.md](./llm-fixture.md)                 | `LlmBackend`、自研 fake provider、`HarnessProfile` 配置               |
-| [ephemeral-client.md](./ephemeral-client.md)         | 同级 Carrier kind、Client Adapter 引用与渠道复用                       |
-| [live-auth-config.md](./live-auth-config.md)     | 可选 `.env.auth.yaml`：provider 凭据、来源优先级与失败语义            |
+| [ephemeral-client.md](./ephemeral-client.md)       | 同级 Carrier kind、Client Adapter 引用与渠道复用                      |
+| [live-auth-config.md](./live-auth-config.md)       | 可选 `.env.auth.yaml`：provider 凭据、来源优先级与失败语义            |
 | [packaging.md](./packaging.md)                     | 包分发、安装方式、版本管理与原生依赖分层                              |
 | [scenario-evaluation.md](./scenario-evaluation.md) | 评分层：Dry / Hard / Fuzzy / enumerate / 报告                         |
 | [scoring-aggregation.md](./scoring-aggregation.md) | 打分聚合机：维度声明、knockout/absent 三态、静态打分出口              |

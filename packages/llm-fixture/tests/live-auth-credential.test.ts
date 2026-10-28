@@ -25,7 +25,9 @@ function channel(overrides: Partial<LiveChannel> = {}): LiveChannel {
   };
 }
 
-async function authWorkspace(t: import("node:test").TestContext): Promise<string> {
+async function authWorkspace(
+  t: import("node:test").TestContext,
+): Promise<string> {
   const root = await mkdtemp(join(os.tmpdir(), "xas-auth-credential-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   return root;
@@ -39,7 +41,7 @@ test("model-config 默认按 provider 使用 auth-file，并优先于内联凭�
   const root = await authWorkspace(t);
   await writeAuth(
     root,
-    'version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKeyEnv: AUTH_FILE_KEY\n',
+    "version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKeyEnv: AUTH_FILE_KEY\n",
   );
   const result = await resolveLiveCredential(
     channel({ credentialSource: "model-config", apiKey: "inline-secret" }),
@@ -60,7 +62,7 @@ test("默认认证条目不存在才回退内联凭据，大小写不匹配不�
   const root = await authWorkspace(t);
   await writeAuth(
     root,
-    'version: 1\nproviders:\n  Provider-A:\n    type: api_key\n    apiKey: wrong-secret\n',
+    "version: 1\nproviders:\n  Provider-A:\n    type: api_key\n    apiKey: wrong-secret\n",
   );
   const result = await resolveLiveCredential(
     channel({ credentialSource: "model-config", apiKey: "inline-secret" }),
@@ -109,7 +111,7 @@ test("auth.provider 允许多个渠道显式复用同一认证条目", async (t)
   const root = await authWorkspace(t);
   await writeAuth(
     root,
-    'version: 1\nproviders:\n  shared-auth:\n    type: api_key\n    apiKey: shared-secret\n',
+    "version: 1\nproviders:\n  shared-auth:\n    type: api_key\n    apiKey: shared-secret\n",
   );
   for (const provider of ["provider-a", "provider-b"]) {
     const result = await resolveLiveCredential(
@@ -159,7 +161,7 @@ test("auth 条目环境变量缺值返回 required missing，不回退内联凭�
   const root = await authWorkspace(t);
   await writeAuth(
     root,
-    'version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKeyEnv: MISSING_AUTH_KEY\n',
+    "version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKeyEnv: MISSING_AUTH_KEY\n",
   );
   const result = await resolveLiveCredential(
     channel({ credentialSource: "model-config", apiKey: "must-not-fallback" }),
@@ -175,18 +177,25 @@ test("代码显式 channel 与无 provider ID 均不发现 auth 文件", async (
   const root = await authWorkspace(t);
   const env = { [LIVE_AUTH_CONFIG_PATH_ENV]: join(root, "missing-auth.yaml") };
 
-  const explicit = await resolveLiveCredential(channel({ apiKey: "inline-secret" }), {
-    carrier: "carrier-a",
-    repoRoot: root,
-    homeDir: root,
-    env,
-  });
+  const explicit = await resolveLiveCredential(
+    channel({ apiKey: "inline-secret" }),
+    {
+      carrier: "carrier-a",
+      repoRoot: root,
+      homeDir: root,
+      env,
+    },
+  );
   assert.equal(explicit.kind, "resolved");
   if (explicit.kind !== "resolved") return;
   assert.equal(explicit.apiKey, "inline-secret");
 
   const noProvider = await resolveLiveCredential(
-    channel({ provider: undefined, credentialSource: "model-config", apiKey: "inline-secret" }),
+    channel({
+      provider: undefined,
+      credentialSource: "model-config",
+      apiKey: "inline-secret",
+    }),
     { carrier: "carrier-a", repoRoot: root, homeDir: root, env },
   );
   assert.equal(noProvider.kind, "resolved");
@@ -199,7 +208,10 @@ test("损坏认证文件不得回退内联凭据", async (t) => {
   await writeAuth(root, "version: 1\nproviders: [\n");
   await assert.rejects(
     resolveLiveCredential(
-      channel({ credentialSource: "model-config", apiKey: "must-not-fallback" }),
+      channel({
+        credentialSource: "model-config",
+        apiKey: "must-not-fallback",
+      }),
       { carrier: "carrier-a", repoRoot: root, homeDir: root, env: {} },
     ),
     LiveAuthConfigError,
@@ -211,7 +223,11 @@ test("provider 查询只接受自有条目，不沿原型链误命中", async (t
   await writeAuth(root, "version: 1\nproviders: {}\n");
   for (const provider of ["constructor", "toString", "__proto__"]) {
     const fallback = await resolveLiveCredential(
-      channel({ provider, credentialSource: "model-config", apiKey: "inline-secret" }),
+      channel({
+        provider,
+        credentialSource: "model-config",
+        apiKey: "inline-secret",
+      }),
       { carrier: "carrier-a", repoRoot: root, homeDir: root, env: {} },
     );
     assert.equal(fallback.kind, "resolved");

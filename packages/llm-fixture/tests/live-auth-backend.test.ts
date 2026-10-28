@@ -39,7 +39,7 @@ test("LiveBackend 从匹配 provider 的 auth 文件解析 key", async (t) => {
   const root = await workspace(t);
   await writeAuth(
     root,
-    'version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKeyEnv: AUTH_FILE_KEY\n',
+    "version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKeyEnv: AUTH_FILE_KEY\n",
   );
   const backend = new LiveBackend({
     carrier: "carrier-a",
@@ -57,7 +57,7 @@ test("LiveBackend 的 runtime 凭据覆盖优先于 auth 文件", async (t) => {
   const root = await workspace(t);
   await writeAuth(
     root,
-    'version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKey: auth-file-secret\n',
+    "version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKey: auth-file-secret\n",
   );
   const backend = new LiveBackend({
     carrier: "carrier-a",
@@ -106,7 +106,7 @@ test("runtime 与 auth-file 已选来源缺值时 start 显式失败", async (t)
 
   await writeAuth(
     root,
-    'version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKeyEnv: MISSING_AUTH_KEY\n',
+    "version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKeyEnv: MISSING_AUTH_KEY\n",
   );
   const fromAuth = new LiveBackend({
     carrier: "carrier-a",
@@ -170,7 +170,7 @@ test("backend runtime 覆盖与模型层认证声明组合时不冲突", async (
       );
       await writeAuth(
         root,
-        'version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKey: must-not-win\n',
+        "version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKey: must-not-win\n",
       );
       const backend = new LiveBackend({
         carrier: "carrier-a",

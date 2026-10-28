@@ -88,18 +88,22 @@ test("认证文件发现遵循 explicit > repo > home 且命中即停", async (t
   const explicit = join(root, "explicit.yaml");
   await writeFile(
     join(root, ".env.auth.yaml"),
-    'version: 1\nproviders:\n  p:\n    type: api_key\n    apiKey: repo\n',
+    "version: 1\nproviders:\n  p:\n    type: api_key\n    apiKey: repo\n",
   );
   await writeFile(
     join(home, ".env.auth.yaml"),
-    'version: 1\nproviders:\n  p:\n    type: api_key\n    apiKey: home\n',
+    "version: 1\nproviders:\n  p:\n    type: api_key\n    apiKey: home\n",
   );
   await writeFile(
     explicit,
-    'version: 1\nproviders:\n  p:\n    type: api_key\n    apiKey: explicit\n',
+    "version: 1\nproviders:\n  p:\n    type: api_key\n    apiKey: explicit\n",
   );
 
-  const repo = await loadLiveAuthConfig({ repoRoot: root, homeDir: home, env: {} });
+  const repo = await loadLiveAuthConfig({
+    repoRoot: root,
+    homeDir: home,
+    env: {},
+  });
   assert.equal(repo.kind, "loaded");
   if (repo.kind === "loaded") {
     assert.equal(repo.source, "repo-local");
@@ -122,9 +126,13 @@ test("repo 缺失时使用 home；全部缺失表示未配置", async (t) => {
   const { root, home } = await workspace(t);
   await writeFile(
     join(home, ".env.auth.yaml"),
-    'version: 1\nproviders:\n  p:\n    type: api_key\n    apiKey: home\n',
+    "version: 1\nproviders:\n  p:\n    type: api_key\n    apiKey: home\n",
   );
-  const loaded = await loadLiveAuthConfig({ repoRoot: root, homeDir: home, env: {} });
+  const loaded = await loadLiveAuthConfig({
+    repoRoot: root,
+    homeDir: home,
+    env: {},
+  });
   assert.equal(loaded.kind, "loaded");
   if (loaded.kind === "loaded") assert.equal(loaded.source, "home-dot");
 

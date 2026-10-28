@@ -57,7 +57,7 @@ test("sniff 与 backend 共用 auth-file 凭据来源", async (t) => {
   const root = await workspace(t);
   await writeFile(
     join(root, ".env.auth.yaml"),
-    'version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKeyEnv: AUTH_FILE_KEY\n',
+    "version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKeyEnv: AUTH_FILE_KEY\n",
   );
   let authorization = "";
   const transport: LiveTransport = async (request) => {
@@ -78,7 +78,7 @@ test("sniff 在已选认证来源缺值时不发请求并返回 auth 失败", as
   const root = await workspace(t);
   await writeFile(
     join(root, ".env.auth.yaml"),
-    'version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKeyEnv: MISSING_AUTH_KEY\n',
+    "version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKeyEnv: MISSING_AUTH_KEY\n",
   );
   let calls = 0;
   const result = await sniffLiveChannel("carrier-a", channel(), {
@@ -101,7 +101,7 @@ test("空字符串 runtime 覆盖不得回退认证文件或发送请求", async
   const root = await workspace(t);
   await writeFile(
     join(root, ".env.auth.yaml"),
-    'version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKey: must-not-fallback\n',
+    "version: 1\nproviders:\n  provider-a:\n    type: api_key\n    apiKey: must-not-fallback\n",
   );
   for (const field of ["apiKey", "apiKeyEnv"] as const) {
     let calls = 0;

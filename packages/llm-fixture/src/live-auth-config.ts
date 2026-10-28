@@ -84,10 +84,13 @@ function parseEntry(value: unknown, provider: string): LiveAuthEntry {
   if (record.type !== "api_key") fail(path + ".type 必须为 api_key");
   const hasKey = record.apiKey !== undefined;
   const hasKeyEnv = record.apiKeyEnv !== undefined;
-  if (hasKey === hasKeyEnv) fail(path + " 的 apiKey 与 apiKeyEnv 必须恰好声明一个");
+  if (hasKey === hasKeyEnv)
+    fail(path + " 的 apiKey 与 apiKeyEnv 必须恰好声明一个");
   return {
     type: "api_key",
-    ...(hasKey ? { apiKey: requiredString(record.apiKey, path + ".apiKey") } : {}),
+    ...(hasKey
+      ? { apiKey: requiredString(record.apiKey, path + ".apiKey") }
+      : {}),
     ...(hasKeyEnv
       ? { apiKeyEnv: requiredString(record.apiKeyEnv, path + ".apiKeyEnv") }
       : {}),
@@ -106,7 +109,8 @@ export function parseLiveAuthConfig(text: string): LiveAuthConfig {
   const unknown = Object.keys(root).filter(
     (key) => !["version", "providers"].includes(key),
   );
-  if (unknown.length > 0) fail("Live 认证配置含未知字段：" + unknown.join(", "));
+  if (unknown.length > 0)
+    fail("Live 认证配置含未知字段：" + unknown.join(", "));
   if (root.version !== 1) fail("Live 认证配置 version 必须为 1");
   const providers = asRecord(root.providers, "providers");
   return {
@@ -163,12 +167,16 @@ export async function loadLiveAuthConfig(
     try {
       config = parseLiveAuthConfig(text);
     } catch (error) {
-      throw new LiveAuthConfigError(
-        "Live 认证文件无效：" + candidate.path,
-        { cause: error },
-      );
+      throw new LiveAuthConfigError("Live 认证文件无效：" + candidate.path, {
+        cause: error,
+      });
     }
-    return { kind: "loaded", source: candidate.source, path: candidate.path, config };
+    return {
+      kind: "loaded",
+      source: candidate.source,
+      path: candidate.path,
+      config,
+    };
   }
   return { kind: "not-configured" };
 }

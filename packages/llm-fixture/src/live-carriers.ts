@@ -4,14 +4,10 @@
  * 不变量：元数据不下传 LiveChannel；来源只提供目录，不转移 default 或执行实现。
  */
 import { normalizeDefaultTargets } from "./live-targets.ts";
-import type {
-  LiveCarrierResolution,
-  LiveChannel,
-} from "./live-types.ts";
+import type { LiveCarrierResolution, LiveChannel } from "./live-types.ts";
 
 type CarrierMetadataResult =
-  | { readonly metadata: LiveCarrierResolution }
-  | { readonly reason: string };
+  { readonly metadata: LiveCarrierResolution } | { readonly reason: string };
 
 /** 解析 Carrier 级执行元数据；缺省 kind 为 cli。 */
 export function parseCarrierMetadata(
@@ -79,7 +75,8 @@ export function resolveReferencedChannels(
       reason: "channelsFrom 不得与渠道字段同时声明：" + unexpected.join(", "),
     };
   }
-  if (sourceInvalid) return { reason: "channelsFrom 来源无效：" + sourceInvalid };
+  if (sourceInvalid)
+    return { reason: "channelsFrom 来源无效：" + sourceInvalid };
   if (
     !sourceRecord ||
     sourceRecord.providers === undefined ||
@@ -109,5 +106,9 @@ export function resolveReferencedChannels(
     return { reason: "default 目标未能归一到 channelsFrom 可选渠道" };
   }
   const channels = defaults as LiveChannel[];
-  return { available: sourceAvailable, defaults: channels, channel: channels[0] };
+  return {
+    available: sourceAvailable,
+    defaults: channels,
+    channel: channels[0],
+  };
 }

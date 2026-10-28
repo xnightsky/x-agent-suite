@@ -17,10 +17,13 @@ test("TargetTagCatalog 不读取认证文件且不生成 auth 标签", async (t)
   const root = await mkdtemp(join(os.tmpdir(), "xas-auth-tags-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const path = join(root, ".env.e2e.yaml");
-  await writeFile(path, `targetTags:
+  await writeFile(
+    path,
+    `targetTags:
   version: 1
   providers: []
-`);
+`,
+  );
   await writeFile(join(root, ".env.auth.yaml"), "version: 1\nproviders: [\n");
   const channel = {
     wire: "openai-chat",
@@ -46,5 +49,8 @@ test("TargetTagCatalog 不读取认证文件且不生成 auth 标签", async (t)
     ...catalog.instances.providerModels,
     ...catalog.instances.models,
   ].flatMap((item) => item.tags);
-  assert.equal(tags.some((tag) => tag.includes(".auth.")), false);
+  assert.equal(
+    tags.some((tag) => tag.includes(".auth.")),
+    false,
+  );
 });

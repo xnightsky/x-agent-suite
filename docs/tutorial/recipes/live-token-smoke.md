@@ -45,7 +45,7 @@ XAS_TUTORIAL_LIVE_AUTHORIZATION=I_ACCEPT_LIVE_COST_AND_DATA_EGRESS \
 XAS_TUTORIAL_LIVE_CARRIER=tutorial \
 TUTORIAL_PROVIDER_API_KEY='<从安全凭据源注入>' \
 pnpm ittest:token:tutorial
-````
+```
 
 ## 执行链
 

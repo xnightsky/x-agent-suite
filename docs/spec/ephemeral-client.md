@@ -48,13 +48,13 @@ carriers:
 
 ## 字段与不变量
 
-| 字段 | 适用 kind | 语义 |
-| --- | --- | --- |
-| `kind` | 全部 | `cli` 或 `ephemeral-client`；省略时归一为 `cli` |
-| `clientRef` | `ephemeral-client` | 必填，引用消费者 registry 中的临时 Client Adapter |
-| `providers` | 全部 | 当前 Carrier 自己持有的可选渠道目录，沿用现有结构 |
-| `channelsFrom` | 主要为 `ephemeral-client` | 引用另一个 Carrier 的渠道目录，避免复制连接与凭据声明 |
-| `default` | 全部 | 当前 Carrier 自己的默认 target 集合，不从渠道来源 Carrier 隐式继承 |
+| 字段           | 适用 kind                 | 语义                                                               |
+| -------------- | ------------------------- | ------------------------------------------------------------------ |
+| `kind`         | 全部                      | `cli` 或 `ephemeral-client`；省略时归一为 `cli`                    |
+| `clientRef`    | `ephemeral-client`        | 必填，引用消费者 registry 中的临时 Client Adapter                  |
+| `providers`    | 全部                      | 当前 Carrier 自己持有的可选渠道目录，沿用现有结构                  |
+| `channelsFrom` | 主要为 `ephemeral-client` | 引用另一个 Carrier 的渠道目录，避免复制连接与凭据声明              |
+| `default`      | 全部                      | 当前 Carrier 自己的默认 target 集合，不从渠道来源 Carrier 隐式继承 |
 
 约束：
 

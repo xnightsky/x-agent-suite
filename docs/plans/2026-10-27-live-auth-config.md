@@ -32,11 +32,13 @@
 ### Task 1: 严格认证文件解析与发现
 
 **Files:**
+
 - Create: `packages/llm-fixture/src/live-auth-config.ts`
 - Create: `packages/llm-fixture/tests/live-auth-config.test.ts`
 - Modify: `packages/llm-fixture/src/index.ts`
 
 **Interfaces:**
+
 - Produces:
   - `LIVE_AUTH_CONFIG_PATH_ENV = "E2E_AUTH_CONFIG_PATH"`
   - `LIVE_AUTH_CONFIG_FILE = ".env.auth.yaml"`
@@ -62,6 +64,7 @@
 ### Task 2: 模型认证绑定与来源标记
 
 **Files:**
+
 - Modify: `packages/llm-fixture/src/live-types.ts`
 - Modify: `packages/llm-fixture/src/live-channel.ts`
 - Modify: `packages/llm-fixture/src/live-config.ts`
@@ -69,6 +72,7 @@
 - Existing regression: `packages/llm-fixture/tests/live-config.test.ts`、`live-config-targets.test.ts`（不继续扩张已超 500 行文件）
 
 **Interfaces:**
+
 - Consumes: Task 1 不需要文件读取；本任务只建立声明。
 - Produces:
   - `LiveChannel.auth?: { readonly provider: string }`
@@ -89,12 +93,14 @@
 ### Task 3: 统一凭据来源选择与显式绑定
 
 **Files:**
+
 - Modify: `packages/llm-fixture/src/live-types.ts`
 - Modify: `packages/llm-fixture/src/live-credential.ts`
 - Modify: `packages/llm-fixture/src/live-config.ts`
 - Create: `packages/llm-fixture/tests/live-auth-credential.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 1 `loadLiveAuthConfig`；Task 2 `channel.auth` 与 `channel.credentialSource`。
 - Produces:
   - `LiveCredentialOptions.repoRoot?: string`；继续使用已有 env/homeDir/hooks。
@@ -119,12 +125,14 @@
 ### Task 4: Backend、sniff 与脱敏集成
 
 **Files:**
+
 - Modify: `packages/llm-fixture/src/live.ts`
 - Modify: `packages/llm-fixture/src/sniff-gate.ts`
 - Create: `packages/llm-fixture/tests/live-auth-backend.test.ts`
 - Create: `packages/llm-fixture/tests/live-auth-sniff.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 3 统一 resolver 和 required missing。
 - Produces: `SniffOptions.repoRoot?: string` 与 `SniffOptions.homeDir?: string`，供隔离发现；`LiveBackend.start` 传递 config 的 repoRoot/homeDir/env。
 
@@ -143,6 +151,7 @@
 ### Task 5: 配置文档与全量验收
 
 **Files:**
+
 - Modify: `docs/spec/llm-fixture.md`
 - Modify: `docs/spec/suite-design.md`
 - Modify: `docs/spec/target-tags.md`
@@ -156,6 +165,7 @@
 - Existing research: `docs/research/pi-models-auth-resolution.md`
 
 **Interfaces:**
+
 - Consumes: Tasks 1–4 的最终公开符号和行为。
 - Produces: 用户可复制的完整 `.env.e2e.yaml` / `.env.auth.yaml` 配置文档，包含默认同名、auth.provider、优先级、失败矩阵和安全边界。
 

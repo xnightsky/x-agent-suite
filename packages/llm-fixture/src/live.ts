@@ -118,8 +118,7 @@ export class LiveBackend implements LlmBackend {
       );
       if (
         credential.kind === "missing" &&
-        (credential.required ||
-          this.channelValue!.credential === "harness")
+        (credential.required || this.channelValue!.credential === "harness")
       ) {
         throw new LiveNotConfiguredError(this.carrier, credential.reason);
       }

@@ -29,7 +29,8 @@ export const TARGET_TAG_DICTIONARY_FILE = "config/target-tags/keys.yaml";
 export const TARGET_TAG_INSTANCES_FILE = "config/target-tags/instances.yaml";
 
 /** home 级私有全局实例文件名。 */
-export const TARGET_TAG_GLOBAL_INSTANCES_FILE = ".env.target-tags.instances.yaml";
+export const TARGET_TAG_GLOBAL_INSTANCES_FILE =
+  ".env.target-tags.instances.yaml";
 
 /** TargetTags 静态定义或实例校验错误。 */
 export class TargetTagDefinitionError extends Error {

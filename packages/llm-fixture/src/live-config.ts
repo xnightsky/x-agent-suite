@@ -300,7 +300,12 @@ async function validateOwnCarriers(
       continue;
     }
     const declaration = record ? stripCarrierMetadata(record) : decl;
-    const resolved = await validateOwnCarrier(carrier, declaration, record, options);
+    const resolved = await validateOwnCarrier(
+      carrier,
+      declaration,
+      record,
+      options,
+    );
     if ("reason" in resolved) {
       state.invalid[carrier] = resolved.reason;
       continue;

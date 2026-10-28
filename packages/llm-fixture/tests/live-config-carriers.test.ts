@@ -9,10 +9,7 @@ import os from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { stringify as stringifyYaml } from "yaml";
-import {
-  loadLiveConfig,
-  resolveLiveTargets,
-} from "@x-agent-suite/llm-fixture";
+import { loadLiveConfig, resolveLiveTargets } from "@x-agent-suite/llm-fixture";
 
 async function makeDirs(): Promise<{
   root: string;

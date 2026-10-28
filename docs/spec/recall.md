@@ -6,11 +6,11 @@
 
 四种输入职责固定：
 
-| 输入                  | 职责                                                                                                      |
-| --------------------- | --------------------------------------------------------------------------------------------------------- |
-| Recall YAML           | case 测试意图、文件内 `plans`、全局/case `context`，最终只编译为 `ScenarioSpec.provision`。               |
-| 执行 Plan YAML        | 只声明 `version: 1` 与 `effects: none/use/inline`。不得包含 driver、mode、cliRef、criteria 或 provision。 |
-| 独立 registry TS 模块 | 注册 Criterion、CLI/临时 Client execution profiles、EffectsProfile 与可选 transport；不是 Recall config 闭包。 |
+| 输入                  | 职责                                                                                                            |
+| --------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Recall YAML           | case 测试意图、文件内 `plans`、全局/case `context`，最终只编译为 `ScenarioSpec.provision`。                     |
+| 执行 Plan YAML        | 只声明 `version: 1` 与 `effects: none/use/inline`。不得包含 driver、mode、cliRef、criteria 或 provision。       |
+| 独立 registry TS 模块 | 注册 Criterion、CLI/临时 Client execution profiles、EffectsProfile 与可选 transport；不是 Recall config 闭包。  |
 | `.env.e2e.yaml`       | 复用 carrier/provider/model、Carrier kind/clientRef/channelsFrom、凭据与私密 TargetTags，不建立第二套模型配置。 |
 
 不读取、发现或兼容 `x-agent-suite.config.ts`。旧 `--config` 会返回定义错误。包内不预置 metric、具体宿主 profile 或领域 EffectsProfile。

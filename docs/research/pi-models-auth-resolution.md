@@ -18,13 +18,13 @@
 
 ## 2. 结论速览
 
-| 目标问题 | 结论 |
-| --- | --- |
-| 两个文件如何关联 | `models.json.providers` 的对象键就是 provider ID；`auth.json` 以**完全相同的 provider ID**索引凭据。不是按 `name`、`baseUrl`、API 类型或模型 ID 匹配。 |
-| 凭据优先级 | 对同一 provider：`--api-key` 运行时覆盖 → `auth.json` 条目 → `models.json` 的 `apiKey` → 内建 provider 的环境变量或 ambient credentials。后两级依赖 provider 是否有对应解析器；provider 扩展可改变行为。 |
-| 自定义 provider 能否用 `/login` | **API key 可以。** 普通静态自定义 provider 会获得默认 API-key 登录方法，`/login` 按 provider ID 写入 `auth.json`，之后该存储条目优先于 `models.json.apiKey`。**OAuth 不是通用能力**：必须有内建、扩展或 `oauth: "radius"` 提供的 OAuth 处理器。 |
-| 条目结构 | API key：`{ type: "api_key", key?: string, env?: Record<string, string> }`；OAuth：`{ type: "oauth", access: string, refresh: string, expires: number, ...providerSpecificFields }`。`expires` 与 `Date.now()` 比较，是毫秒时间戳。 |
-| 何时解析、是否回退 | 配置加载与可用性检查会读取部分凭据；实际请求前还会解析。缺失条目才进入下一来源；已有条目的类型无匹配处理器、OAuth 刷新失败、`models.json.apiKey` 插值/命令失败均不会静默改选更低优先级来源。存储 API-key 解析器可以在自身内部按字段补环境值，这是例外而非通用的“失败后回退”。 |
+| 目标问题                        | 结论                                                                                                                                                                                                                                                                          |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 两个文件如何关联                | `models.json.providers` 的对象键就是 provider ID；`auth.json` 以**完全相同的 provider ID**索引凭据。不是按 `name`、`baseUrl`、API 类型或模型 ID 匹配。                                                                                                                        |
+| 凭据优先级                      | 对同一 provider：`--api-key` 运行时覆盖 → `auth.json` 条目 → `models.json` 的 `apiKey` → 内建 provider 的环境变量或 ambient credentials。后两级依赖 provider 是否有对应解析器；provider 扩展可改变行为。                                                                      |
+| 自定义 provider 能否用 `/login` | **API key 可以。** 普通静态自定义 provider 会获得默认 API-key 登录方法，`/login` 按 provider ID 写入 `auth.json`，之后该存储条目优先于 `models.json.apiKey`。**OAuth 不是通用能力**：必须有内建、扩展或 `oauth: "radius"` 提供的 OAuth 处理器。                               |
+| 条目结构                        | API key：`{ type: "api_key", key?: string, env?: Record<string, string> }`；OAuth：`{ type: "oauth", access: string, refresh: string, expires: number, ...providerSpecificFields }`。`expires` 与 `Date.now()` 比较，是毫秒时间戳。                                           |
+| 何时解析、是否回退              | 配置加载与可用性检查会读取部分凭据；实际请求前还会解析。缺失条目才进入下一来源；已有条目的类型无匹配处理器、OAuth 刷新失败、`models.json.apiKey` 插值/命令失败均不会静默改选更低优先级来源。存储 API-key 解析器可以在自身内部按字段补环境值，这是例外而非通用的“失败后回退”。 |
 
 ## 3. provider 键与 `auth.json` 条目如何匹配
 
@@ -51,12 +51,12 @@
 
 **[源码结论]** 当前实现与文档一致，但需补充以下边界：
 
-| 优先级 | 来源 | 实现与范围 |
-| --- | --- | --- |
-| 1 | CLI `--api-key` | `RuntimeCredentials.read()` 先查 provider 维度的内存覆盖，命中就构造 `{ type: "api_key", key }`，不读取持久条目。证据：`$PI/dist/core/runtime-credentials.js:8-21`。 |
-| 2 | `auth.json` | `resolveProviderAuthWithSignal()` 先读存储条目；OAuth 条目交给 OAuth 处理器，API-key 条目交给 API-key 处理器。证据：`$AI/dist/auth/resolve.js:14-34`。 |
-| 3 | `models.json.apiKey` | 没有存储条目时，组合后的 API-key 解析器先处理 `rawKey`；其值来自 `models.json`（若无更高层扩展覆盖）。证据：`$PI/dist/core/provider-composer.js:225-227,284-302`，关键函数 `configuredApiKey`、`composeApiKeyAuth.resolve`。 |
-| 4 | provider 环境变量 / ambient | 没有存储条目且没有 `models.json.apiKey` 时，才调用继承自内建 provider 的 `resolve()`。证据：`$PI/dist/core/provider-composer.js:293-302`。标准环境变量解析器依次读取其声明的变量，证据：`$AI/dist/auth/helpers.js:7-29`，关键函数 `envApiKeyAuth`。 |
+| 优先级 | 来源                        | 实现与范围                                                                                                                                                                                                                                          |
+| ------ | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1      | CLI `--api-key`             | `RuntimeCredentials.read()` 先查 provider 维度的内存覆盖，命中就构造 `{ type: "api_key", key }`，不读取持久条目。证据：`$PI/dist/core/runtime-credentials.js:8-21`。                                                                                |
+| 2      | `auth.json`                 | `resolveProviderAuthWithSignal()` 先读存储条目；OAuth 条目交给 OAuth 处理器，API-key 条目交给 API-key 处理器。证据：`$AI/dist/auth/resolve.js:14-34`。                                                                                              |
+| 3      | `models.json.apiKey`        | 没有存储条目时，组合后的 API-key 解析器先处理 `rawKey`；其值来自 `models.json`（若无更高层扩展覆盖）。证据：`$PI/dist/core/provider-composer.js:225-227,284-302`，关键函数 `configuredApiKey`、`composeApiKeyAuth.resolve`。                        |
+| 4      | provider 环境变量 / ambient | 没有存储条目且没有 `models.json.apiKey` 时，才调用继承自内建 provider 的 `resolve()`。证据：`$PI/dist/core/provider-composer.js:293-302`。标准环境变量解析器依次读取其声明的变量，证据：`$AI/dist/auth/helpers.js:7-29`，关键函数 `envApiKeyAuth`。 |
 
 `models.json.apiKey: "$SOME_VAR"` 虽然也从环境取值，但在来源顺序上仍属于第 3 级“配置的 API key”，不是第 4 级内建 provider 的自动环境认证。普通、无内建基座的自定义 provider 不会凭空知道某个环境变量；应通过 `apiKey` 插值、`/login` 或扩展显式提供。
 
@@ -148,23 +148,23 @@ OAuth 条目：
 
 两种命令值的缓存语义不同：
 
-| 配置位置 | 时机与缓存 |
-| --- | --- |
+| 配置位置                                  | 时机与缓存                                                                                                                                                                                                                                                                                     |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `auth.json` 的 `api_key.key = "!command"` | 首次读取并需要该 key 时执行，结果（包括失败得到的 `undefined`）按命令字符串缓存到进程结束。文档：`$PI/docs/providers.md:71-84`；源码：`$PI/dist/core/auth-storage.js:376-384`、`$PI/dist/core/resolve-config-value.js:181-187`。首次需要可能发生在启动可用性检查，不应理解为只在 HTTP 前执行。 |
-| `models.json` 的 `apiKey = "!command"` | 请求时执行且不缓存；文档明确说明见 `$PI/docs/models.md:63-67`。实现走 `resolveConfigValueOrThrow()` → `resolveConfigValueUncached()`，证据：`$PI/dist/core/resolve-config-value.js:192-217`。 |
+| `models.json` 的 `apiKey = "!command"`    | 请求时执行且不缓存；文档明确说明见 `$PI/docs/models.md:63-67`。实现走 `resolveConfigValueOrThrow()` → `resolveConfigValueUncached()`，证据：`$PI/dist/core/resolve-config-value.js:192-217`。                                                                                                  |
 
 ### 6.2 缺失与失效时的回退矩阵
 
 **[源码结论]** 优先级是“选择哪个来源”，不是所有错误都依次尝试下一个来源：
 
-| 情况 | 当前行为 | 证据 |
-| --- | --- | --- |
-| 没有 `auth.json` 条目 | 继续尝试 `models.json.apiKey`，再尝试继承的环境/ambient 解析器。 | `$AI/dist/auth/resolve.js:24-38`；`$PI/dist/core/provider-composer.js:284-302`。 |
-| 有存储条目，但类型没有对应处理器 | 返回 `undefined`，不进入 `models.json` 或 ambient。 | `$AI/dist/auth/resolve.js:24-38`。源码注释也明确“无匹配 handler 不静默环境回退”，见同文件 `:4-9`。 |
-| OAuth 距到期不足默认 5 分钟 | 在存储锁内刷新并持久化；刷新失败抛 `ModelsError("oauth")`，不改用 `models.json` 或环境变量。 | `$AI/dist/auth/resolve.js:46-47,62-95,100-122`。 |
-| `models.json.apiKey` 的环境插值缺值或命令失败 | `resolveConfigValueOrThrow()` 抛错，不转入继承的环境解析器。 | `$PI/dist/core/provider-composer.js:293-301`；`$PI/dist/core/resolve-config-value.js:199-217`。 |
-| 所有来源都未配置 | 请求准备阶段抛 `Provider is not configured: <provider>`；模型选择器则只显示有可用认证的模型。 | `$PI/dist/core/model-runtime.js:452-463`；`$PI/docs/models.md:27-30,209-217`。 |
-| API key 已被选择但被上游判定无效 | 本地解析器不探测上游有效性；请求链只把当次解析结果交给 provider，没有“收到 401 后换下一来源”的逻辑。实际 401、重试与刷新表现未做 live 验证。 | `$AI/dist/auth/helpers.js:16-28`；`$PI/dist/core/model-runtime.js:452-492`。 |
+| 情况                                          | 当前行为                                                                                                                                     | 证据                                                                                               |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| 没有 `auth.json` 条目                         | 继续尝试 `models.json.apiKey`，再尝试继承的环境/ambient 解析器。                                                                             | `$AI/dist/auth/resolve.js:24-38`；`$PI/dist/core/provider-composer.js:284-302`。                   |
+| 有存储条目，但类型没有对应处理器              | 返回 `undefined`，不进入 `models.json` 或 ambient。                                                                                          | `$AI/dist/auth/resolve.js:24-38`。源码注释也明确“无匹配 handler 不静默环境回退”，见同文件 `:4-9`。 |
+| OAuth 距到期不足默认 5 分钟                   | 在存储锁内刷新并持久化；刷新失败抛 `ModelsError("oauth")`，不改用 `models.json` 或环境变量。                                                 | `$AI/dist/auth/resolve.js:46-47,62-95,100-122`。                                                   |
+| `models.json.apiKey` 的环境插值缺值或命令失败 | `resolveConfigValueOrThrow()` 抛错，不转入继承的环境解析器。                                                                                 | `$PI/dist/core/provider-composer.js:293-301`；`$PI/dist/core/resolve-config-value.js:199-217`。    |
+| 所有来源都未配置                              | 请求准备阶段抛 `Provider is not configured: <provider>`；模型选择器则只显示有可用认证的模型。                                                | `$PI/dist/core/model-runtime.js:452-463`；`$PI/docs/models.md:27-30,209-217`。                     |
+| API key 已被选择但被上游判定无效              | 本地解析器不探测上游有效性；请求链只把当次解析结果交给 provider，没有“收到 401 后换下一来源”的逻辑。实际 401、重试与刷新表现未做 live 验证。 | `$AI/dist/auth/helpers.js:16-28`；`$PI/dist/core/model-runtime.js:452-492`。                       |
 
 一个必须保留的细粒度例外：**存储 API-key 条目存在，不等于其 provider 解析器绝不读取环境。** `ApiKeyAuth.resolve` 的契约允许 `credential.key ?? env(...)`、`credential.env?.NAME ?? env(...)` 的按字段合并，证据：`$AI/dist/auth/types.d.ts:166-195`。例如：
 
@@ -213,6 +213,7 @@ OAuth 条目：
 ### 9.1 `models.json` 有没有 `authRef` / `authProvider` / `credentialRef`
 
 **[源码结论] 没有。** 当前 provider 配置的完整字段集合是 `name`、`baseUrl`、`apiKey`、`api`、`oauth`、`headers`、`compat`、`authHeader`、`models`、`modelOverrides`。证据：
+
 - 生成 schema 的 provider 属性清单：`$PI/schemas/models.schema.json:18-63,204-205`。
 - TypeScript 源 schema 对应的编译声明：`$PI/dist/core/model-config.d.ts:378-515`。
 - 实际加载使用的 `ProviderConfigSchema`：`$PI/dist/core/model-config.js:66-90`。
@@ -232,17 +233,17 @@ OAuth 条目：
 
 ### 9.3 各配置分别绑定什么
 
-| 机制 | 显式选择的对象 | 不属于什么 | 证据 |
-| --- | --- | --- | --- |
-| `models.json.providers.<id>` 与 `auth.json.<id>` 同键 | 某个 provider 的持久凭据条目 | 不是条目 UUID、profile 引用或 handler 引用 | `$PI/dist/core/auth-storage.js:376-384` |
-| `models.json.apiKey` | 直接附着于该 provider 的**凭据值来源**：字面量、环境插值或命令输出 | 不引用 `auth.json`，也不选择 OAuth handler | `$PI/docs/models-configuration.md:15-18`；`$PI/dist/core/provider-composer.js:225-227,284-302` |
-| `models.json.oauth: "radius"` | **命名的 OAuth 流程/handler 选择**；当前 schema 只允许 Radius，并要求 `baseUrl` | 不引用某个 OAuth 凭据条目，不能填写任意 handler 名 | `$PI/docs/models-configuration.md:19-20`；`$PI/dist/core/model-runtime.js:119-132`；`$AI/dist/providers/radius.js:7-24` |
-| `models.json.headers` | 请求头字段及其字面量/环境/命令值，属于**请求构造** | 不选择凭据来源或认证 handler | `$PI/docs/models-configuration.md:20-22`；`$PI/dist/core/provider-composer.js:305-308` |
-| `models.json.authHeader` | 把当前已解析的 API key **投影**为 `Authorization: Bearer`，属于输出映射 | 不决定 key 来自运行时、存储、模型配置还是环境 | `$PI/docs/models-configuration.md:22`；`$PI/dist/core/provider-composer.js:216-223` |
-| `auth.json` 条目的 `type` | 在 `provider.auth.apiKey` 与 `provider.auth.oauth` 之间做**类型分派** | 不能按名字选择任意 handler；类型无匹配 handler 时失败 | `$AI/dist/auth/resolve.js:24-38` |
-| 扩展 `registerProvider(name, config)` | 以代码把 legacy `apiKey`/`oauth` 配置及可选登录、刷新、令牌转换行为注册到 `name` 对应的 provider | 不是 `models.json` 的凭据条目引用 | `$PI/dist/core/extensions/types.d.ts:1307-1359,1413-1465`；`$PI/dist/core/provider-composer.js:196-214,312-326` |
-| 扩展 `registerProvider(provider)` | 直接注册完整 provider 实现，其 `provider.auth.apiKey/oauth` 是**代码级 handler 注入** | 不是 JSON 引用；存储凭据仍按 `provider.id` 关联 | `$PI/docs/custom-provider.md:19-30,126-139`；`$AI/dist/models.d.ts:61-84` |
-| 以内建 provider ID 写 `models.json` 覆盖 | 通过同 ID 组合并继承内建认证实现，同时覆盖模型/endpoint 等字段 | 不是另写 `authProvider` 指针 | `$PI/docs/models.md:67-77`；`$PI/dist/core/model-runtime.js:156-166` |
+| 机制                                                  | 显式选择的对象                                                                                   | 不属于什么                                            | 证据                                                                                                                    |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `models.json.providers.<id>` 与 `auth.json.<id>` 同键 | 某个 provider 的持久凭据条目                                                                     | 不是条目 UUID、profile 引用或 handler 引用            | `$PI/dist/core/auth-storage.js:376-384`                                                                                 |
+| `models.json.apiKey`                                  | 直接附着于该 provider 的**凭据值来源**：字面量、环境插值或命令输出                               | 不引用 `auth.json`，也不选择 OAuth handler            | `$PI/docs/models-configuration.md:15-18`；`$PI/dist/core/provider-composer.js:225-227,284-302`                          |
+| `models.json.oauth: "radius"`                         | **命名的 OAuth 流程/handler 选择**；当前 schema 只允许 Radius，并要求 `baseUrl`                  | 不引用某个 OAuth 凭据条目，不能填写任意 handler 名    | `$PI/docs/models-configuration.md:19-20`；`$PI/dist/core/model-runtime.js:119-132`；`$AI/dist/providers/radius.js:7-24` |
+| `models.json.headers`                                 | 请求头字段及其字面量/环境/命令值，属于**请求构造**                                               | 不选择凭据来源或认证 handler                          | `$PI/docs/models-configuration.md:20-22`；`$PI/dist/core/provider-composer.js:305-308`                                  |
+| `models.json.authHeader`                              | 把当前已解析的 API key **投影**为 `Authorization: Bearer`，属于输出映射                          | 不决定 key 来自运行时、存储、模型配置还是环境         | `$PI/docs/models-configuration.md:22`；`$PI/dist/core/provider-composer.js:216-223`                                     |
+| `auth.json` 条目的 `type`                             | 在 `provider.auth.apiKey` 与 `provider.auth.oauth` 之间做**类型分派**                            | 不能按名字选择任意 handler；类型无匹配 handler 时失败 | `$AI/dist/auth/resolve.js:24-38`                                                                                        |
+| 扩展 `registerProvider(name, config)`                 | 以代码把 legacy `apiKey`/`oauth` 配置及可选登录、刷新、令牌转换行为注册到 `name` 对应的 provider | 不是 `models.json` 的凭据条目引用                     | `$PI/dist/core/extensions/types.d.ts:1307-1359,1413-1465`；`$PI/dist/core/provider-composer.js:196-214,312-326`         |
+| 扩展 `registerProvider(provider)`                     | 直接注册完整 provider 实现，其 `provider.auth.apiKey/oauth` 是**代码级 handler 注入**            | 不是 JSON 引用；存储凭据仍按 `provider.id` 关联       | `$PI/docs/custom-provider.md:19-30,126-139`；`$AI/dist/models.d.ts:61-84`                                               |
+| 以内建 provider ID 写 `models.json` 覆盖              | 通过同 ID 组合并继承内建认证实现，同时覆盖模型/endpoint 等字段                                   | 不是另写 `authProvider` 指针                          | `$PI/docs/models.md:67-77`；`$PI/dist/core/model-runtime.js:156-166`                                                    |
 
 所以，“显式绑定”的记忆在三种意义上都可能成立：**同 ID 关联凭据、`oauth: "radius"` 选择命名流程、扩展代码注入 handler**。它们都不等于 `models.json` 支持通用的 `authRef`/`credentialRef`。
 

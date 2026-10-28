@@ -25,7 +25,9 @@ export type CarrierChannelResult =
   { readonly channel: LiveChannel } | { readonly reason: string };
 
 /** 校验可选认证文件绑定。 */
-function validateAuth(raw: unknown):
+function validateAuth(
+  raw: unknown,
+):
   | { readonly auth: { readonly provider: string } }
   | { readonly reason: string } {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
@@ -59,7 +61,8 @@ export function validateChannel(raw: unknown): CarrierChannelResult {
       reason: `wire "${String(record.wire)}" 非法（可用: ${VALID_WIRES.join(", ")}）`,
     };
   }
-  const parsedAuth = record.auth === undefined ? undefined : validateAuth(record.auth);
+  const parsedAuth =
+    record.auth === undefined ? undefined : validateAuth(record.auth);
   if (parsedAuth && "reason" in parsedAuth) return parsedAuth;
   const channel: LiveChannel = {
     credentialSource: "model-config",
@@ -114,7 +117,9 @@ export function validateChannel(raw: unknown): CarrierChannelResult {
       record.apiKeyEnv !== undefined ||
       record.credential !== undefined)
   ) {
-    return { reason: "auth.provider 不能与内联 apiKey/apiKeyEnv/credential 同时声明" };
+    return {
+      reason: "auth.provider 不能与内联 apiKey/apiKeyEnv/credential 同时声明",
+    };
   }
   if (
     channel.credential === "harness" &&
@@ -207,9 +212,9 @@ export async function resolveCarrierChannel(
       harnessBaseUrl: record.harnessBaseUrl ?? borrowed.harnessBaseUrl,
       ...record,
       ...(record.auth === undefined &&
-        record.credential === undefined &&
-        record.apiKey === undefined &&
-        record.apiKeyEnv === undefined
+      record.credential === undefined &&
+      record.apiKey === undefined &&
+      record.apiKeyEnv === undefined
         ? { credential: "harness" }
         : {}),
     };

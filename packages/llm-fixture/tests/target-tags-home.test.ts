@@ -66,10 +66,7 @@ test("home 私有实例位于公共目录与 live overlay 之间且 live 策略�
         providers: [
           {
             id: "co",
-            tags: [
-              "provider.usage.api-payg",
-              "provider.usage.live.allowed",
-            ],
+            tags: ["provider.usage.api-payg", "provider.usage.live.allowed"],
           },
         ],
       },
@@ -116,11 +113,13 @@ test("home 私有实例位于公共目录与 live overlay 之间且 live 策略�
   const requirements = {
     direct: {
       allOf: ["provider-model.api.complete", "model.inference.chat"],
-      anyOf: [[
-        "provider-model.usage.api-payg",
-        "provider-model.usage.api-credit",
-        "provider-model.usage.api-free",
-      ]],
+      anyOf: [
+        [
+          "provider-model.usage.api-payg",
+          "provider-model.usage.api-credit",
+          "provider-model.usage.api-free",
+        ],
+      ],
     },
     borrowed: { allOf: [] },
   } as const;

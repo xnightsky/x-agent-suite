@@ -32,7 +32,9 @@ async function loadYaml(
 }
 
 test("provider 的 auth.provider 在默认 target 展开后保留", async (t) => {
-  const load = await loadYaml(t, `carriers:
+  const load = await loadYaml(
+    t,
+    `carriers:
   carrier-a:
     default: [model-a]
     providers:
@@ -42,7 +44,8 @@ test("provider 的 auth.provider 在默认 target 展开后保留", async (t) =>
         baseUrl: https://example.invalid/v1
         wire: openai-chat
         models: [model-a]
-`);
+`,
+  );
   assert.equal(load.kind, "loaded");
   if (load.kind !== "loaded") return;
   assert.deepEqual(load.invalid, {});
@@ -51,7 +54,9 @@ test("provider 的 auth.provider 在默认 target 展开后保留", async (t) =>
   assert.equal(result.kind, "configured");
   if (result.kind !== "configured") return;
   assert.equal(result.targets.length, 1);
-  assert.deepEqual(result.targets[0]?.channel.auth, { provider: "shared-auth" });
+  assert.deepEqual(result.targets[0]?.channel.auth, {
+    provider: "shared-auth",
+  });
 });
 
 test("auth 绑定与内联凭据或未知字段互斥", async (t) => {
@@ -67,7 +72,9 @@ test("auth 绑定与内联凭据或未知字段互斥", async (t) => {
   ];
   for (const [index, declaration] of declarations.entries()) {
     await t.test(`非法绑定 ${index + 1}`, async () => {
-      const load = await loadYaml(t, `carriers:
+      const load = await loadYaml(
+        t,
+        `carriers:
   carrier-a:
     default: [model-a]
     providers:
@@ -76,7 +83,8 @@ test("auth 绑定与内联凭据或未知字段互斥", async (t) => {
         baseUrl: https://example.invalid/v1
         wire: openai-chat
         models: [model-a]
-`);
+`,
+      );
       assert.equal(load.kind, "loaded");
       if (load.kind !== "loaded") return;
       assert.equal(typeof load.invalid["carrier-a"], "string");
@@ -106,7 +114,9 @@ test("from:harness 仅在未显式绑定 auth 时隐含借用凭据", async (t) 
   );
   assert.equal(bound.kind, "loaded");
   if (bound.kind !== "loaded") return;
-  assert.deepEqual(bound.channels["carrier-a"]?.auth, { provider: "shared-auth" });
+  assert.deepEqual(bound.channels["carrier-a"]?.auth, {
+    provider: "shared-auth",
+  });
   assert.equal(bound.channels["carrier-a"]?.credential, undefined);
 
   const borrowed = await loadYaml(
@@ -123,13 +133,16 @@ test("from:harness 仅在未显式绑定 auth 时隐含借用凭据", async (t) 
 });
 
 test("文件渠道与运行时凭据覆盖保留不同 credentialSource", async (t) => {
-  const load = await loadYaml(t, `carriers:
+  const load = await loadYaml(
+    t,
+    `carriers:
   carrier-a:
     provider: provider-a
     model: model-a
     baseUrl: https://example.invalid/v1
     wire: openai-chat
-`);
+`,
+  );
   const fromFile = resolveLiveChannel(load, "carrier-a", {});
   assert.equal(fromFile.kind, "configured");
   if (fromFile.kind !== "configured") return;
@@ -170,14 +183,17 @@ test("runtime 凭据覆盖替换模型层认证意图而不是叠加冲突", asy
   ];
   for (const [index, item] of cases.entries()) {
     await t.test(`覆盖组合 ${index + 1}`, async () => {
-      const load = await loadYaml(t, `carriers:
+      const load = await loadYaml(
+        t,
+        `carriers:
   carrier-a:
     provider: provider-a
     model: model-a
     ${item.declaration}
     baseUrl: https://example.invalid/v1
     wire: openai-chat
-`);
+`,
+      );
       const result = resolveLiveChannel(load, "carrier-a", item.env);
       assert.equal(result.kind, "configured", JSON.stringify(result));
       if (result.kind !== "configured") return;
@@ -194,14 +210,17 @@ test("runtime 凭据覆盖替换模型层认证意图而不是叠加冲突", asy
 });
 
 test("空字符串 runtime 覆盖仍保留 runtime 来源且替换内联凭据", async (t) => {
-  const load = await loadYaml(t, `carriers:
+  const load = await loadYaml(
+    t,
+    `carriers:
   carrier-a:
     provider: provider-a
     model: model-a
     apiKey: inline-secret
     baseUrl: https://example.invalid/v1
     wire: openai-chat
-`);
+`,
+  );
   for (const field of ["API_KEY", "API_KEY_ENV"] as const) {
     const result = resolveLiveChannel(load, "carrier-a", {
       [`E2E_LIVE_CARRIER_A_${field}`]: "",
@@ -210,6 +229,9 @@ test("空字符串 runtime 覆盖仍保留 runtime 来源且替换内联凭据",
     if (result.kind !== "configured") return;
     assert.equal(result.channel.credentialSource, "runtime");
     assert.equal(result.channel.apiKey, field === "API_KEY" ? "" : undefined);
-    assert.equal(result.channel.apiKeyEnv, field === "API_KEY_ENV" ? "" : undefined);
+    assert.equal(
+      result.channel.apiKeyEnv,
+      field === "API_KEY_ENV" ? "" : undefined,
+    );
   }
 });
