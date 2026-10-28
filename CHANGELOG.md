@@ -10,10 +10,13 @@
 - Recall 显式执行收敛：移除 `x-agent-suite.config.ts` 依赖，新增显式 carrier/provider/model 选择、独立 Criterion/profile/EffectsProfile registry、effects-only Plan、文件内 `plans/context.plan`、direct 纯文本与唯一 borrowed profile；无执行级 ProvisionPlan，Runner 不合并 provision，并保留 target/mode/cliRef/provision/effects 报告归因。
 - live 新增可选 `.env.auth.yaml`：按 provider ID 或 `auth.provider` 显式绑定 API key，支持 `E2E_AUTH_CONFIG_PATH`、repo/home 发现、runtime > auth-file > model-config 优先级、失败不回退及 backend/sniff 统一脱敏；配置参考与教程同步。
 - `install:global` package script：显式接收正式制品目录，先校验清单、SHA-256 与路径边界，再全局安装核心 CLI；不自动构建/发布，不安装 PTY，不初始化用户配置，新增失败回归与隔离全局安装验收说明。
+- Recall 单次 `--execution-params <JSON对象>` / `executionParams` API：按 case/repeat 隔离透传给已选 Profile/Adapter，不改变渠道、权限或路由；新增独立消费者入口 `x-agent-suite/profiles/pi-config`，复用原生模型配置并默认继承宿主思考档位，仅显式 `thinkingLevel` 覆盖隔离 settings。
 
 ### Fixed
 
 - 核心制品按白名单携带公共 TargetTags 词典与实例，默认加载兼容源码和安装后的 `dist/` 布局，不再要求消费者指向源码仓；仓库外冒烟增加隔离 home 的默认公共标签、Recall 前置装载和独立 CLI live 拒绝门禁验证（零 token）。
+- Recall Carrier 路由修正（行为变更）：`kind: cli`（含省略 kind）始终选择真实 CLI 的唯一 borrowed Profile，不再内建 HTTP direct；纯渠道调用须迁移为 `kind: ephemeral-client + clientRef`。borrowed 接受真实 api-payg/api-credit/api-free，不必伪造 subscription；unknown 与审批门禁不变。
+- Pi live 配置不再套用 fixture 的 `reasoning:false` / `defaultThinkingLevel:"off"`；保留原生 provider ID、模型能力、思考映射与分档采样，仅在隔离目录写入已选渠道/凭据，不改真实 HOME。制品冒烟增加默认思考保真断言。
 
 ## 0.6.1 - 2026-10-19
 

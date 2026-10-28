@@ -1,6 +1,6 @@
 /**
  * @module @x-agent-suite/recall/execution
- * 按 Carrier kind、effects 与场景需求选择内置 direct、borrowed 或临时 Client Adapter；不在 Plan DSL 暴露 mode/cliRef。
+ * 仅按 Carrier kind 选择真实 CLI borrowed 或临时 Client direct Adapter；不在 Plan DSL 暴露 mode/cliRef。
  * 不变量：live 与 TargetTags fail-closed；borrowed 候选与注册 profile 的交集必须唯一。
  */
 import {
@@ -18,7 +18,7 @@ import type { RecallExecutionProfile, RecallRegistry } from "./registry.ts";
 export interface RecallResolvedExecution {
   /** 完整 carrier/provider/model。 */
   readonly target: ResolvedLiveTarget;
-  /** 由 effects 和场景需求推导，不由 Plan DSL 指定。 */
+  /** 由 Carrier kind 固定，不由 Plan DSL 或运行参数指定。 */
   readonly mode: TargetAccessMode;
   /** borrowed 的唯一注册 profile。 */
   readonly cliRef?: string;
@@ -59,6 +59,9 @@ function borrowedRequirements(effects: RecallEffects): TargetTagRequirement {
     ],
     anyOf: [
       [
+        "provider-model.usage.api-payg",
+        "provider-model.usage.api-credit",
+        "provider-model.usage.api-free",
         "provider-model.usage.cli-subscription",
         "provider-model.usage.ci-subscription",
         "provider-model.usage.third-party-subscription",
@@ -168,7 +171,7 @@ function selectBorrowed(
   };
 }
 
-/** 选择 ephemeral-client 的自定义 direct Adapter；不得回退内置 direct。 */
+/** 选择 ephemeral-client 的自定义 direct Adapter；不得回退其他实现。 */
 function selectEphemeralClient(
   target: ResolvedLiveTarget,
   catalog: TargetTagCatalog,
@@ -188,13 +191,12 @@ function selectEphemeralClient(
   return { ...selected, clientRef, profile };
 }
 
-/** 解析一个 target；requireBorrowed 由显式 effects 或场景 provision 在外层推导。 */
+/** 按 Carrier kind 解析一个 target；effects 只约束能力，不切换执行路径。 */
 export function resolveRecallExecution(options: {
   readonly target: ResolvedLiveTarget;
   readonly catalog: TargetTagCatalog;
   readonly effects: RecallEffects;
   readonly registry: RecallRegistry;
-  readonly requireBorrowed: boolean;
   readonly liveReviewApproved: boolean;
 }): RecallResolvedExecution {
   if (options.target.kind === "ephemeral-client") {
@@ -206,18 +208,11 @@ export function resolveRecallExecution(options: {
       options.liveReviewApproved,
     );
   }
-  return options.requireBorrowed
-    ? selectBorrowed(
-        options.target,
-        options.catalog,
-        options.effects,
-        options.registry,
-        options.liveReviewApproved,
-      )
-    : selectDirect(
-        options.target,
-        options.catalog,
-        options.effects,
-        options.liveReviewApproved,
-      );
+  return selectBorrowed(
+    options.target,
+    options.catalog,
+    options.effects,
+    options.registry,
+    options.liveReviewApproved,
+  );
 }

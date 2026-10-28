@@ -60,8 +60,9 @@ x-agent-suite recall   --carrier consumer-carrier   --live-config private-live.y
 
 - 无 `--carrier/--provider/--model` 时拒绝，不运行任何 default。
 - `--carrier` 可展开多个 defaults；`--provider/--model` 继续过滤，不追加其他 default。
-- 无 Plan 且全部场景无 provision 时才允许 direct 纯文本。这里有场景 provision，因此必须显式 `--plan` 并由唯一 borrowed profile 执行。
+- `kind: cli`（含省略 kind）始终走唯一 borrowed Profile；纯渠道调用使用 `kind: ephemeral-client + clientRef` 的自定义 direct Adapter。这里有场景 provision，因此还必须显式 `--plan`。
 - `--config`、`--mode`、`--cli-ref` 均不是合法 Recall 参数。
+- 单次运行参数经 `--execution-params <JSON对象>` 交给选中的 Profile/Adapter，不改路由或权限。例如思考强度由消费者映射到隔离配置；未指定时继承宿主默认，见[宿主配置保真](../../spec/host-config-projection.md)。
 
 ## 实际执行链
 

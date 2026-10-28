@@ -7,7 +7,11 @@
     "declarationMap": false,
     "sourceMap": false
   },
-  "include": ["packages/*/src/**/*.ts", "packaging/entries/**/*.ts"],
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packaging/entries/**/*.ts",
+    "profiles/**/*.ts"
+  ],
   "exclude": [
     "node_modules",
     "**/node_modules",

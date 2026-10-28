@@ -2,6 +2,7 @@
 import { MockDriver } from "@x-agent-suite/driver";
 import { textContains } from "@x-agent-suite/criteria";
 import type { RecallRegistry } from "../../src/registry.ts";
+import { createDirectClient } from "./direct-client.ts";
 
 export interface RecallRegistryTestState {
   transports: { model: string; messageCount: number }[];
@@ -39,6 +40,10 @@ const registry: RecallRegistry = {
     };
   },
   profiles: {
+    "fixture-direct": {
+      carrier: "fixture-carrier",
+      createDriver: ({ backend }) => createDirectClient(backend),
+    },
     "fixture-cli-0": {
       carrier: "fixture-carrier",
       createDriver: (context) => {

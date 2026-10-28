@@ -32,6 +32,8 @@ export interface RecallProfileDriverContext {
   readonly clientRef?: string;
   /** 当前显式 effects；场景 provision 仍在 spec 内，不做执行级合并。 */
   readonly effects: RecallEffects;
+  /** 本次命令的运行参数；消费者必须校验支持的字段，不得改变 target 或安全策略。 */
+  readonly executionParams: Readonly<Record<string, unknown>>;
 }
 
 /** 消费者 CLI 或临时 Client 执行实现。 */

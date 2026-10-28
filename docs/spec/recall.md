@@ -4,7 +4,7 @@
 
 `@x-agent-suite/recall` 把 Recall YAML 编译为现有 `ScenarioSpec[]`，再复用同一个 Runner 的 repeat、判据调度和报告。**没有执行级 ProvisionPlan，也不做执行 provision 与场景 provision 合并。**
 
-四种输入职责固定：
+五种输入职责固定：
 
 | 输入                  | 职责                                                                                                            |
 | --------------------- | --------------------------------------------------------------------------------------------------------------- |
@@ -12,8 +12,9 @@
 | 执行 Plan YAML        | 只声明 `version: 1` 与 `effects: none/use/inline`。不得包含 driver、mode、cliRef、criteria 或 provision。       |
 | 独立 registry TS 模块 | 注册 Criterion、CLI/临时 Client execution profiles、EffectsProfile 与可选 transport；不是 Recall config 闭包。  |
 | `.env.e2e.yaml`       | 复用 carrier/provider/model、Carrier kind/clientRef/channelsFrom、凭据与私密 TargetTags，不建立第二套模型配置。 |
+| 本次命令执行参数      | `--execution-params <JSON对象>`，仅交给已选 Profile/Adapter；不参与渠道、权限或执行路径选择。                   |
 
-不读取、发现或兼容 `x-agent-suite.config.ts`。旧 `--config` 会返回定义错误。包内不预置 metric、具体宿主 profile 或领域 EffectsProfile。
+不读取、发现或兼容 `x-agent-suite.config.ts`。旧 `--config` 会返回定义错误。Recall 不预置 metric、具体宿主 profile 或领域 EffectsProfile；独立消费者配置投影入口见 [宿主配置保真](./host-config-projection.md)。
 
 ## CLI 与 target 选择
 
@@ -21,7 +22,7 @@
 x-agent-suite recall \
   --carrier <id> [--provider <id>] [--model <id>] \
   [--live-config <path>] [--registry <module.ts>] [--plan <yaml>] \
-  [--approve-live] [--repeat <n>] [--out-dir <path>] [--root-dir <path>] \
+  [--execution-params <json-object>] [--approve-live] [--repeat <n>] [--out-dir <path>] [--root-dir <path>] \
   [YAML|目录]
 ```
 
@@ -29,8 +30,8 @@ x-agent-suite recall \
 - `--carrier` 展开该 carrier 的 default targets，保持声明顺序，可多个，由外层逐 target 执行。
 - `--provider` 在已选范围继续过滤 defaults；`--model` 从可选目录继续定位具体模型，歧义时失败。显式选择不追加其他 default。
 - `--live-config` 映射为本次 `E2E_LIVE_CONFIG_PATH`；省略时沿用既有配置发现链。
-- CLI 不提供 `--mode/--cli-ref`。direct/borrowed 由 effects、场景 provision、TargetTags 和注册实现共同决定。
-- `kind: ephemeral-client` 的 Carrier 通过 `clientRef` 选择同 carrier 注册 Adapter，使用自定义 direct 路径；未注册或 carrier 不匹配即失败，不回退内置 direct。详见 [ephemeral-client.md](./ephemeral-client.md)。
+- CLI 不提供 `--mode/--cli-ref`。路径只由 Carrier kind 决定：`cli`（含省略 kind）必须 borrowed，`ephemeral-client` 必须注册自定义 direct Adapter；effects/provision 只约束执行能力，不改变路径。
+- `kind: ephemeral-client` 的 Carrier 通过 `clientRef` 选择同 carrier 注册 Adapter，使用自定义 direct 路径；未注册或 carrier 不匹配即失败，不回退其他实现。详见 [ephemeral-client.md](./ephemeral-client.md)。
 - 考卷显式目标优先；否则读取 cwd 下 `.recall/*.{yaml,yml}` 第一层，不递归。显式 `--plan` 位于该目录时从默认考卷发现中排除。
 
 ## 实际执行链
@@ -40,7 +41,7 @@ x-agent-suite recall \
   → loadLiveConfig / resolveLiveTargets
   → loadTargetTagCatalog（公共实例 + home 私有全局实例 + 同文件私密 overlay）
   → 每个 target 经 TargetTags/live 审批
-  → 根据 Carrier kind、effects 与场景 provision 选择内置 direct、唯一 borrowed profile 或临时 Client Adapter
+  → 根据 Carrier kind 选择唯一 borrowed profile 或临时 Client direct Adapter
   → 原有 ScenarioSpec / runScenarioRepeat
   → metadata.recallExecution 报告归因
 ```
@@ -49,13 +50,15 @@ x-agent-suite recall \
 
 ## 无 Plan、direct、borrowed 与 ephemeral-client
 
-- 无 Plan 等价于 `effects: none`。只有**所有场景均无 provision**时，才允许内置 direct 多轮纯文本 Driver；不声明 tools，返回工具调用会失败。
+- 无 Plan 等价于 `effects: none`，但不等于 direct。`kind: cli`（含省略 kind）始终需要唯一注册的 borrowed Profile；不再内建 HTTP direct Driver。
 - 任一场景有 provision 而没有 `--plan`：定义错误，direct 不得隐式挂载。
 - 显式 Plan 为 `effects: none` 且场景有 provision：允许 borrowed，由注册 profile 物化 `ScenarioSpec.provision`。
-- effects 为 inline/use：要求 borrowed。TargetTags borrowed 候选与 registry 中同 carrier profile 的交集必须恰好一个；cliRef 由此归因，不靠 CLI 或 Plan 猜选。
-- ephemeral-client 始终通过 `clientRef` 使用自定义 direct Adapter；Adapter 接收 `spec.provision` 与显式 effects Plan，不受内置 direct 的纯文本、无 provision 限制。
+- CLI 的 TargetTags borrowed 候选与 registry 中同 carrier profile 的交集必须恰好一个；cliRef 由此归因，不靠 CLI 参数或 Plan 猜选。effects 只约束工具/会话/隔离等能力。
+- ephemeral-client 始终通过 `clientRef` 使用自定义 direct Adapter；Adapter 接收 `spec.provision` 与显式 effects Plan，其多轮、工具策略和生命周期由消费者兑现。
 - 临时 Client 复用 `registry.profiles[clientRef]`，其 `carrier` 必须与临时 Carrier ID 一致；`createDriver` 上下文中的 `cliRef/clientRef` 恰居其一。
 - `review-required` 只有当前命令带 `--approve-live` 才放行；`disallowed/unknown` 不因审批放行。direct 与 borrowed 之间不降级、不回退。
+- borrowed 接受真实的 `api-payg/api-credit/api-free` 及既有 CLI/CI/第三方订阅、CLI-free；不得伪造 subscription。缺少 usage 或 live 声明仍 fail-closed，`--approve-live` 不放行 unknown。
+- 兼容性变更：旧“省略 kind、无 provision、effects:none”的 HTTP direct 用法须迁移为 `kind: ephemeral-client` 并注册 `clientRef`，不能通过缺注册 Profile 降级为 HTTP。
 
 ## 独立 registry
 
@@ -69,12 +72,20 @@ const registry: RecallRegistry = {
   profiles: {
     "consumer-cli-profile": {
       carrier: "consumer-carrier",
-      createDriver: ({ spec, backend, target, cliRef, effects }) =>
+      createDriver: ({
+        spec,
+        backend,
+        target,
+        cliRef,
+        effects,
+        executionParams,
+      }) =>
         createConsumerDriver({
           backend,
           target,
           cliRef,
           effects,
+          executionParams,
           scenarioProvision: spec.provision,
         }),
     },
@@ -96,6 +107,12 @@ export default registry;
 ```
 
 重复判据、非法 profile、未知 registry 字段均在执行前拒绝。registry 只注册实现，不参与 model/default 或 Carrier kind 选择。
+
+## 单次运行参数
+
+`--execution-params <JSON对象>` 是通用对象透传；程序 API 对应 `LoadRecallOptions.executionParams`。省略时 Adapter 接收 `{}`；每个 case/repeat 获得独立副本，适用于 PTY/JSONL/SDK 等不同机制。解析错误不回显输入，不将原始参数写入日志或报告。
+
+框架只校验对象与可序列化形状。消费者 Profile/Adapter 必须校验字段和类型、拒绝不支持的参数，并映射到宿主原生参数/隔离 settings。参数不得改变 target、凭据、权限 Plan 或 live 审批；禁止经此入口注入 secret、原始命令或任意宿主配置。Pi 的 `thinkingLevel` 由独立消费者入口解释，未提供时继承宿主默认，不在 Recall case YAML、Plan 或 TargetTags 中建第二份事实源。
 
 ## 执行 Plan DSL：仅 effects
 
@@ -190,7 +207,7 @@ cases:
 
 ## 报告、退出码与验证
 
-每次 case/repeat 都创建独立 backend/Driver，同一 case 的内置 direct 多轮保留消息历史；自定义 Adapter 的多轮与生命周期由其执行契约兑现。报告写入：
+每次 case/repeat 都创建独立 backend/Driver；多轮消息与生命周期均由选中的 CLI Profile/Client Adapter 按执行契约兑现。报告写入：
 
 ```text
 metadata.recallExecution = {

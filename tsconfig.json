@@ -25,6 +25,7 @@
     "packages/*/src/**/*.ts",
     "packages/*/tests/**/*.ts",
     "packaging/cli.ts",
+    "profiles/**/*.ts",
     "scripts/**/*.ts"
   ],
   "exclude": ["node_modules", "**/node_modules", "dist", "**/dist"]

@@ -1,42 +1,17 @@
 /**
  * @module @x-agent-suite/harness/tests/fixtures/profiles/pi
  * Pi CLI profile：wire openai-chat，隔离支点 PI_CODING_AGENT_DIR。
- * PTY 使用真实交互入口；models.json 把模型固定到 harness backend，避免读取真实登录态。
+ * PTY 使用真实交互入口；fixture 固定假模型，live 复用消费者投影并继承宿主思考配置。
  */
 import { join } from "node:path";
 import type { HarnessProfile, ParsedEvent } from "@x-agent-suite/contracts";
 import { writeJsonFile } from "../../../src/mcp-config";
-import type { HarnessLiveChannel } from "../../../src/types";
+import { writePiLiveConfig } from "../../../../../profiles/pi-config.ts";
 
 const PROVIDER_ID = "xas";
 const FIXTURE_MODEL_ID = "fake";
 const DISPLAY_NAME = "XAS Harness";
 const MCP_ADAPTER_PACKAGE = "npm:pi-mcp-adapter@2.29.0";
-
-/** Pi models.json 支持的 API 名。 */
-type PiModelApi =
-  | "openai-completions"
-  | "openai-responses"
-  | "anthropic-messages"
-  | "google-generative-ai";
-
-/** 把 harness wire 名映射为 Pi models.json API 名。 */
-function piModelApi(wire: string): PiModelApi {
-  switch (wire) {
-    case "openai-chat":
-      return "openai-completions";
-    case "openai-responses":
-      return "openai-responses";
-    case "anthropic-messages":
-      return "anthropic-messages";
-    case "gemini-generate":
-      return "google-generative-ai";
-    default:
-      throw new Error(
-        `piProfile.writeConfig: 不支持 wire ${JSON.stringify(wire)}`,
-      );
-  }
-}
 
 /** 从 Pi assistant message 的内容块提取最终文本事件。 */
 function parseAssistantText(
@@ -73,7 +48,7 @@ export const piProfile: HarnessProfile = {
     prompt,
   ],
   ptyArgs: () => ["--no-session", "--no-context-files", "--no-skills"],
-  ptyReadyPattern: /\(xas\)/,
+  ptyReadyPattern: /(?:\(xas\)|\d+(?:\.\d+)?%\/\S+.*\([^)]+\))/,
   ptyIdlePatterns: [/[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏].*/g],
   ptySetupSequence: [
     {
@@ -112,43 +87,44 @@ export const piProfile: HarnessProfile = {
     if (!piHome) {
       throw new Error("piProfile.writeConfig: sandbox 未创建 piHome");
     }
-    const live = ctx.live as HarnessLiveChannel | undefined;
-    const modelId = live?.model ?? FIXTURE_MODEL_ID;
-    const api = piModelApi(live?.wire ?? "openai-chat");
-    const baseUrl = live
-      ? (live.harnessBaseUrl ?? ctx.baseUrl)
-      : `${ctx.baseUrl}/v1`;
+    if (ctx.live) {
+      await writePiLiveConfig(sandbox, ctx);
+    } else {
+      const modelId = FIXTURE_MODEL_ID;
+      const api = "openai-completions";
+      const baseUrl = `${ctx.baseUrl}/v1`;
 
-    await writeJsonFile(join(piHome, "models.json"), {
-      providers: {
-        [PROVIDER_ID]: {
-          baseUrl,
-          api,
-          apiKey: ctx.apiKey,
-          models: [
-            {
-              id: modelId,
-              name: DISPLAY_NAME,
-              reasoning: false,
-              input: ["text"],
-              contextWindow: 128000,
-              maxTokens: 8000,
-              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            },
-          ],
+      await writeJsonFile(join(piHome, "models.json"), {
+        providers: {
+          [PROVIDER_ID]: {
+            baseUrl,
+            api,
+            apiKey: ctx.apiKey,
+            models: [
+              {
+                id: modelId,
+                name: DISPLAY_NAME,
+                reasoning: false,
+                input: ["text"],
+                contextWindow: 128000,
+                maxTokens: 8000,
+                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+              },
+            ],
+          },
         },
-      },
-    });
-    await writeJsonFile(join(piHome, "settings.json"), {
-      defaultProvider: PROVIDER_ID,
-      defaultModel: modelId,
-      defaultThinkingLevel: "off",
-      enableInstallTelemetry: false,
-      enableAnalytics: false,
-      ...(ctx.injectServer === false
-        ? {}
-        : { packages: [MCP_ADAPTER_PACKAGE] }),
-    });
+      });
+      await writeJsonFile(join(piHome, "settings.json"), {
+        defaultProvider: PROVIDER_ID,
+        defaultModel: modelId,
+        defaultThinkingLevel: "off",
+        enableInstallTelemetry: false,
+        enableAnalytics: false,
+        ...(ctx.injectServer === false
+          ? {}
+          : { packages: [MCP_ADAPTER_PACKAGE] }),
+      });
+    }
     await writeJsonFile(join(piHome, "mcp.json"), {
       mcpServers:
         ctx.injectServer === false

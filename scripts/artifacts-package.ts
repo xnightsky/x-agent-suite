@@ -78,6 +78,10 @@ export function createCorePackageManifest(version: string): PackageManifest {
       },
     ]),
   );
+  exports["./profiles/pi-config"] = {
+    types: "./types/profiles/pi-config.d.ts",
+    import: "./dist/profiles/pi-config.js",
+  };
   return {
     name: "x-agent-suite",
     version,

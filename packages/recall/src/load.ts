@@ -23,6 +23,7 @@ import {
 } from "./execution.ts";
 import { loadRecallRegistry, type RecallRegistry } from "./registry.ts";
 import { isNonEmptyString, isPositiveInteger, isRecord } from "./validation.ts";
+import { copyExecutionParams } from "./execution-params.ts";
 
 /** Recall 装载选项；selection 至少包含 carrier/provider/model 之一。 */
 export interface LoadRecallOptions {
@@ -48,6 +49,8 @@ export interface LoadRecallOptions {
   readonly repeat?: number;
   /** 报告根目录。 */
   readonly outDir?: string;
+  /** 本次调用的执行参数，仅由选中的消费者 Profile/Adapter 解释。 */
+  readonly executionParams?: Readonly<Record<string, unknown>>;
 }
 
 /** effects-only ExecutionPlan；不含 driver/mode/cliRef/criteria/provision。 */
@@ -78,6 +81,8 @@ export interface LoadedRecall {
   readonly repeat: number;
   /** 报告根目录。 */
   readonly outDir: string;
+  /** 经 JSON 校验的本次调用参数，不进入渠道、标签或考卷。 */
+  readonly executionParams: Readonly<Record<string, unknown>>;
 }
 
 function validateSelection(selection: LiveTargetSelection): void {
@@ -142,7 +147,6 @@ async function resolveExecutions(options: {
   readonly selection: LiveTargetSelection;
   readonly effects: RecallEffects;
   readonly registry: RecallRegistry;
-  readonly requireBorrowed: boolean;
   readonly approveLive: boolean;
 }): Promise<readonly RecallResolvedExecution[]> {
   const live = await loadLiveConfig(options.config);
@@ -160,7 +164,6 @@ async function resolveExecutions(options: {
       catalog,
       effects: options.effects,
       registry: options.registry,
-      requireBorrowed: options.requireBorrowed,
       liveReviewApproved: options.approveLive,
     }),
   );
@@ -171,6 +174,7 @@ export async function loadRecall(
   options: LoadRecallOptions,
 ): Promise<LoadedRecall> {
   validateSelection(options.selection);
+  const executionParams = copyExecutionParams(options.executionParams ?? {});
   const cwd = resolve(options.cwd ?? process.cwd());
   if (options.repeat !== undefined && !isPositiveInteger(options.repeat)) {
     throw new Error("Recall repeat 必须是正整数");
@@ -194,9 +198,7 @@ export async function loadRecall(
     (scenario) => scenario.provision !== undefined,
   );
   if (hasProvision && planPath === undefined) {
-    throw new Error(
-      "场景包含 provision，必须显式提供 --plan；direct 不得隐式挂载",
-    );
+    throw new Error("场景包含 provision，必须显式提供 --plan；不得隐式挂载");
   }
 
   const liveConfigPath = options.liveConfigPath
@@ -208,11 +210,11 @@ export async function loadRecall(
     selection: options.selection,
     effects,
     registry,
-    requireBorrowed: hasProvision || effects.kind !== "none",
     approveLive: options.approveLive ?? false,
   });
   return {
     cwd,
+    executionParams,
     rootDir,
     files,
     registry,

@@ -12,7 +12,7 @@
 | 评分    | dry / hard / fuzzy / enumerate / 自定义 Criterion       | 通用函数 + 消费者        |
 | 输出    | Observation / ScenarioResult / Markdown+JSON            | driver、runner、reporter |
 
-Backend 不属于 `MockDriver` 或底层 `JsonlProcess` 本身；Scenario Runner 不负责选择 backend。Recall 通过显式 target 参数复用 live target 选择器，并由 effects-only Plan、场景 provision 和注册实现决定 direct/borrowed。把“不适用”与“尚未实现”区分开，能避免产生不存在的组合。
+Backend 不属于 `MockDriver` 或底层 `JsonlProcess` 本身；Scenario Runner 不负责选择 backend。Recall 通过显式 target 参数复用 live target 选择器，并由 Carrier kind 决定路径：cli 为唯一 borrowed Profile，ephemeral-client 为注册 Client direct Adapter；effects-only Plan 与场景 provision 只约束执行能力。把“不适用”与“尚未实现”区分开，能避免产生不存在的组合。
 
 ## 支持矩阵
 

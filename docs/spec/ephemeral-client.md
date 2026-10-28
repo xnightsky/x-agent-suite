@@ -111,14 +111,16 @@ const registry: RecallRegistry = {
 };
 ```
 
-Profile 的 `carrier` 必须与临时 Carrier ID 一致。`createDriver` 上下文中的 `cliRef/clientRef` 恰居其一；ephemeral-client 接收 `clientRef`、`spec.provision` 与显式 effects Plan，不受内置 direct 的纯文本、无 provision 限制。未注册或 carrier 不匹配时在 Driver 创建前失败，不回退内置 direct。
+Profile 的 `carrier` 必须与临时 Carrier ID 一致。`createDriver` 上下文中的 `cliRef/clientRef` 恰居其一；ephemeral-client 接收 `clientRef`、`spec.provision`、本次 `executionParams` 与显式 effects Plan，生命周期由 Adapter 兑现。未注册或 carrier 不匹配时在 Driver 创建前失败，不回退其他实现。
 
 ## direct / borrowed 边界
 
-- `kind: cli` 保留现有内置 direct 与 borrowed 选择规则；省略 `kind` 的旧配置行为不变。
-- 基于渠道直接请求 Provider 的 `kind: ephemeral-client` 属于 direct 模型调用路径，但由 `clientRef` 指定的临时 Client Adapter 执行，不自动等价于当前内置 direct Driver。
+- `kind: cli`（含省略 kind）始终走真实 CLI 的唯一 borrowed Profile，即使无 provision 且 effects:none 也不走 HTTP direct。
+- 基于渠道直接请求 Provider 的 `kind: ephemeral-client` 属于 direct 模型调用路径，但只由 `clientRef` 指定的临时 Client Adapter 执行，不存在内置 direct fallback。
 - 如果实际执行是“临时启动真实 CLI，再由 CLI 请求 Provider”，Carrier 本质仍是 `kind: cli`，临时性由该 CLI 的 execution profile 兑现，不应另建 channel-client Carrier。
 - 任一实现失败不得跨 Carrier、跨 `clientRef` 或跨 direct/borrowed 静默回退。
+- 每次命令可用 `--execution-params <JSON对象>` 向选中的 `createDriver` 传入运行参数（如思考强度）。框架不解释宿主字段，不修改 kind/渠道/权限；Client Adapter 只在自己确实需要时读取自己的配置，不因 channelsFrom 自动读取 Pi settings。
+- 原先依赖内置 HTTP direct 的调用须迁移为显式 `ephemeral-client + clientRef`；没有跨路径兼容 fallback。
 
 ## Recall 选择
 

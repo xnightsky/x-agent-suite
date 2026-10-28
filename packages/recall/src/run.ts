@@ -75,6 +75,7 @@ async function runCase(
         effects: loaded.plan.effects,
         registry: loaded.registry,
         config: loaded.config,
+        executionParams: loaded.executionParams,
       }),
     criteria: loaded.registry.criteria,
     repeat: loaded.repeat,

@@ -14,6 +14,7 @@ import { join } from "node:path";
 
 import { CORE_EXPORT_NAMES } from "./artifacts-package.ts";
 import type { ArtifactDescriptor } from "./artifacts-manifest.ts";
+import { createProfileRuntimeSmoke } from "./artifacts-profile-smoke.ts";
 
 type CommandRunner = (
   command: string,
@@ -77,13 +78,16 @@ async function writeCoreSmokeProject(
     (name, index) =>
       `type Core${index} = typeof import("x-agent-suite/${name}");`,
   );
+  typeImports.push(
+    'type PiConfigSmoke = typeof import("x-agent-suite/profiles/pi-config");',
+  );
   const tuple = CORE_EXPORT_NAMES.map((_, index) => `Core${index}`).join(", ");
   await writeSmokeFiles(
     directory,
     "x-agent-suite-core-artifact-smoke",
     dependencies,
     `${createCoreRuntimeSmoke(runtimeImports)}\n`,
-    `${typeImports.join("\n")}\nexport type CoreSmoke = [${tuple}];\n`,
+    `${typeImports.join("\n")}\nexport type CoreSmoke = [${tuple}, PiConfigSmoke];\n`,
   );
 }
 
@@ -161,6 +165,7 @@ function createRecallLoadSmoke(): string {
   return `const { loadRecall } = await import("x-agent-suite/recall");
   await writeFile(join(tagHome, "live.yaml"), JSON.stringify({
     carriers: { artifact: {
+      kind: "ephemeral-client", clientRef: "artifact-client",
       providers: { "artifact-provider": {
         wire: "openai-chat", baseUrl: "https://artifact.invalid/v1", models: ["artifact-model"],
       } },
@@ -176,9 +181,11 @@ function createRecallLoadSmoke(): string {
   await writeFile(join(tagHome, "recall.yaml"), JSON.stringify({
     version: 1, id: "artifact-install", cases: [{ id: "artifact", turns: [{ send: "offline installation check" }] }],
   }));
+  await writeFile(join(tagHome, "registry.mjs"), 'export default { profiles: { "artifact-client": { carrier: "artifact", createDriver() { throw new Error("load-only smoke must not create Driver"); } } } };');
   const loaded = await loadRecall({
     cwd: tagHome, homeDir: tagHome, selection: { carrier: "artifact" },
     liveConfigPath: "live.yaml", target: "recall.yaml",
+    registryPath: "registry.mjs",
   });
   assert.equal(loaded.executions[0].mode, "direct");
   ${createRecallCliGateSmoke()}
@@ -197,6 +204,7 @@ function createRecallCliGateSmoke(): string {
   const cliEntry = fileURLToPath(new URL("./cli.js", import.meta.resolve("x-agent-suite/recall")));
   const cli = spawnSync(process.execPath, [
     "--require", guardFile, cliEntry, "recall", "--carrier", "artifact",
+    "--execution-params", '{"thinkingLevel":"high"}',
     "--live-config", liveFile, join(tagHome, "recall.yaml"),
   ], { cwd: tagHome, env: { HOME: tagHome, PATH: process.env.PATH }, encoding: "utf8" });
   if (cli.error) throw cli.error;
@@ -214,6 +222,7 @@ import { fileURLToPath } from "node:url";
 
 await Promise.all([${runtimeImports.join(",")}]);
 ${createTargetTagsRuntimeSmoke()}
+${createProfileRuntimeSmoke()}
 const { judge } = await import("x-agent-suite/judge");
 const judgeOutcome = await judge(
   { output: "smoke", rubrics: [{ name: "fact", rubric: "Is the answer factual?" }] },

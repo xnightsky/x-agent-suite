@@ -149,7 +149,11 @@ async function bundleCore(root: string, stage: string): Promise<void> {
   );
   await build({
     absWorkingDir: root,
-    entryPoints: { ...entries, cli: join(root, "packaging", "cli.ts") },
+    entryPoints: {
+      ...entries,
+      "profiles/pi-config": join(root, "profiles", "pi-config.ts"),
+      cli: join(root, "packaging", "cli.ts"),
+    },
     outdir: join(stage, "dist"),
     alias,
     bundle: true,

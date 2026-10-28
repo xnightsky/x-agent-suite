@@ -1,6 +1,6 @@
 /**
  * @module @x-agent-suite/recall/driver
- * Recall 内置 direct 纯文本 Driver、registry borrowed/临时 Client 接线与执行归因。
+ * Recall registry CLI/临时 Client 接线与执行归因；不内建执行器，不跨实现 fallback。
  * 不变量：只消费 ScenarioSpec.provision；无执行级 provision 合并；每次执行独立 backend。
  */
 import type {
@@ -12,69 +12,11 @@ import type {
 import {
   LiveBackend,
   type LiveConfigOptions,
-  type LiveMessage,
 } from "@x-agent-suite/llm-fixture";
 import type { RecallEffects } from "./effects.ts";
 import type { RecallResolvedExecution } from "./execution.ts";
 import type { RecallRegistry } from "./registry.ts";
-
-class DirectRecallDriver implements AgentDriver {
-  readonly redactor: AgentDriver["redactor"];
-
-  private readonly messages: LiveMessage[] = [];
-  private readonly log: DriverEvent[] = [];
-  private started = false;
-  private closed = false;
-
-  constructor(private readonly backend: LiveBackend) {
-    this.redactor = backend.redactor;
-  }
-
-  async start(): Promise<void> {
-    if (this.started || this.closed)
-      throw new Error("direct Recall Driver: 重复 start");
-    await this.backend.start();
-    this.started = true;
-  }
-
-  async sendPrompt(text: string): Promise<Observation> {
-    if (!this.started || this.closed) {
-      throw new Error("direct Recall Driver: 未 start 或已 close");
-    }
-    this.messages.push({ role: "user", text });
-    const completion = await this.backend.complete({ messages: this.messages });
-    if (completion.toolCalls.length > 0) {
-      throw new Error("direct Recall 纯文本 Driver 不得返回工具调用");
-    }
-    this.messages.push({ role: "assistant", text: completion.text });
-    const events: DriverEvent[] = [
-      { type: "prompt", timestamp: Date.now(), payload: { text } },
-      {
-        type: "text",
-        timestamp: Date.now(),
-        payload: { text: completion.text },
-      },
-    ];
-    this.log.push(...events);
-    return {
-      text: completion.text,
-      toolCalls: [],
-      toolCallsCount: 0,
-      steps: 1,
-      events,
-    };
-  }
-
-  async *events(): AsyncIterable<DriverEvent> {
-    for (const event of this.log) yield event;
-  }
-
-  async close(): Promise<void> {
-    if (this.closed) return;
-    this.closed = true;
-    await this.backend.stop();
-  }
-}
+import { copyExecutionParams } from "./execution-params.ts";
 
 function provisionAttribution(spec: ScenarioSpec): string {
   const recall = spec.metadata?.recall as { provision?: string } | undefined;
@@ -170,6 +112,7 @@ export async function createRecallDriver(
     readonly effects: RecallEffects;
     readonly registry: RecallRegistry;
     readonly config: LiveConfigOptions;
+    readonly executionParams?: Readonly<Record<string, unknown>>;
   },
 ): Promise<AgentDriver> {
   const { execution, effects, registry, config } = options;
@@ -181,31 +124,19 @@ export async function createRecallDriver(
     config,
     ...(registry.transport ? { transport: registry.transport } : {}),
   });
-  let driver: AgentDriver;
-  if (execution.mode === "direct" && !execution.clientRef) {
-    if (effects.kind !== "none" || spec.provision !== undefined) {
-      throw new Error(
-        "direct Recall 纯文本只支持 effects:none 且无场景 provision",
-      );
-    }
-    driver = new DirectRecallDriver(backend);
-  } else {
-    const reference = execution.cliRef ?? execution.clientRef;
-    if (!execution.profile || !reference) {
-      throw new Error(
-        "Recall 注册执行实现缺失：" +
-          JSON.stringify({ mode: execution.mode, reference }),
-      );
-    }
-    driver = await execution.profile.createDriver({
-      spec,
-      backend,
-      target,
-      ...(execution.cliRef ? { cliRef: execution.cliRef } : {}),
-      ...(execution.clientRef ? { clientRef: execution.clientRef } : {}),
-      effects,
-    });
+  const reference = execution.cliRef ?? execution.clientRef;
+  if (!execution.profile || !reference) {
+    throw new Error("Recall 注册执行实现缺失");
   }
+  const driver = await execution.profile.createDriver({
+    spec,
+    executionParams: copyExecutionParams(options.executionParams ?? {}),
+    backend,
+    target,
+    ...(execution.cliRef ? { cliRef: execution.cliRef } : {}),
+    ...(execution.clientRef ? { clientRef: execution.clientRef } : {}),
+    effects,
+  });
   assertAgentDriver(driver);
   return new AttributedRecallDriver(driver, spec, execution, effects);
 }

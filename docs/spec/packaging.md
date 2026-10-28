@@ -357,10 +357,12 @@ pnpm add -D @x-agent-suite/pty-driver@0.1.0
 
 ```bash
 pnpm exec x-agent-suite eval <config-module>
-pnpm exec x-agent-suite recall (--carrier <id> | --provider <id> | --model <id>) [--live-config <yaml>] [--registry <module.ts>] [--plan <yaml>] [YAML|目录]
+pnpm exec x-agent-suite recall (--carrier <id> | --provider <id> | --model <id>) [--live-config <yaml>] [--registry <module.ts>] [--plan <yaml>] [--execution-params <json-object>] [YAML|目录]
 ```
 
-`x-agent-suite/recall` 同一子路径导出显式 target 装载/执行、独立 registry、effects-only Plan 和场景资源物化 API，并复用聚合包内现有 llm-fixture live resolver/TargetTags 与 harness hooks。统一 CLI 不再读取 `x-agent-suite.config.ts`；没有新增子路径、制品种类或 token 冒烟入口，消费者 Criterion/profile/EffectsProfile 仍通过显式 `--registry` 提供。
+`x-agent-suite/recall` 同一子路径导出显式 target 装载/执行、独立 registry、effects-only Plan 和场景资源物化 API，并复用聚合包内现有 llm-fixture live resolver/TargetTags 与 harness hooks。统一 CLI 不再读取 `x-agent-suite.config.ts`；消费者 Criterion/profile/EffectsProfile 仍通过显式 `--registry` 提供。
+
+`x-agent-suite/profiles/pi-config` 是独立消费者配置投影入口：源码在根 `profiles/`，不放入 `packages/*/src/`，不内建注册执行器，不给 Harness 契约添加 Pi 字段。核心制品显式打包该入口 JS/声明，并继续按白名单携带公共 `config/target-tags/{keys,instances}.yaml`；不打包任何私密 live/auth/宿主配置。仓库外安装冒烟覆盖入口导入/类型、隔离 settings 继承 high、单次覆盖 low、模型思考映射和宿主文件不变；只用合成配置，零 provider 请求，不新增 token 冒烟。
 
 需要任意目录可调用的全局 CLI 时，使用 `pnpm run install:global -- <制品目录>`：校验正式 manifest 与校验和后只安装核心包，不隐式构建、不发布、不初始化用户配置。全局 bin/PATH 须由执行者准备；详细前置、跨仓路径规则和验收边界见[全局 CLI 安装](./global-cli-install.md)。
 

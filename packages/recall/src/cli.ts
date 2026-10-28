@@ -5,6 +5,7 @@
  */
 import { runRecall } from "./run.ts";
 import type { LoadRecallOptions } from "./load.ts";
+import { parseExecutionParams } from "./execution-params.ts";
 
 type RecallArguments = Omit<LoadRecallOptions, "cwd">;
 
@@ -61,7 +62,7 @@ export async function main(
 }
 
 function usage(): string {
-  return "用法：x-agent-suite recall (--carrier <id> | --provider <id> | --model <id>) [--live-config <yaml>] [--registry <module.ts>] [--plan <yaml>] [--approve-live] [--repeat <n>] [--out-dir <path>] [--root-dir <path>] [YAML|目录]";
+  return "用法：x-agent-suite recall (--carrier <id> | --provider <id> | --model <id>) [--live-config <yaml>] [--registry <module.ts>] [--plan <yaml>] [--execution-params <json-object>] [--approve-live] [--repeat <n>] [--out-dir <path>] [--root-dir <path>] [YAML|目录]";
 }
 
 function applyOption(
@@ -74,6 +75,7 @@ function applyOption(
     liveConfigPath?: string;
     registryPath?: string;
     planPath?: string;
+    executionParams?: Readonly<Record<string, unknown>>;
     repeat?: number;
     outDir?: string;
     rootDir?: string;
@@ -96,6 +98,9 @@ function applyOption(
       break;
     case "--plan":
       mutable.planPath = value;
+      break;
+    case "--execution-params":
+      mutable.executionParams = parseExecutionParams(value);
       break;
     case "--repeat":
       mutable.repeat = Number(value);

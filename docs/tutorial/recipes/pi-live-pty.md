@@ -36,7 +36,7 @@ pnpm ittest:token:pi-pty -- --model k3-256k
 2. 文件级测试再次检查单次授权值；缺失时连测试回调都不执行。
 3. `loadLiveConfig` 读取真实 home 配置并借用渠道，`resolveLiveTargets` 解析 `--model` 或汇总 `carriers.pi.default`；未配置或借用失败显式 skip，显式模型无匹配/有歧义则失败。入口启动器将 `--model` 注入 Node 测试子进程，非法或重复参数直接失败，不回退默认集合。
 4. 每个 target 创建独立 `LiveBackend` 与 PTY 子测试，显式复用同一份已解析 channel；start 时解析借用凭据（OAuth access，过期显式 missing）。
-5. driver 建沙盒 HOME，`piProfile.writeConfig` 按 `live` 渠道写沙盒 `models.json`（baseUrl 取 `harnessBaseUrl` 宿主原值）与 `settings.json`；PTY 启动真实 Pi。
+5. driver 建沙盒 HOME，`piProfile.writeConfig` 的 live 分支复用独立消费者投影：保留原生 provider ID、默认思考强度与模型配套映射，按 live 渠道写沙盒 `models.json`（baseUrl 取 `harnessBaseUrl` 宿主原值）与 `settings.json`；不使用 fixture 的 reasoning:false/thinking:off；PTY 启动真实 Pi。
 6. footer 出现所选模型 id 后发 "hi"，等待一轮真实回复；每个 target 关闭后即清理其沙盒 home/cwd（含借用 token 副本）。
 
 ## 它实际证明什么
@@ -49,3 +49,4 @@ pnpm ittest:token:pi-pty -- --model k3-256k
 - 借用的是 OAuth access 快照：宿主 token 寿命短（约 1 小时），过期则显式 missing，需在宿主里重新登录/运行让其刷新；harness 不代替宿主刷新。
 - 沙盒只隔离 HOME/cwd 与配置，不是 OS 级网络封锁；真实 token 会短暂写入沙盒 `models.json`，关闭即删。
 - 显式闸门只代表本次运行责任人的授权，不代表第三方条款许可。
+- 当前投影辅助函数不隐式复制原生 headers/oauth 或动态扩展配置；需要这些认证/模型机制时显式拒绝并要求专用消费者适配。零 token 的配置保真测试不等于完成本节真实 provider 验证。

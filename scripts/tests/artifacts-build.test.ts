@@ -169,6 +169,10 @@ test("core consumer 独立安装，PTY consumer 刻意混装核心制品以验�
   assert.match(coreSmoke, /loadTargetTagCatalog\(\{ homeDir: tagHome \}\)/);
   assert.match(coreSmoke, /loadRecall\([\s\S]*"live":"disallowed"/);
   assert.match(coreSmoke, /loaded\.executions\[0\]\.mode, "direct"/);
+  assert.match(coreSmoke, /writePiLiveConfig/);
+  assert.match(coreSmoke, /defaultThinkingLevel/);
+  assert.match(coreSmoke, /thinkingLevelMap/);
+  assert.match(coreSmoke, /samplingParamsByThinkingLevel/);
   // PTY 冒烟必须按行为断言跨制品 live 判定（liveEnv 被调用、渠道透传）。
   assert.match(ptySmoke, /new LiveBackend/);
   assert.match(ptySmoke, /startHarnessBackend/);

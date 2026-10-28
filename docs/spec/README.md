@@ -4,28 +4,29 @@
 
 ## 目录
 
-| 文档                                               | 内容                                                                  |
-| -------------------------------------------------- | --------------------------------------------------------------------- |
-| [suite-design.md](./suite-design.md)               | 框架总览：验证层、运行模式、环境变量                                  |
-| [capability-system.md](./capability-system.md)     | 能力体系：能力账本（内核/子包/不做）、五问需求侧、P0–P8 路线          |
-| [boundary-discipline.md](./boundary-discipline.md) | 边界纪律：四条守卫、三个合法出口、边界债务                            |
-| [layering.md](./layering.md)                       | 分层与依赖选型：工具型库 vs 平台                                      |
-| [contracts.md](./contracts.md)                     | 通用类型契约：Observation、Driver、Scenario、Criterion、Registry      |
-| [scenario-dsl.md](./scenario-dsl.md)               | Scenario DSL 设计原则：可比性轴、分歧点、LLM 控制器禁区               |
-| [scenario-runner.md](./scenario-runner.md)         | P3 设计：Registry 运行时、DSL 执行与 CLI                              |
-| [recall.md](./recall.md)                           | 原生 `.recall`：发现、严格 YAML、ScenarioSpec 编译与执行              |
-| [judge.md](./judge.md)                             | 通用 AI Judge：批量 rubric、具名 verdict、失败分层与双 mode           |
-| [target-tags.md](./target-tags.md)                 | 四层能力标签、实例与 direct/borrowed/live 决策                        |
-| [driver.md](./driver.md)                           | 子进程基座：`JsonlProcess`、`PtyProcess`、严格 LF 分帧 + 宿主适配纪律 |
-| [sandbox.md](./sandbox.md)                         | 临时 `HOME` / `cwd`、环境剥离、并发隔离与清理                         |
-| [llm-fixture.md](./llm-fixture.md)                 | `LlmBackend`、自研 fake provider、`HarnessProfile` 配置               |
-| [ephemeral-client.md](./ephemeral-client.md)       | 同级 Carrier kind、Client Adapter 引用与渠道复用                      |
-| [live-auth-config.md](./live-auth-config.md)       | 可选 `.env.auth.yaml`：provider 凭据、来源优先级与失败语义            |
-| [packaging.md](./packaging.md)                     | 包分发、安装方式、版本管理与原生依赖分层                              |
-| [global-cli-install.md](./global-cli-install.md)   | 指定制品集的全局 CLI 安装、校验、副作用与跨仓路径边界                 |
-| [scenario-evaluation.md](./scenario-evaluation.md) | 评分层：Dry / Hard / Fuzzy / enumerate / 报告                         |
-| [scoring-aggregation.md](./scoring-aggregation.md) | 打分聚合机：维度声明、knockout/absent 三态、静态打分出口              |
-| [matrix.md](./matrix.md)                           | `runMatrix`：变体串行、carrier 并行、对照表与报告                     |
-| [long-lived-driver.md](./long-lived-driver.md)     | `LongLivedAgentDriver` 与入站事件观测                                 |
-| [pty-driver.md](./pty-driver.md)                   | PTY 驱动层：屏幕 idle 判定与 TUI 门槛                                 |
-| [lessons-from-evals.md](./lessons-from-evals.md)   | 从内部评测实践总结的通用模式                                          |
+| 文档                                                     | 内容                                                                  |
+| -------------------------------------------------------- | --------------------------------------------------------------------- |
+| [suite-design.md](./suite-design.md)                     | 框架总览：验证层、运行模式、环境变量                                  |
+| [capability-system.md](./capability-system.md)           | 能力体系：能力账本（内核/子包/不做）、五问需求侧、P0–P8 路线          |
+| [boundary-discipline.md](./boundary-discipline.md)       | 边界纪律：四条守卫、三个合法出口、边界债务                            |
+| [layering.md](./layering.md)                             | 分层与依赖选型：工具型库 vs 平台                                      |
+| [contracts.md](./contracts.md)                           | 通用类型契约：Observation、Driver、Scenario、Criterion、Registry      |
+| [scenario-dsl.md](./scenario-dsl.md)                     | Scenario DSL 设计原则：可比性轴、分歧点、LLM 控制器禁区               |
+| [scenario-runner.md](./scenario-runner.md)               | P3 设计：Registry 运行时、DSL 执行与 CLI                              |
+| [recall.md](./recall.md)                                 | 原生 `.recall`：发现、严格 YAML、ScenarioSpec 编译与执行              |
+| [judge.md](./judge.md)                                   | 通用 AI Judge：批量 rubric、具名 verdict、失败分层与双 mode           |
+| [target-tags.md](./target-tags.md)                       | 四层能力标签、实例与 direct/borrowed/live 决策                        |
+| [driver.md](./driver.md)                                 | 子进程基座：`JsonlProcess`、`PtyProcess`、严格 LF 分帧 + 宿主适配纪律 |
+| [sandbox.md](./sandbox.md)                               | 临时 `HOME` / `cwd`、环境剥离、并发隔离与清理                         |
+| [llm-fixture.md](./llm-fixture.md)                       | `LlmBackend`、自研 fake provider、`HarnessProfile` 配置               |
+| [ephemeral-client.md](./ephemeral-client.md)             | 同级 Carrier kind、Client Adapter 引用与渠道复用                      |
+| [host-config-projection.md](./host-config-projection.md) | 渠道与执行偏好分离、单次参数、Pi 消费者隔离投影与保真边界             |
+| [live-auth-config.md](./live-auth-config.md)             | 可选 `.env.auth.yaml`：provider 凭据、来源优先级与失败语义            |
+| [packaging.md](./packaging.md)                           | 包分发、安装方式、版本管理与原生依赖分层                              |
+| [global-cli-install.md](./global-cli-install.md)         | 指定制品集的全局 CLI 安装、校验、副作用与跨仓路径边界                 |
+| [scenario-evaluation.md](./scenario-evaluation.md)       | 评分层：Dry / Hard / Fuzzy / enumerate / 报告                         |
+| [scoring-aggregation.md](./scoring-aggregation.md)       | 打分聚合机：维度声明、knockout/absent 三态、静态打分出口              |
+| [matrix.md](./matrix.md)                                 | `runMatrix`：变体串行、carrier 并行、对照表与报告                     |
+| [long-lived-driver.md](./long-lived-driver.md)           | `LongLivedAgentDriver` 与入站事件观测                                 |
+| [pty-driver.md](./pty-driver.md)                         | PTY 驱动层：屏幕 idle 判定与 TUI 门槛                                 |
+| [lessons-from-evals.md](./lessons-from-evals.md)         | 从内部评测实践总结的通用模式                                          |
