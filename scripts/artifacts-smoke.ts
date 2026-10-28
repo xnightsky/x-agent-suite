@@ -80,6 +80,7 @@ async function writeCoreSmokeProject(
   );
   typeImports.push(
     'type PiConfigSmoke = typeof import("x-agent-suite/profiles/pi-config");',
+    'type PiRecallSmoke = typeof import("x-agent-suite/profiles/pi-recall");',
   );
   const tuple = CORE_EXPORT_NAMES.map((_, index) => `Core${index}`).join(", ");
   await writeSmokeFiles(
@@ -87,7 +88,7 @@ async function writeCoreSmokeProject(
     "x-agent-suite-core-artifact-smoke",
     dependencies,
     `${createCoreRuntimeSmoke(runtimeImports)}\n`,
-    `${typeImports.join("\n")}\nexport type CoreSmoke = [${tuple}, PiConfigSmoke];\n`,
+    `${typeImports.join("\n")}\nexport type CoreSmoke = [${tuple}, PiConfigSmoke, PiRecallSmoke];\n`,
   );
 }
 
@@ -234,6 +235,15 @@ assert.deepEqual(judgeOutcome, {
   absent: [],
   attempts: 1,
 });
+const { createJudgeAssertion, textContains } = await import("x-agent-suite/assertions");
+assert.equal(textContains.evaluate({ text: "smoke" }, { expect: "smoke" }).pass, true);
+const aiAssertion = createJudgeAssertion({
+  name: "artifact-fact", maxRetries: 0,
+  client: { complete: async () => ({ text: '{"fact":true}' }) },
+});
+assert.equal((await aiAssertion.evaluate({ text: "smoke" }, {
+  expect: [{ name: "fact", rubric: "Is the answer factual?" }],
+})).pass, true);
 const harnessUrl = import.meta.resolve("x-agent-suite/harness");
 const require = createRequire(harnessUrl);
 const { buildMcpServerSpec } = await import(harnessUrl);

@@ -31,7 +31,7 @@
 
 ## 当前形态
 
-x-agent-suite 已拆为 11 个 workspace 包：
+x-agent-suite 已拆为 12 个 workspace 包：
 
 | 包                           | 内容                                            | 运行时依赖             | 原生依赖           |
 | ---------------------------- | ----------------------------------------------- | ---------------------- | ------------------ |
@@ -40,9 +40,10 @@ x-agent-suite 已拆为 11 个 workspace 包：
 | `@x-agent-suite/sandbox`     | 临时 `HOME` / `cwd` / 环境剥离                  | 无                     | 无                 |
 | `@x-agent-suite/llm-fixture` | fake provider / live backend                    | `yaml`                 | 无                 |
 | `@x-agent-suite/harness`     | `HarnessProfile` / driver 组合                  | workspace 包           | 无                 |
-| `@x-agent-suite/observation` | checks / report                                 | workspace 包           | 无                 |
+| `@x-agent-suite/observation` | 判据调度 / 聚合 / 报告与旧检查兼容入口          | workspace 包           | 无                 |
 | `@x-agent-suite/matrix`      | `runMatrix` / 报告落盘                          | workspace 包           | 无                 |
-| `@x-agent-suite/criteria`    | 可选通用判据插件                                | workspace 包           | 无                 |
+| `@x-agent-suite/assertions`  | 检查原语 / 确定性判据 / Judge 薄适配            | workspace 包           | 无                 |
+| `@x-agent-suite/criteria`    | 确定性判据兼容重导出                            | workspace 包           | 无                 |
 | `@x-agent-suite/runner`      | ScenarioSpec 执行 / repeat / eval CLI           | workspace 包           | 无                 |
 | `@x-agent-suite/recall`      | 原生 `.recall` / ExecutionPlan / CLI            | `yaml`、workspace 包   | 无                 |
 | `@x-agent-suite/judge`       | 通用 AI Judge / 具名 verdict / direct、borrowed | workspace 包           | 无                 |
@@ -363,6 +364,8 @@ pnpm exec x-agent-suite recall (--carrier <id> | --provider <id> | --model <id>)
 `x-agent-suite/recall` 同一子路径导出显式 target 装载/执行、独立 registry、effects-only Plan 和场景资源物化 API，并复用聚合包内现有 llm-fixture live resolver/TargetTags 与 harness hooks。统一 CLI 不再读取 `x-agent-suite.config.ts`；消费者 Criterion/profile/EffectsProfile 仍通过显式 `--registry` 提供。
 
 `x-agent-suite/profiles/pi-config` 是独立消费者配置投影入口：源码在根 `profiles/`，不放入 `packages/*/src/`，不内建注册执行器，不给 Harness 契约添加 Pi 字段。核心制品显式打包该入口 JS/声明，并继续按白名单携带公共 `config/target-tags/{keys,instances}.yaml`；不打包任何私密 live/auth/宿主配置。仓库外安装冒烟覆盖入口导入/类型、隔离 settings 继承 high、单次覆盖 low、模型思考映射和宿主文件不变；只用合成配置，零 provider 请求，不新增 token 冒烟。
+
+`x-agent-suite/assertions` 在核心聚合包内分发，不新增第三个 tarball；原有 `criteria` 和 observation 检查入口仍可使用。`x-agent-suite/profiles/pi-recall` 同样显式打包 JS/声明，消费者自行注册 `createPiRecallDriver`，不会因 carrier 名自动启用。仓库外安装冒烟使用 fake Judge 与 fake CLI 验证适配、配置继承和清理，不接真实 provider。
 
 需要任意目录可调用的全局 CLI 时，使用 `pnpm run install:global -- <制品目录>`：校验正式 manifest 与校验和后只安装核心包，不隐式构建、不发布、不初始化用户配置。全局 bin/PATH 须由执行者准备；详细前置、跨仓路径规则和验收边界见[全局 CLI 安装](./global-cli-install.md)。
 

@@ -17,6 +17,7 @@ export const CORE_EXPORT_NAMES = [
   "runner",
   "recall",
   "judge",
+  "assertions",
 ] as const;
 
 /** 核心包运行所需的公开标签文件白名单，不复制消费者私密配置。 */
@@ -81,6 +82,10 @@ export function createCorePackageManifest(version: string): PackageManifest {
   exports["./profiles/pi-config"] = {
     types: "./types/profiles/pi-config.d.ts",
     import: "./dist/profiles/pi-config.js",
+  };
+  exports["./profiles/pi-recall"] = {
+    types: "./types/profiles/pi-recall.d.ts",
+    import: "./dist/profiles/pi-recall.js",
   };
   return {
     name: "x-agent-suite",

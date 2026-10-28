@@ -29,8 +29,46 @@ try {
   await writePiLiveConfig(profileSandbox, context, { agentDir: host, executionParams: { thinkingLevel: "low" } });
   assert.equal(JSON.parse(await readFile(join(output, "settings.json"), "utf8")).defaultThinkingLevel, "low");
   assert.deepEqual(JSON.parse(await readFile(join(host, "settings.json"), "utf8")), settings);
+  ${createPiRecallRuntimeSmoke()}
   console.log("Pi projection smoke: inherited high; explicit low; native model preserved; host unchanged");
 } finally {
   await cleanupSandbox(profileSandbox);
 }`;
+}
+
+/** 生成安装后一次性驱动冒烟，用假子进程验证 live 分支、原生完成信号及隔离配置。 */
+function createPiRecallRuntimeSmoke(): string {
+  return `const { createPiRecallDriver } = await import("x-agent-suite/profiles/pi-recall");
+  const { LiveBackend } = await import("x-agent-suite/llm-fixture");
+  const hostScript = join(profileSandbox.cwd, "fake-host.mjs");
+  await writeFile(hostScript, [
+    'import { readFileSync } from "node:fs";',
+    'import { join } from "node:path";',
+    'const text = readFileSync(join(process.env.PI_CODING_AGENT_DIR, "settings.json"), "utf8");',
+    'console.log(JSON.stringify({type:"message_end", message:{role:"assistant", stopReason:"stop", content:[{type:"text",text}]}}));',
+    'console.log(JSON.stringify({type:"agent_end"}));',
+  ].join("\\n"));
+  const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+  process.env.PI_CODING_AGENT_DIR = host;
+  const target = { carrier: "pi", channel: { ...context.live, baseUrl: context.baseUrl, apiKey: "synthetic" } };
+  const driver = createPiRecallDriver({
+    spec: { id: "artifact-profile", turns: [{ send: "offline smoke" }] },
+    target, backend: new LiveBackend(target), cliRef: "pi", executionParams: {},
+    effects: { kind: "none", attribution: "none", tools: "none", commands: { allow: [], deny: [] },
+      maxSteps: 1, timeoutMs: 10000, workspace: "isolated", cleanup: "required" },
+  }, { commandOverride: { command: process.execPath, argsPrefix: [hostScript] } });
+  let workspace;
+  try {
+    await driver.start();
+    const observation = await driver.sendPrompt("offline smoke");
+    assert.equal(JSON.parse(observation.text).defaultThinkingLevel, "high");
+    assert.equal(observation.metadata.nativeCompleted, true);
+    workspace = observation.metadata.workspaceCwd;
+  } finally {
+    try { await driver.close(); } finally {
+      if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+      else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
+    }
+  }
+  await assert.rejects(access(workspace), { code: "ENOENT" });`;
 }

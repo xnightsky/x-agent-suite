@@ -152,6 +152,7 @@ async function bundleCore(root: string, stage: string): Promise<void> {
     entryPoints: {
       ...entries,
       "profiles/pi-config": join(root, "profiles", "pi-config.ts"),
+      "profiles/pi-recall": join(root, "profiles", "pi-recall.ts"),
       cli: join(root, "packaging", "cli.ts"),
     },
     outdir: join(stage, "dist"),
