@@ -84,4 +84,4 @@ Runner 只消费场景 provision，不做执行 provision 合并。资源 source
 - `contextPath: CONTEXT.md`；
 - 报告 mode 为 `borrowed`、provision 为 `plan:local`、effects 为 `none`。
 
-完整 CLI、effects.use/inline、TargetTags、报告分目录和失败语义见[原生 Recall 规范](../../spec/recall.md)。默认教程、单测和 CI 不调用真实 provider；本次没有新增 Recall token 测试。
+完整 CLI、effects.use/inline、TargetTags、报告分目录和失败语义见[原生 Recall 规范](../../spec/recall.md)。默认教程、单测和 CI 不调用真实 provider；真实场景仓入口见 [`integrations/README.md`](../../../integrations/README.md)。

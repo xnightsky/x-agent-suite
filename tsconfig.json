@@ -21,6 +21,7 @@
     "types": ["node"]
   },
   "include": [
+    "integrations/*.ts",
     "examples/tutorial/**/*.ts",
     "packages/*/src/**/*.ts",
     "packages/*/tests/**/*.ts",

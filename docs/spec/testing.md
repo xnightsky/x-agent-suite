@@ -21,6 +21,7 @@
 - 真实宿主集成测试：`packages/<package>/tests/*.ittest.ts` 或 `examples/tutorial/*.ittest.ts`；默认 runner 打平发现各包 tests 与教程目录顶层文件。
 - token 测试默认可以与普通 ittest 平铺为 `packages/<package>/tests/<name>.token.ittest.ts`，便于按包和文件名全局观察。用例较多或需要权限/责任分组时，可选用 `tests/token/` 子目录；目录不是安全边界。
 - 教程可执行验证：仍按同一判定表命名；token 例可平铺在 `examples/tutorial/`，辅助模块可以使用普通 `*.ts`。
+- 声明式场景仓：`integrations/itrepos/<name>/.recall.yaml`，由 Recall 自身执行与判定，不新增 `*.ittest.ts` 包装；真实 token 入口精确指向考卷，仍不进入默认回归。
 
 ## 命令与默认回归
 
@@ -47,7 +48,7 @@ PTY、headless、sandbox 是机制，smoke 是抽样范围，contract 是验证�
 `packages/recall/tests/effects.test.ts`、`compile.test.ts`、`discovery.test.ts` 与 `recall.test.ts` 都属于单元测试：临时 live YAML、合成 TargetTags、fake transport 和 MockDriver 不访问真实 provider，也不读取真实 home 配置。它们覆盖无参数拒绝、carrier 多 default、provider/model 过滤、默认无 effects、文件内 plans/context 继承覆盖、inline 权限、direct/borrowed、ephemeral-client Adapter、live 审批、资源清理和报告归因，进入 `pnpm test` 与 `pnpm check`。`packages/llm-fixture/tests/live-config-carriers.test.ts` 另行覆盖 kind 缺省 cli、clientRef、channelsFrom、非法引用与 target 归因。
 `packages/llm-fixture/tests/target-tags-home.test.ts` 使用临时 home 覆盖公共实例、home 私有全局实例与 live overlay 的合并顺序，并验证后续 `live.allowed` 不会放松此前的 `review-required`；生产默认 home 与测试注入 home 分离。
 
-真实 Recall live 调用会消耗 token，只能在显式 live 配置和 `--approve-live`（策略为 review-required 时）下执行。当前没有新增 `*.token.ittest.ts` 或 `ittest:token:recall`，不得以 fake transport 或 MockDriver 的成功推断真实 direct/borrowed/ephemeral-client 已获 live 验证。
+真实 Recall live 调用会消耗 token，只能在显式选择渠道、已有 live 配置和 `--approve-live`（策略为 review-required 时）下执行。`pnpm ittest:token:cedar --carrier pi --approve-live` 精确运行场景仓的 `.recall.yaml`，复用 CLI 而非包装另一层驱动；脚本未提供渠道时失败，不发出请求。计费分类在 borrowed 测试阶段暂不设为条件，live 策略检查继续执行。不得以 fake transport 或 MockDriver 的成功推断真实 direct/borrowed/ephemeral-client 已获 live 验证。
 
 ## token 级安全门
 

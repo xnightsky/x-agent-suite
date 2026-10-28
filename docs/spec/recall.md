@@ -215,6 +215,16 @@ Windows 仅保留文件只读语义，不保证 POSIX 的精确权限位。
 
 ## 报告、退出码与验证
 
+### 场景测试仓
+
+`integrations/itrepos/<name>/` 是仓库级声明式集成验证入口，与包测试目录独立。
+当前 `cedar/` 内维护 `.recall.yaml`、`AGENTS.md` 和任务素材，直接由 Recall 驱动并判定，无额外测试脚本包装。
+资源的 source 相对调用 cwd（或显式 `--root-dir`），由 Profile 物化到一次性隔离工作区；不直接在模板仓执行模型工具。
+Pi 的项目规则发现由显式消费者 registry 通过 `contextFiles: "project"` 开启，不在核心包枚举宿主语义。
+入口、带规则/无规则对照和真实 token 命令见 [`integrations/README.md`](../../integrations/README.md)。
+
+### 执行结果
+
 每次 case/repeat 都创建独立 backend/Driver；多轮消息与生命周期均由选中的 CLI Profile/Client Adapter 按执行契约兑现。报告写入：
 
 ```text
@@ -235,4 +245,4 @@ metadata.recallExecution = {
 - 用法、registry、Plan、YAML、资源、target 和候选定义错误：退出码 2。
 - Driver、超时、报告写入等基础设施错误：退出码 1。
 - 行为判据不通过：`hardPass=false`，退出码仍为 0。
-- 默认测试使用临时配置、合成 TargetTags、fake transport 和 MockDriver，零 token；覆盖 ephemeral-client 自定义 Adapter、缺注册拒绝与 provision/Plan 接线。真实 provider 没有默认 Recall token 入口。
+- 默认测试使用临时配置、合成 TargetTags、fake transport 和 MockDriver，零 token；覆盖 ephemeral-client 自定义 Adapter、缺注册拒绝与 provision/Plan 接线。`pnpm ittest:token:cedar` 显式运行真实场景考卷，不进入默认回归，且脚本本身不预填渠道。

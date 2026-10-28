@@ -42,6 +42,7 @@
     "ittest:token:tutorial": "tsx --test examples/tutorial/10-live-smoke.token.ittest.ts",
     "ittest:token:pi-pty": "tsx scripts/run-pi-token-ittest.ts",
     "ittest:token:judge": "tsx --test \"packages/judge/tests/client-live.token.ittest.ts\"",
+    "ittest:token:cedar": "tsx packaging/cli.ts recall integrations/itrepos/cedar/.recall.yaml --root-dir integrations/itrepos/cedar --registry integrations/pi.registry.ts",
     "tutorial:check": "tsx --test scripts/tests/tutorial.test.ts",
     "test": "tsx --test \"packages/*/tests/*.test.ts\" \"scripts/tests/*.test.ts\"",
     "test:watch": "tsx --test --watch \"packages/*/tests/*.test.ts\"",

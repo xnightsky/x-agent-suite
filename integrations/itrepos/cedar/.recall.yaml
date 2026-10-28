@@ -1,0 +1,24 @@
+version: 1
+id: cedar-project-rules
+plans:
+  project:
+    resources:
+      - source: AGENTS.md
+        destination: AGENTS.md
+      - source: README.md
+        destination: README.md
+context:
+  plan: project
+cases:
+  - id: follows-project-rules
+    turns:
+      - send: 请给出一句简短的项目状态问候。
+        expect:
+          text-contains: [CEDAR_READY]
+  - id: without-project-rules
+    context:
+      plan: none
+    turns:
+      - send: 请给出一句简短的项目状态问候。
+        expect:
+          text-not-contains: [CEDAR_READY]

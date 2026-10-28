@@ -7,6 +7,7 @@ x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenari
 - 设计/规格文档写入 [`docs/spec/`](./spec/README.md)。
 - 实施计划按记录价值分流：无记录价值的（中间形态、一次性过程稿、与核心业务无关）写入 `.tmp/plans/`（不入库）；有记录价值的写入 `docs/plans/YYYY-MM-DD-<主题>.md`。
 - 从模块、工具和组合开始使用见 [`tutorial/`](./tutorial/README.md)。
+- 可复用场景仓与真实 Recall 命令见 [`integrations/`](../integrations/README.md)。
 - 架构总览见 [`docs/architecture/`](./architecture/README.md)。
 - 真实 CLI 适配坑见 [`docs/notes/`](./notes/README.md)。
 - 协议调研见 [`docs/research/`](./research/README.md)。
