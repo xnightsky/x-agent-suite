@@ -4,7 +4,14 @@
  */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -53,7 +60,7 @@ test("校验清单与核心校验和后只安装 core，路径可含空格且无
     await installGlobal(["--", directory], (file) => {
       calls.push(file);
     });
-    assert.deepEqual(calls, [join(directory, CORE)]);
+    assert.deepEqual(calls, [await realpath(join(directory, CORE))]);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

@@ -70,4 +70,6 @@ x-agent-suite recall
 
 默认单测用 fake 安装函数验证参数、正式清单、hash、路径逃逸及安装失败传播，不修改真实全局环境。真实安装探针应使用隔离 HOME/PNPM_HOME/全局目录，并在安装前确认 `pnpm root --global` 和 bin 均落在临时目录内；从无 package.json 的其他 cwd 验证 PATH shim、公共 TargetTags 和 live.disallowed 拒绝，额外禁止 fetch，不启动真实宿主或 provider。
 
+路径断言按文件系统规范路径比较，兼容 macOS 临时目录的 `/var` 与 `/private/var` 别名；测试仍用 fake 安装函数，不将单测通过视为 macOS 真实全局安装验收。
+
 2026-10-28 在 Linux、Node 24.14.0、pnpm 10.33.0 下，用干净提交 `480de68` 产生的正式 snapshot `0.7.0-dev.20261028.480de68` 验证两种 package script 调用、含空格的制品/全局路径、core-only 安装、任意 cwd 的 PATH shim、默认公共标签和 live 拒绝门禁，全部通过。源码 package.json/lockfile 及真实全局环境未改动。安装器 8 个单测通过；本轮 `pnpm check` 为 468 pass、1 skip，另 2 个真实宿主集成用例 skip，不视为宿主/PTY/live 通过。
