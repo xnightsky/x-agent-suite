@@ -17,6 +17,7 @@
     "test": "tsx --test \"tests/*.test.ts\""
   },
   "dependencies": {
+    "@x-agent-suite/assertions": "workspace:*",
     "@x-agent-suite/contracts": "workspace:*"
   },
   "devDependencies": {

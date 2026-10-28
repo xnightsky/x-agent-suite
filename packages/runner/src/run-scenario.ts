@@ -19,11 +19,8 @@ import type {
   SessionObservation,
   TurnObservation,
 } from "@x-agent-suite/contracts";
-import {
-  dryChecks,
-  resolveAggregate,
-  runCriteria,
-} from "@x-agent-suite/observation";
+import { dryChecks } from "@x-agent-suite/assertions";
+import { resolveAggregate, runCriteria } from "@x-agent-suite/observation";
 
 /** runScenarioSpec 注入依赖。 */
 export interface RunScenarioSpecDeps {

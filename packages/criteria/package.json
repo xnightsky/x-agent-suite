@@ -2,7 +2,7 @@
   "name": "@x-agent-suite/criteria",
   "version": "0.0.0",
   "private": true,
-  "description": "x-agent-suite 通用判据子包：文本包含/排除与工具调用核对（可选插件，不进内核语义）。",
+  "description": "x-agent-suite 确定性判据兼容入口；实现统一来自 assertions。",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -17,8 +17,7 @@
     "test": "tsx --test \"tests/*.test.ts\""
   },
   "dependencies": {
-    "@x-agent-suite/contracts": "workspace:*",
-    "@x-agent-suite/observation": "workspace:*"
+    "@x-agent-suite/assertions": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

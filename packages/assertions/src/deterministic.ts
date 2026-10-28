@@ -1,17 +1,17 @@
 /**
- * @module @x-agent-suite/criteria/tool-call
- * 工具调用核对判据：期望工具被调用且 completed、action 与入参子集匹配。
+ * @module @x-agent-suite/assertions/deterministic
+ * 确定性判据：文本包含（AND）、红线排除与工具调用核对。
  * 不变量：
- * - 断言只落在 ToolCall.status 与结构化入参上，不看退出码与文本；
- * - expect 形状非法显式抛错（配置错误不等于评测失败）。
+ * - expect 形状非法显式抛错（配置错误不等于评测失败）；
+ * - 工具断言只落在 ToolCall.status 与结构化入参上，不看退出码与文本；
+ * - tool-call 的 args 是递归子集约束，浅层 JSON 相等只用于检查层的 hardChecks。
  */
-
 import type {
   CriterionResult,
   ToolCall,
   TurnCriterion,
 } from "@x-agent-suite/contracts";
-import { toolActionMatches, toolNameMatches } from "@x-agent-suite/observation";
+import { toolActionMatches, toolNameMatches } from "./checks.ts";
 
 /** tool-call 判据的 expect 形状。 */
 export interface ToolCallExpect {
@@ -23,7 +23,34 @@ export interface ToolCallExpect {
   readonly args?: Record<string, unknown>;
 }
 
-/** 校验 expect 形状；非法显式抛错。 */
+/**
+ * 校验并归一 expect 为字符串列表。
+ * @param expect 判据 expect 原值。
+ * @param criterionName 用于错误信息的判据名。
+ * @throws TypeError expect 不是非空字符串或非空字符串数组时抛出。
+ */
+function asExpectList(
+  expect: unknown,
+  criterionName: string,
+): readonly string[] {
+  const list = typeof expect === "string" ? [expect] : expect;
+  if (
+    !Array.isArray(list) ||
+    list.length === 0 ||
+    !list.every((item) => typeof item === "string" && item.length > 0)
+  ) {
+    throw new TypeError(
+      `${criterionName} 的 expect 必须是非空字符串或非空字符串数组，实际：${JSON.stringify(expect)}`,
+    );
+  }
+  return list as readonly string[];
+}
+
+/**
+ * 校验 tool-call 的 expect 形状。
+ * @param expect 判据 expect 原值。
+ * @throws TypeError expect 不是含非空 tool 字段的对象时抛出。
+ */
 function asToolCallExpect(expect: unknown): ToolCallExpect {
   if (
     typeof expect !== "object" ||
@@ -92,6 +119,38 @@ function judgeCalls(
         reason: `工具 "${expect.tool}" 被调用但无一 completed`,
       };
 }
+
+/**
+ * 文本包含判据（AND 语义）：expect 列出的文本全部出现才通过。
+ * expect：`string | string[]`。
+ */
+export const textContains: TurnCriterion = {
+  name: "text-contains",
+  scope: "turn",
+  evaluate(turn, context): CriterionResult {
+    const expected = asExpectList(context.expect, "text-contains");
+    const missing = expected.filter((keyword) => !turn.text.includes(keyword));
+    return missing.length === 0
+      ? { pass: true, score: 1, reason: `全部 ${expected.length} 个关键词命中` }
+      : { pass: false, score: 0, reason: `缺少关键词：${missing.join("、")}` };
+  },
+};
+
+/**
+ * 红线排除判据：expect 列出的文本任一出现即失败。
+ * expect：`string | string[]`。
+ */
+export const textNotContains: TurnCriterion = {
+  name: "text-not-contains",
+  scope: "turn",
+  evaluate(turn, context): CriterionResult {
+    const redLines = asExpectList(context.expect, "text-not-contains");
+    const hits = redLines.filter((keyword) => turn.text.includes(keyword));
+    return hits.length === 0
+      ? { pass: true, score: 1, reason: "红线均未出现" }
+      : { pass: false, score: 0, reason: `命中红线：${hits.join("、")}` };
+  },
+};
 
 /**
  * 工具调用核对判据。

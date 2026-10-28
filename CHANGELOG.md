@@ -11,6 +11,7 @@
 - live 新增可选 `.env.auth.yaml`：按 provider ID 或 `auth.provider` 显式绑定 API key，支持 `E2E_AUTH_CONFIG_PATH`、repo/home 发现、runtime > auth-file > model-config 优先级、失败不回退及 backend/sniff 统一脱敏；配置参考与教程同步。
 - `install:global` package script：显式接收正式制品目录，先校验清单、SHA-256 与路径边界，再全局安装核心 CLI；不自动构建/发布，不安装 PTY，不初始化用户配置，新增失败回归与隔离全局安装验收说明。
 - Recall 单次 `--execution-params <JSON对象>` / `executionParams` API：按 case/repeat 隔离透传给已选 Profile/Adapter，不改变渠道、权限或路由；新增独立消费者入口 `x-agent-suite/profiles/pi-config`，复用原生模型配置并默认继承宿主思考档位，仅显式 `thinkingLevel` 覆盖隔离 settings。
+- `x-agent-suite/assertions`：统一原有检查原语与确定性判据，旧 `criteria` 和 observation 检查入口保留兼容重导出，不保留重复实现；新增 `createJudgeAssertion`，将调用方注入的 Judge client 与每轮 `expect` 适配为 `TurnCriterion`，不可评测与缺证据显式报错。
 
 ### Fixed
 

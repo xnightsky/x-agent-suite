@@ -23,7 +23,8 @@ packages/
   llm-fixture/    # fake provider + live backend
   harness/        # HarnessProfile + 一次性/长驻 driver
   observation/    # Observation / 判据调度 / 聚合 / 报告
-  criteria/       # 最小领域中立判据集（text / tool-call）
+  assertions/     # 确定性检查与判据 / AI→Criterion 薄适配
+  criteria/       # 确定性判据兼容重导出
   matrix/         # 矩阵对照 CLI / API
   runner/         # Registry 运行时 + ScenarioSpec 执行 + eval CLI
   recall/         # 原生 .recall 发现 + YAML 编译 + 声明式评测 CLI
@@ -80,7 +81,7 @@ pnpm run install:global -- "/path/to/artifacts/<version>"
 | 场景声明 | `ScenarioSpec`          | config 代码模块                    | YAML/JSON 加载器、代码 `Scenario`、矩阵展开      |
 | 驱动     | `AgentDriver`           | `MockDriver` / harness driver      | 任何自持 driver（PTY、HTTP、SDK…）               |
 | 观测     | `Observation`           | 各 driver 归一产出                 | 消费者胶水（如 skill 脚本采集）                  |
-| 判据     | `Criterion`             | `@x-agent-suite/criteria` 最小集   | 消费者注册的任意判据（含未来 autoevals 子包）    |
+| 判据     | `Criterion`             | `@x-agent-suite/assertions` 可选集 | 消费者注册的任意判据与 Judge 薄适配              |
 | 判据调度 | `runCriteria`           | observation 内置（顺序、引用完整） | 自定义调度器（并行、短路、采样）                 |
 | 聚合     | `resolveAggregate`      | observation 内置加权机             | mathjs 表达式、自定义聚合器                      |
 | 报告     | `writeScenarioReports`  | md/json 双格式                     | 自定义 reporter（JUnit、HTML…）                  |

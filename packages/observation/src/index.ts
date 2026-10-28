@@ -1,6 +1,6 @@
 /**
  * @module @x-agent-suite/observation
- * Observation 层公共入口：检查函数与报告生成。
+ * Observation 层公共入口：判据调度、聚合与报告；检查原语仅保留兼容重导出。
  */
 export * from "./checks.ts";
 export * from "./aggregation.ts";

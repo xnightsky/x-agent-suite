@@ -1,7 +1,11 @@
 /**
  * @module @x-agent-suite/criteria
- * 通用判据子包公共入口：文本包含/排除与工具调用核对。
- * 定位：可选插件——判据模板由本包沉淀，领域判据仍由消费者注册。
+ * 确定性判据兼容入口；新代码使用 @x-agent-suite/assertions。
+ * 不变量：只重导出，不保留第二份断言实现，也不自动注册判据。
  */
-export { textContains, textNotContains } from "./text.ts";
-export { toolCall, type ToolCallExpect } from "./tool-call.ts";
+export {
+  textContains,
+  textNotContains,
+  toolCall,
+  type ToolCallExpect,
+} from "@x-agent-suite/assertions";

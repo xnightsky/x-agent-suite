@@ -253,6 +253,6 @@ pnpm ittest:token:judge
 
 ## 与 Criterion、decision、Recall 的关系
 
-Judge 的结果不是 `CriterionResult`。消费者若接入判据，应自行把 verdict 映射为判据结果；若需聚合，再把结果交给静态聚合机。weight、threshold、knockout、decision 和 absent 计分映射均不在 Judge 内。
+Judge 的结果不是 `CriterionResult`。可用 `@x-agent-suite/assertions` 的 `createJudgeAssertion` 适配为 `TurnCriterion`，或由消费者自行映射；该薄适配按每轮 `expect: JudgeRubric[]` 取规则，缺证据与不可评测显式抛错。若需聚合，再把结果交给静态聚合机。weight、threshold、knockout、decision 和 absent 计分映射均不在 Judge 内。
 
 原生 Recall v1 的 YAML、config、compile、run 与 CLI 不因本包改变；`expected.judge/decision` 仍不是原生 Recall 字段。默认测试使用 fake client/transport/driver，真实 provider 或具体宿主验证必须走显式 token 集成入口。

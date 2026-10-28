@@ -1,0 +1,28 @@
+{
+  "name": "@x-agent-suite/assertions",
+  "version": "0.0.0",
+  "private": true,
+  "description": "x-agent-suite 行为断言子包：检查层原语、确定性判据与 AI 断言适配的统一调用面（可选插件，不进内核语义）。",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test \"tests/*.test.ts\""
+  },
+  "dependencies": {
+    "@x-agent-suite/contracts": "workspace:*",
+    "@x-agent-suite/judge": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}

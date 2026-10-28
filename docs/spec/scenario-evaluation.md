@@ -42,18 +42,20 @@ export interface ScenarioResult {
 
 借鉴评测实践的分层评分：先硬判，后模糊，最后才 LLM judge。
 
-| 层               | 例子                                                                  | 实现                         |
-| ---------------- | --------------------------------------------------------------------- | ---------------------------- |
-| **Dry contract** | fixture 结构合法、fake provider 能启动、工具 schema 正确              | `dryChecks()`                |
-| **Hard**         | 期望工具被调用**且 `status === "completed"`**、入参正确、外部证据匹配 | `hardChecks()`               |
-| **Fuzzy**        | 返回文本包含 `done=true`                                              | regex / contains             |
-| **LLM judge**    | 模型回复是否满足自然语言 rubric                                       | 可选，`@x-agent-suite/judge` |
+| 层               | 例子                                                                  | 实现                                        |
+| ---------------- | --------------------------------------------------------------------- | ------------------------------------------- |
+| **Dry contract** | fixture 结构合法、fake provider 能启动、工具 schema 正确              | `dryChecks()`                               |
+| **Hard**         | 期望工具被调用**且 `status === "completed"`**、入参正确、外部证据匹配 | `hardChecks()`                              |
+| **Fuzzy**        | 返回文本包含 `done=true`                                              | regex / contains                            |
+| **LLM judge**    | 模型回复是否满足自然语言 rubric                                       | 显式注册 `createJudgeAssertion`，复用 Judge |
 
-默认 Dry + Hard 必须全过；Fuzzy 兜底；LLM judge 仅人工评估时开启。
+确定性检查与判据实现在 `@x-agent-suite/assertions`；`criteria` 与 observation 的旧检查入口只作兼容重导出。AI 判据只有调用方显式注册并注入 client 后才执行，不默认触发模型调用。
 
 各判据的具名结果如何加权汇总成出口分（weight / knockout / absent / threshold），见 [scoring-aggregation.md](./scoring-aggregation.md)。
 
 通用 AI 裁定执行、absent 与 not-evaluated 分层见 [judge.md](./judge.md)；Judge 只产具名布尔 verdict，不替代上述确定性层或静态聚合。
+
+`createJudgeAssertion({ name, client, timeoutMs?, maxRetries? })` 返回 `TurnCriterion`，该名称对应的每轮 `expect` 为 `JudgeRubric[]`。全部显式 verdict 为 true 才通过；真实 false 才映射为失败与 0 分；`not-evaluated` 与缺 verdict 分别抛带 `[not-evaluated:<kind>]` / `[absent]` 前缀的错误，不冒充普通不通过。Recall 继续按名称透传 `expect`，不增加专用 YAML 字段，注册示例见 [assertions 包说明](../../packages/assertions/README.md)。
 
 ## 执行不变量
 
@@ -164,9 +166,15 @@ Live 模式断言 model-agnostic：不断言具体文本，只断言行为形态
 ## 文件清单
 
 ```text
+packages/assertions/src/
+├── checks.ts           # dry / hard / fuzzy / enumerate 与工具匹配
+├── deterministic.ts    # text / tool-call 判据
+└── judge-assertion.ts  # AI→TurnCriterion 薄适配
+
 packages/observation/src/
-├── checks.ts         # dry / hard / fuzzy / enumerate
-└── report.ts         # md/json 报告生成
+├── checks.ts           # 旧检查入口的兼容重导出
+├── criteria-runner.ts  # 判据调度
+└── report.ts           # md/json 报告生成
 
 packages/contracts/src/
 ├── observation.ts    # Observation / ScenarioResult 类型
