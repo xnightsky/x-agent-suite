@@ -5,6 +5,8 @@
  * 不变量：
  * - 本模块不出现任何具体协议方法名字面量；method 一律由调用方传入；
  * - request 带 id 自增配对，超时显式 reject 并附 stderrTail 诊断；
+ * - 响应配对严格按 id 类型与值：只有数值 id 命中待完成请求，字符串 id 不做
+ *   数值归一（"1" / "01" / "1e0" 不命中 1），未知 id 的应答直接丢弃；
  * - 消费循环三态路由：有 id 且含 result/error → 响应归位（error 显式 reject）；
  *   有 id 且含 method → 反向请求分发；否则 → 通知回调；无法归类的消息显式失败；
  * - 未注册 handler 的反向请求必须回复 {error: {code: -32601}}，防止对端挂起；
@@ -241,14 +243,19 @@ export class JsonRpcPeer {
     );
   }
 
-  /** 响应归位：按 id 找回调，error 显式 reject。 */
+  /** 响应归位：只认数值 id（不做字符串归一），error 显式 reject。 */
   private resolvePending(msg: WireMessage): void {
-    const pending = this.pending.get(Number(msg.id));
+    const id = msg.id;
+    if (typeof id !== "number") {
+      // 类型不符：字符串 id 即使 Number() 后等于某请求 id 也不得命中。
+      return;
+    }
+    const pending = this.pending.get(id);
     if (!pending) {
       // 未知 id（多为已超时请求迟到应答）：该请求已显式拒绝过，直接丢弃。
       return;
     }
-    this.pending.delete(Number(msg.id));
+    this.pending.delete(id);
     clearTimeout(pending.timer);
     if (msg.error) {
       pending.reject(

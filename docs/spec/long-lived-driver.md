@@ -84,7 +84,7 @@ export interface JsonRpcLongLivedAdapter {
 
 分工与不变量：
 
-- `JsonRpcPeer`（协议无关）：请求 id 自增配对、超时显式拒绝并附 stderr 诊断；消费循环三态路由——响应归位（error 显式 reject）/ 反向请求分发 / 通知回调；未注册 handler 的反向请求回 `-32601` 防止对端挂起；流断或解析失败时显式拒绝所有悬挂请求；close 幂等且先停消费再关进程。**本层不出现任何具体协议方法名。**
+- `JsonRpcPeer`（协议无关）：请求 id 自增配对、超时显式拒绝并附 stderr 诊断；响应配对严格按 id 类型与值——只有数值 id 命中待完成请求，字符串 `"1"` / `"01"` / `"1e0"` 不做数值归一、不命中数值 `1`，未知 id 的应答直接丢弃；消费循环三态路由——响应归位（error 显式 reject）/ 反向请求分发 / 通知回调；未注册 handler 的反向请求回 `-32601` 防止对端挂起；流断或解析失败时显式拒绝所有悬挂请求；close 幂等且先停消费再关进程。**本层不出现任何具体协议方法名。**
 - `LongLivedJsonRpcDriver`（LongLivedAgentDriver 骨架）：轮次串行化（roundChain，前一轮失败不阻塞后续）；轮次内通知经 `mapNotification` 聚合进当轮 `Observation`（`{kind:"round"}`），轮次外通知进 `inbound()`（`{kind:"inbound"}`），`{kind:"ignore"}` 丢弃；`sendPrompt` 委托首次 `inject` 语义；`waitInbound` 只等未来事件、超时显式抛错；close 幂等，先 best-effort 告别请求（`closeRequest`）再关 peer。
 - sandbox / 宿主编排不进骨架：`spawn.command/args` 由消费者直接给出。
 - adapter 可持有跨调用状态（如工具调用合并器）；`buildPrompt` 每轮调用一次，可作为轮次边界重置时机。adapter 抛错显式失败，不静默吞错。
@@ -119,6 +119,6 @@ packages/harness/src/pty-driver.ts              # PTY 版长驻驱动（可选�
 - 每个长驻 profile 显式声明 `injectMode`，测试中不出现运行时切换。
 - 断言落在被测系统侧记录与消费者自定义证据，不依赖宿主自报文本。
 - `inject` / `sendPrompt` 均返回 `Observation`（含 `ToolCall.status`）。
-- wire 层：请求/响应 id 配对与超时显式拒绝；反向请求未注册时回 `-32601`；
+- wire 层：请求/响应 id 配对（严格按 id 类型与值，字符串 id 不命中数值 id）与超时显式拒绝；反向请求未注册时回 `-32601`；
   流断或非法 JSONL 时悬挂请求显式失败且 close 仍能清理干净；close 幂等。
 - `packages/driver/src/` 的 wire 层与骨架不出现任何具体协议方法名（由 `pnpm boundary` 与代码评审双重保证）。
