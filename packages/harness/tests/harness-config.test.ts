@@ -398,8 +398,8 @@ test("宿主 E：provider hint 命中内置表；hint === defaultProvider 时沿
     if (hinted.kind !== "resolved") return;
     assert.equal(hinted.channel.provider, "kimi-coding");
     assert.equal(hinted.channel.baseUrl, "https://api.kimi.com/coding/v1");
-    assert.equal(hinted.channel.harnessBaseUrl, "https://api.kimi.com/coding");
-    assert.equal(hinted.channel.wire, "anthropic-messages");
+    assert.equal(hinted.channel.harnessBaseUrl, undefined);
+    assert.equal(hinted.channel.wire, "openai-chat");
     assert.equal(hinted.channel.model, "kimi-for-coding");
     assert.match(hinted.channel.source, /内置/);
   } finally {
@@ -535,8 +535,8 @@ test("from: harness + provider：借用宿主 E 非默认 provider 的渠道（�
     if (r.kind !== "configured") return;
     assert.equal(r.channel.provider, "kimi-coding");
     assert.equal(r.channel.baseUrl, "https://api.kimi.com/coding/v1");
-    assert.equal(r.channel.harnessBaseUrl, "https://api.kimi.com/coding");
-    assert.equal(r.channel.wire, "anthropic-messages");
+    assert.equal(r.channel.harnessBaseUrl, undefined);
+    assert.equal(r.channel.wire, "openai-chat");
     assert.equal(r.channel.model, "kimi-for-coding");
     assert.equal(r.channel.credential, "harness");
   } finally {

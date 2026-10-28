@@ -4,7 +4,7 @@
  *
  * 不变量：
  * - 只服务 live borrowed 执行：不读 auth.json、不写真实 HOME，凭据只经 writePiLiveConfig 投影进隔离目录；
- * - 干净启动固定关闭会话、上下文文件、技能、扩展发现、MCP 与提示模板；工具策略单独由 effects 兑现；
+ * - 默认关闭所有发现面；受信任 Profile 可显式开启隔离工作区的上下文文件，工具策略单独由 effects 兑现；
  * - --tools 只是工具集裁剪（read-only 与 allowlist 都只放行固定四个原生只读工具）；文件系统边界与步数预算
  *   由守卫扩展兑现，守卫只覆盖当前 tools/path/maxSteps；
  * - 证据只认原生事件：agent_end 判完成，tool_execution_end 判工具成败，message_end 的 stopReason/usage
@@ -40,7 +40,7 @@ const PI_HOME_DIR = "piHome";
 const GUARD_FILE = "pi-recall-guard.ts";
 /** 原生只读工具集；仅裁剪工具集，不构成文件系统沙箱。 */
 const READ_ONLY_TOOLS = ["read", "grep", "find", "ls"] as const;
-/** 干净启动参数：无会话、无上下文文件、无技能、无扩展发现、无 MCP、无提示模板。 */
+/** 默认干净启动参数；项目上下文仅由受信任选项显式开启。 */
 const CLEAN_START_ARGS = [
   "--mode",
   "json",
@@ -51,7 +51,7 @@ const CLEAN_START_ARGS = [
   "--no-extensions",
   "--no-mcp",
   "--no-prompt-templates",
-  // headless 无交互确认入口，且所有发现面已关闭：显式信任本次隔离工作区并关闭启动期网络行为。
+  // headless 无交互确认入口：显式信任本次隔离工作区，并关闭启动期网络行为。
   "--approve",
   "--offline",
 ] as const;
@@ -73,6 +73,8 @@ export interface PiRecallDriverOptions {
    * 本模块不读取消费者路径、也不从考卷推测内容。
    */
   readonly appendSystemPrompt?: string;
+  /** 默认 off；project 允许宿主原生发现隔离工作区中的项目上下文文件。 */
+  readonly contextFiles?: "off" | "project";
 }
 
 /** 原生 usage 累计值。 */
@@ -98,6 +100,13 @@ function assertSupported(
   { spec, executionParams, effects }: RecallProfileDriverContext,
   options: PiRecallDriverOptions,
 ): void {
+  if (
+    options.contextFiles !== undefined &&
+    options.contextFiles !== "off" &&
+    options.contextFiles !== "project"
+  ) {
+    throw new Error("Pi Recall Driver contextFiles 只支持 off/project");
+  }
   if (spec.turns.length > 1) {
     throw new Error(
       "Pi Recall Driver 只支持单轮场景，headless 不保留多轮上下文",
@@ -279,7 +288,10 @@ function createProfile(
     sandbox: { configDirs: [PI_HOME_DIR] },
     configDirEnv: { env: "PI_CODING_AGENT_DIR", sandboxDir: PI_HOME_DIR },
     headlessArgs: (prompt) => [
-      ...CLEAN_START_ARGS,
+      ...CLEAN_START_ARGS.filter(
+        (flag) =>
+          flag !== "--no-context-files" || options.contextFiles !== "project",
+      ),
       ...(context.effects.tools === "none"
         ? ["--no-tools"]
         : ["--tools", READ_ONLY_TOOLS.join(",")]),
@@ -357,7 +369,7 @@ function wrapHarness(harness: HarnessDriver, state: NativeState): AgentDriver {
 /**
  * 创建单轮 Pi Recall Driver；目标与权限来自已批准上下文，不自动注册任何 profile。
  * @param context Recall 的场景、backend、目标、effects 与 executionParams。
- * @param options 受信任的追加系统提示词与测试命令注入。
+ * @param options 受信任的上下文发现、追加系统提示词与测试命令注入。
  * @returns start 创建隔离资源、close 幂等清理的一次性驱动。
  * @throws 多轮、命令执行或不支持的 executionParams 在执行前显式拒绝。
  */

@@ -194,13 +194,6 @@ export async function loadRecall(
   });
   const rootDir = options.rootDir ? resolve(cwd, options.rootDir) : cwd;
   const scenarios = await loadScenarios(files, rootDir, registry);
-  const hasProvision = scenarios.some(
-    (scenario) => scenario.provision !== undefined,
-  );
-  if (hasProvision && planPath === undefined) {
-    throw new Error("场景包含 provision，必须显式提供 --plan；不得隐式挂载");
-  }
-
   const liveConfigPath = options.liveConfigPath
     ? resolve(cwd, options.liveConfigPath)
     : undefined;

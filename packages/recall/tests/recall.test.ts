@@ -107,17 +107,19 @@ test("carrier 展开多个 default 并逐 target 出报告，provider 过滤不�
   assert.equal((await readReports(filteredDir)).length, 1);
 });
 
-test("场景 provision 无 Plan 拒绝，显式 effects:none 才经唯一 borrowed profile", async (t) => {
+test("场景 provision 默认 effects:none，经唯一 borrowed profile 执行", async (t) => {
   const ws = await workspace(t, { provision: true });
   assert.equal(
-    await main(args(ws, join(ws.cwd, "reports-denied")), {
+    await main(args(ws, join(ws.cwd, "reports-default")), {
       cwd: ws.cwd,
       homeDir: ws.cwd,
     }),
-    2,
+    0,
   );
-  assert.equal(state().profiles.length, 0);
+  assert.equal(state().profiles.length, 1);
   assert.equal(state().transports.length, 0);
+  assert.equal(state().profiles[0]!.effects, "none");
+  resetState();
 
   const planPath = join(ws.cwd, "execution.yaml");
   await writeFile(planPath, "version: 1\neffects: none\n");

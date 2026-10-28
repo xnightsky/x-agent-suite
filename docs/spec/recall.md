@@ -51,13 +51,13 @@ x-agent-suite recall \
 ## 无 Plan、direct、borrowed 与 ephemeral-client
 
 - 无 Plan 等价于 `effects: none`，但不等于 direct。`kind: cli`（含省略 kind）始终需要唯一注册的 borrowed Profile；不再内建 HTTP direct Driver。
-- 任一场景有 provision 而没有 `--plan`：定义错误，direct 不得隐式挂载。
-- 显式 Plan 为 `effects: none` 且场景有 provision：允许 borrowed，由注册 profile 物化 `ScenarioSpec.provision`。
+- 场景 provision 显式来自考卷的 context/plans，不要求额外 `--plan`；无执行 Plan 时保持 `effects: none`，由注册 Profile/Adapter 物化并清理隔离资源，不增加模型工具或命令权限。
+- 显式 Plan 为 `effects: none` 且场景有 provision：与无执行 Plan 等价；需要模型工具或命令副作用时才显式提供其他 effects。
 - CLI 的 TargetTags borrowed 候选与 registry 中同 carrier profile 的交集必须恰好一个；cliRef 由此归因，不靠 CLI 参数或 Plan 猜选。effects 只约束工具/会话/隔离等能力。
 - ephemeral-client 始终通过 `clientRef` 使用自定义 direct Adapter；Adapter 接收 `spec.provision` 与显式 effects Plan，其多轮、工具策略和生命周期由消费者兑现。
 - 临时 Client 复用 `registry.profiles[clientRef]`，其 `carrier` 必须与临时 Carrier ID 一致；`createDriver` 上下文中的 `cliRef/clientRef` 恰居其一。
 - `review-required` 只有当前命令带 `--approve-live` 才放行；`disallowed/unknown` 不因审批放行。direct 与 borrowed 之间不降级、不回退。
-- borrowed 接受真实的 `api-payg/api-credit/api-free` 及既有 CLI/CI/第三方订阅、CLI-free；不得伪造 subscription。缺少 usage 或 live 声明仍 fail-closed，`--approve-live` 不放行 unknown。
+- borrowed 测试阶段暂不按非 live 的 usage 计费分类过滤，不要求为运行补写或推断 subscription；direct 的 API 用量要求保持原样。缺少 live 策略仍 fail-closed，`--approve-live` 不放行 live unknown/disallowed。
 - 兼容性变更：旧“省略 kind、无 provision、effects:none”的 HTTP direct 用法须迁移为 `kind: ephemeral-client` 并注册 `clientRef`，不能通过缺注册 Profile 降级为 HTTP。
 
 ## 独立 registry

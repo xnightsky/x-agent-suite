@@ -40,6 +40,7 @@ const DIRECT_REQUIREMENTS: TargetTagRequirement = {
   ],
 };
 
+/** borrowed 测试暂不按计费分类过滤；运行能力与 live 审批仍由同一次决策校验。 */
 function borrowedRequirements(effects: RecallEffects): TargetTagRequirement {
   const toolTags =
     effects.tools === "none"
@@ -58,18 +59,7 @@ function borrowedRequirements(effects: RecallEffects): TargetTagRequirement {
       "model.inference.chat",
       ...toolTags,
     ],
-    anyOf: [
-      [
-        "provider-model.usage.api-payg",
-        "provider-model.usage.api-credit",
-        "provider-model.usage.api-free",
-        "provider-model.usage.cli-subscription",
-        "provider-model.usage.ci-subscription",
-        "provider-model.usage.third-party-subscription",
-        "provider-model.usage.cli-free",
-      ],
-      ["cli.io.text", "cli.io.jsonl"],
-    ],
+    anyOf: [["cli.io.text", "cli.io.jsonl"]],
   };
 }
 

@@ -112,7 +112,7 @@ for (const kind of ["cli", "ephemeral-client"]) {
   });
 }
 
-test("borrowed 接受 API 三种实际用量；unknown usage/live 与未审批仍拒绝", async (t) => {
+test("borrowed 暂不限制计费分类；unknown/disallowed live 与未审批仍拒绝", async (t) => {
   const ws = await workspace(t);
   for (const usage of ["api-payg", "api-credit", "api-free", "unknown"]) {
     ws.live.targetTags.providers[0]!.tags = [
@@ -120,12 +120,9 @@ test("borrowed 接受 API 三种实际用量；unknown usage/live 与未审批�
       "provider.usage.live.allowed",
     ];
     await ws.save();
-    assert.equal(
-      await main(ws.argv, { cwd: ws.cwd, homeDir: ws.cwd }),
-      usage === "unknown" ? 2 : 0,
-    );
+    assert.equal(await main(ws.argv, { cwd: ws.cwd, homeDir: ws.cwd }), 0);
   }
-  for (const policy of ["unknown", "review-required"]) {
+  for (const policy of ["unknown", "disallowed", "review-required"]) {
     ws.live.targetTags.providers[0]!.tags = [
       "provider.usage.api-credit",
       ...(policy === "unknown" ? [] : ["provider.usage.live." + policy]),
@@ -137,7 +134,7 @@ test("borrowed 接受 API 三种实际用量；unknown usage/live 与未审批�
         cwd: ws.cwd,
         homeDir: ws.cwd,
       }),
-      policy === "unknown" ? 2 : 0,
+      policy === "review-required" ? 0 : 2,
     );
     assert.equal(await main(ws.argv, { cwd: ws.cwd, homeDir: ws.cwd }), 2);
   }
