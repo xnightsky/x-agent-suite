@@ -26,13 +26,15 @@ export interface RecallProfileDriverContext {
   readonly backend: LiveBackend;
   /** 当前完整 target。 */
   readonly target: ResolvedLiveTarget;
-  /** TargetTags 与注册表共同唯一确定的 CLI profile。 */
-  readonly cliRef: string;
+  /** CLI 执行引用；与 clientRef 恰居其一。 */
+  readonly cliRef?: string;
+  /** 临时 Client 执行引用；与 cliRef 恰居其一。 */
+  readonly clientRef?: string;
   /** 当前显式 effects；场景 provision 仍在 spec 内，不做执行级合并。 */
   readonly effects: RecallEffects;
 }
 
-/** 消费者 borrowed 执行实现。 */
+/** 消费者 CLI 或临时 Client 执行实现。 */
 export interface RecallExecutionProfile {
   /** 该实现服务的 carrier。 */
   readonly carrier: string;
@@ -46,7 +48,7 @@ export interface RecallExecutionProfile {
 export interface RecallRegistry {
   /** 考卷 expect 可用判据。 */
   readonly criteria: readonly Criterion[];
-  /** 按 cliRef 注册的 borrowed 实现。 */
+  /** 按 cliRef/clientRef 注册的执行实现。 */
   readonly profiles: Readonly<Record<string, RecallExecutionProfile>>;
   /** 按名称注册的可序列化 EffectsProfile。 */
   readonly effectsProfiles: Readonly<Record<string, RecallEffectsProfile>>;

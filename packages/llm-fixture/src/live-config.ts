@@ -23,6 +23,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import { expandCarrier, hasExpandedCarrierFormat } from "./live-targets.ts";
+import {
+  parseCarrierMetadata,
+  resolveReferencedChannels,
+  stripCarrierMetadata,
+} from "./live-carriers.ts";
 import { resolveCarrierChannel, validateChannel } from "./live-channel.ts";
 import {
   BORROWED_CREDENTIAL_ENDPOINT_FIELDS,
@@ -33,7 +38,9 @@ import type {
   LiveChannelResult,
   LiveConfigLoad,
   LiveConfigOptions,
+  LiveCarrierResolution,
   LiveConfigSource,
+  LiveConfigWarning,
 } from "./live-types.ts";
 
 export {
@@ -46,6 +53,8 @@ export type {
   BorrowedChannelResult,
   BorrowedCredentialResult,
   LiveChannel,
+  LiveCarrierKind,
+  LiveCarrierResolution,
   LiveChannelPricing,
   LiveChannelResult,
   LiveConfigLoad,
@@ -185,66 +194,150 @@ async function validateExpandedCarrier(
   return { available, defaults: channels, channel: channels[0] };
 }
 
-/** 逐 carrier 校验声明并生成可选目录、默认目标与兼容告警。 */
-async function validateCarriers(
-  raw: Record<string, unknown>,
-  options: Required<Pick<LiveConfigOptions, "homeDir" | "borrowChannel">>,
-): Promise<{
+interface CarrierReference {
+  readonly carrier: string;
+  readonly record: Record<string, unknown>;
+  readonly metadata: LiveCarrierResolution;
+}
+
+interface CarrierValidationState {
   channels: Record<string, LiveChannel>;
+  carriers: Record<string, LiveCarrierResolution>;
   available: Record<string, readonly LiveChannel[]>;
   defaults: Record<string, readonly LiveChannel[]>;
   invalid: Record<string, string>;
-  warnings: {
-    code: "deprecated-carrier-model";
-    carrier: string;
-    message: string;
-  }[];
-}> {
-  const channels: Record<string, LiveChannel> = {};
-  const available: Record<string, readonly LiveChannel[]> = {};
-  const defaults: Record<string, readonly LiveChannel[]> = {};
-  const invalid: Record<string, string> = {};
-  const warnings: {
-    code: "deprecated-carrier-model";
-    carrier: string;
-    message: string;
-  }[] = [];
-  for (const [carrier, decl] of Object.entries(raw)) {
-    const record =
-      typeof decl === "object" && decl !== null
-        ? (decl as Record<string, unknown>)
-        : undefined;
-    if (record && hasExpandedCarrierFormat(record)) {
-      const resolved = await validateExpandedCarrier(carrier, record, options);
-      if ("reason" in resolved) {
-        invalid[carrier] = resolved.reason;
-      } else {
-        available[carrier] = resolved.available;
-        defaults[carrier] = resolved.defaults;
-        if (resolved.channel) channels[carrier] = resolved.channel;
-      }
-      continue;
-    }
-    const resolved = await resolveCarrierChannel(carrier, decl, options);
-    if ("reason" in resolved) {
-      invalid[carrier] = resolved.reason;
-      continue;
-    }
-    channels[carrier] = resolved.channel;
-    available[carrier] = [resolved.channel];
-    defaults[carrier] = [resolved.channel];
-    if (
-      record &&
-      (record.provider !== undefined || record.model !== undefined)
-    ) {
-      warnings.push({
-        code: "deprecated-carrier-model",
-        carrier,
-        message: `carriers.${carrier}.provider/model 已弃用，请迁移到 providers 与 default；本次仍按旧格式执行`,
-      });
-    }
+  warnings: LiveConfigWarning[];
+  references: CarrierReference[];
+}
+
+interface OwnCarrierResolution {
+  readonly available: readonly LiveChannel[];
+  readonly defaults: readonly LiveChannel[];
+  readonly channel?: LiveChannel;
+  readonly warning?: LiveConfigWarning;
+}
+
+function carrierRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function createValidationState(): CarrierValidationState {
+  return {
+    channels: {},
+    carriers: {},
+    available: {},
+    defaults: {},
+    invalid: {},
+    warnings: [],
+    references: [],
+  };
+}
+
+async function validateOwnCarrier(
+  carrier: string,
+  declaration: unknown,
+  record: Record<string, unknown> | undefined,
+  options: Required<Pick<LiveConfigOptions, "homeDir" | "borrowChannel">>,
+): Promise<OwnCarrierResolution | { readonly reason: string }> {
+  if (
+    record &&
+    hasExpandedCarrierFormat(declaration as Record<string, unknown>)
+  ) {
+    return validateExpandedCarrier(
+      carrier,
+      declaration as Record<string, unknown>,
+      options,
+    );
   }
-  return { channels, available, defaults, invalid, warnings };
+  const resolved = await resolveCarrierChannel(carrier, declaration, options);
+  if ("reason" in resolved) return resolved;
+  return {
+    available: [resolved.channel],
+    defaults: [resolved.channel],
+    channel: resolved.channel,
+    ...(record && (record.provider !== undefined || record.model !== undefined)
+      ? {
+          warning: {
+            code: "deprecated-carrier-model" as const,
+            carrier,
+            message: `carriers.${carrier}.provider/model 已弃用，请迁移到 providers 与 default；本次仍按旧格式执行`,
+          },
+        }
+      : {}),
+  };
+}
+
+function commitCarrier(
+  state: CarrierValidationState,
+  carrier: string,
+  metadata: LiveCarrierResolution,
+  resolved: OwnCarrierResolution,
+): void {
+  state.available[carrier] = resolved.available;
+  state.defaults[carrier] = resolved.defaults;
+  state.carriers[carrier] = metadata;
+  if (resolved.channel) state.channels[carrier] = resolved.channel;
+  if (resolved.warning) state.warnings.push(resolved.warning);
+}
+
+async function validateOwnCarriers(
+  raw: Record<string, unknown>,
+  options: Required<Pick<LiveConfigOptions, "homeDir" | "borrowChannel">>,
+  state: CarrierValidationState,
+): Promise<void> {
+  for (const [carrier, decl] of Object.entries(raw)) {
+    const record = carrierRecord(decl);
+    const parsed = parseCarrierMetadata(record);
+    if ("reason" in parsed) {
+      state.invalid[carrier] = parsed.reason;
+      continue;
+    }
+    const { metadata } = parsed;
+    if (metadata.channelCarrier !== undefined) {
+      state.references.push({ carrier, record: record!, metadata });
+      continue;
+    }
+    const declaration = record ? stripCarrierMetadata(record) : decl;
+    const resolved = await validateOwnCarrier(carrier, declaration, record, options);
+    if ("reason" in resolved) {
+      state.invalid[carrier] = resolved.reason;
+      continue;
+    }
+    commitCarrier(state, carrier, metadata, resolved);
+  }
+}
+
+function resolveCarrierReferences(
+  raw: Record<string, unknown>,
+  state: CarrierValidationState,
+): void {
+  for (const { carrier, record, metadata } of state.references) {
+    const source = metadata.channelCarrier!;
+    const resolved = resolveReferencedChannels(
+      record,
+      carrierRecord(raw[source]),
+      state.available[source],
+      state.invalid[source],
+    );
+    if ("reason" in resolved) {
+      state.invalid[carrier] = resolved.reason;
+      continue;
+    }
+    commitCarrier(state, carrier, metadata, resolved);
+  }
+}
+
+/** 逐 carrier 校验声明并生成执行实现、可选目录、默认目标与兼容告警。 */
+async function validateCarriers(
+  raw: Record<string, unknown>,
+  options: Required<Pick<LiveConfigOptions, "homeDir" | "borrowChannel">>,
+): Promise<CarrierValidationState> {
+  const state = createValidationState();
+  await validateOwnCarriers(raw, options, state);
+  resolveCarrierReferences(raw, state);
+  return state;
 }
 
 /**
@@ -283,7 +376,7 @@ export async function loadLiveConfig(
     if ("reason" in result) {
       return { kind: "not-configured", reason: result.reason };
     }
-    const { channels, available, defaults, invalid, warnings } =
+    const { channels, carriers, available, defaults, invalid, warnings } =
       await validateCarriers(result.raw, {
         homeDir,
         borrowChannel:
@@ -299,6 +392,7 @@ export async function loadLiveConfig(
       source: candidate.source,
       path: candidate.path,
       channels,
+      carriers,
       available,
       defaults,
       warnings,

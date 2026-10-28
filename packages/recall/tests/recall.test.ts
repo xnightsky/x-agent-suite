@@ -53,6 +53,7 @@ interface WorkspaceOptions {
   readonly targetCount?: number;
   readonly livePolicy?: "allowed" | "review-required";
   readonly provision?: boolean;
+  readonly ephemeralClient?: boolean;
 }
 
 interface Workspace {
@@ -129,6 +130,16 @@ async function workspace(
           providers: carrierProviders,
           default: defaults,
         },
+        ...(options.ephemeralClient
+          ? {
+              "fixture-ephemeral": {
+                kind: "ephemeral-client",
+                clientRef: "fixture-client-0",
+                channelsFrom: "fixture-carrier",
+                default: "fixture-provider/fixture-model-0",
+              },
+            }
+          : {}),
       },
       targetTags: {
         version: 1,
@@ -396,4 +407,83 @@ export default {
   );
   assert.equal(state().profiles.length, 0);
   assert.equal(state().transports.length, 0);
+});
+
+test("ephemeral-client 经 clientRef 使用自定义 direct Adapter 并保留渠道归因", async (t) => {
+  const ws = await workspace(t, { ephemeralClient: true });
+  const outDir = join(ws.cwd, "reports-ephemeral");
+  assert.equal(
+    await main(args(ws, outDir, ["--carrier", "fixture-ephemeral"], false), {
+      cwd: ws.cwd,
+    }),
+    0,
+  );
+  assert.equal(state().transports.length, 0);
+  assert.equal(state().profiles.length, 1);
+  assert.equal(state().profiles[0]?.clientRef, "fixture-client-0");
+  assert.equal(state().profiles[0]?.backendCarrier, "fixture-carrier");
+  assert.equal(state().profiles[0]?.cliRef, undefined);
+
+  const [report] = await readReports(outDir);
+  const execution = report.rows[0].result.observation.metadata.recallExecution;
+  assert.deepEqual(execution, {
+    target: {
+      carrier: "fixture-ephemeral",
+      provider: "fixture-provider",
+      model: "fixture-model-0",
+    },
+    kind: "ephemeral-client",
+    mode: "direct",
+    clientRef: "fixture-client-0",
+    channelCarrier: "fixture-carrier",
+    provision: "none",
+    effects: "none",
+  });
+});
+
+test("ephemeral-client 缺注册 Adapter 时在 Driver 前拒绝且不回退 direct", async (t) => {
+  const ws = await workspace(t, { ephemeralClient: true });
+  await writeFile(
+    ws.registryPath,
+    `import base from ${JSON.stringify(REGISTRY_FIXTURE_URL)};
+export default {
+  ...base,
+  profiles: {
+    "fixture-cli-0": base.profiles["fixture-cli-0"],
+  },
+};
+`,
+  );
+  assert.equal(
+    await main(
+      args(ws, join(ws.cwd, "reports-denied"), ["--carrier", "fixture-ephemeral"], false),
+      { cwd: ws.cwd },
+    ),
+    2,
+  );
+  assert.equal(state().profiles.length, 0);
+  assert.equal(state().transports.length, 0);
+});
+
+test("ephemeral-client Adapter 接收场景 provision 与显式 effects Plan", async (t) => {
+  const ws = await workspace(t, { ephemeralClient: true, provision: true });
+  const planPath = join(ws.cwd, "execution.yaml");
+  await writeFile(planPath, "version: 1\neffects: none\n");
+  const outDir = join(ws.cwd, "reports-ephemeral-provision");
+  assert.equal(
+    await main(
+      args(ws, outDir, ["--carrier", "fixture-ephemeral", "--plan", planPath], false),
+      { cwd: ws.cwd },
+    ),
+    0,
+  );
+  assert.equal(state().transports.length, 0);
+  assert.equal(state().profiles.length, 1);
+  assert.notEqual(state().profiles[0]?.provision, undefined);
+  const [report] = await readReports(outDir);
+  const execution = report.rows[0].result.observation.metadata.recallExecution;
+  assert.equal(execution.mode, "direct");
+  assert.equal(execution.clientRef, "fixture-client-0");
+  assert.equal(execution.provision, "plan:shared");
+  assert.equal(execution.effects, "none");
 });

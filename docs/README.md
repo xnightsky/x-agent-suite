@@ -3,6 +3,7 @@
 x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenario、criterion、report 等基础设施，让不同宿主（CLI、TUI、长驻协议、mock）都能被同一套评估语义驱动。
 
 - 行为、协议、使用和验证变化必须同步本目录。
+- 统一术语以根目录 [`CONTEXT.md`](../CONTEXT.md) 为锚；本目录承载详细契约、机制与使用方式。
 - 设计/规格文档写入 [`docs/spec/`](./spec/README.md)。
 - 实施计划按记录价值分流：无记录价值的（中间形态、一次性过程稿、与核心业务无关）写入 `.tmp/plans/`（不入库）；有记录价值的写入 `docs/plans/YYYY-MM-DD-<主题>.md`。
 - 从模块、工具和组合开始使用见 [`tutorial/`](./tutorial/README.md)。
@@ -30,6 +31,7 @@ x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenari
 | [`spec/driver.md`](./spec/driver.md)                                               | 子进程 / JSONL / PTY 基座                                    |
 | [`spec/sandbox.md`](./spec/sandbox.md)                                             | 无 Docker 隔离沙箱                                           |
 | [`spec/llm-fixture.md`](./spec/llm-fixture.md)                                     | 自研 fake provider 与 HarnessProfile 配置                    |
+| [`spec/ephemeral-client.md`](./spec/ephemeral-client.md)                         | 同级 Carrier 与临时 Client 配置、Adapter 和报告归因           |
 | [`spec/scenario-evaluation.md`](./spec/scenario-evaluation.md)                     | 评分层与报告格式                                             |
 | [`spec/matrix.md`](./spec/matrix.md)                                               | 同场景多宿主对照表                                           |
 | [`spec/long-lived-driver.md`](./spec/long-lived-driver.md)                         | 长驻会话驱动契约                                             |

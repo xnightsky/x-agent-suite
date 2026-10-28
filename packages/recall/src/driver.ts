@@ -1,6 +1,6 @@
 /**
  * @module @x-agent-suite/recall/driver
- * Recall direct 纯文本 Driver、registry borrowed 接线与执行归因。
+ * Recall 内置 direct 纯文本 Driver、registry borrowed/临时 Client 接线与执行归因。
  * 不变量：只消费 ScenarioSpec.provision；无执行级 provision 合并；每次执行独立 backend。
  */
 import type {
@@ -87,7 +87,7 @@ function withExecutionMetadata(
   execution: RecallResolvedExecution,
   effects: RecallEffects,
 ): Observation {
-  const { target, mode, cliRef } = execution;
+  const { target, mode, cliRef, clientRef } = execution;
   const provider = target.channel.provider!;
   return {
     ...observation,
@@ -103,6 +103,11 @@ function withExecutionMetadata(
           model: target.channel.model,
         },
         mode,
+        ...(target.kind === "ephemeral-client" ? { kind: target.kind } : {}),
+        ...(clientRef ? { clientRef } : {}),
+        ...(target.channelCarrier
+          ? { channelCarrier: target.channelCarrier }
+          : {}),
         ...(cliRef ? { cliRef } : {}),
         provision: provisionAttribution(spec),
         effects: effects.attribution,
@@ -169,14 +174,15 @@ export async function createRecallDriver(
 ): Promise<AgentDriver> {
   const { execution, effects, registry, config } = options;
   const { target } = execution;
+  // channelsFrom 的借用渠道与凭据锚定来源 Carrier；执行归因仍使用 target.carrier。
   const backend = new LiveBackend({
-    carrier: target.carrier,
+    carrier: target.channelCarrier ?? target.carrier,
     channel: target.channel,
     config,
     ...(registry.transport ? { transport: registry.transport } : {}),
   });
   let driver: AgentDriver;
-  if (execution.mode === "direct") {
+  if (execution.mode === "direct" && !execution.clientRef) {
     if (effects.kind !== "none" || spec.provision !== undefined) {
       throw new Error(
         "direct Recall 纯文本只支持 effects:none 且无场景 provision",
@@ -184,14 +190,19 @@ export async function createRecallDriver(
     }
     driver = new DirectRecallDriver(backend);
   } else {
-    if (!execution.profile || !execution.cliRef) {
-      throw new Error("borrowed Recall 缺唯一注册 profile");
+    const reference = execution.cliRef ?? execution.clientRef;
+    if (!execution.profile || !reference) {
+      throw new Error(
+        "Recall 注册执行实现缺失：" +
+          JSON.stringify({ mode: execution.mode, reference }),
+      );
     }
     driver = await execution.profile.createDriver({
       spec,
       backend,
       target,
-      cliRef: execution.cliRef,
+      ...(execution.cliRef ? { cliRef: execution.cliRef } : {}),
+      ...(execution.clientRef ? { clientRef: execution.clientRef } : {}),
       effects,
     });
   }

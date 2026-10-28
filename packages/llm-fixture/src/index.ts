@@ -28,6 +28,8 @@ export {
   LIVE_CONFIG_PATH_ENV,
   LIVE_CONFIG_FILE,
   type LiveChannel,
+  type LiveCarrierKind,
+  type LiveCarrierResolution,
   type LiveChannelPricing,
   type LiveChannelResult,
   type LiveConfigLoad,

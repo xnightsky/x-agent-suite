@@ -81,12 +81,14 @@ export interface FixtureProviderOptions {
 
 #### 概念与不变量
 
-- **carrier**：宿主 CLI，同时对应 driver/profile 标识；不是套餐。
+- **carrier**：执行载体的逻辑标识，同时对应 driver/profile 标识；可为 CLI 或 ephemeral-client，不是套餐。
 - **provider**：carrier 下的套餐或连接渠道，包含端点、wire 与凭据来源。
 - **model**：provider 下允许本仓选择的模型。
 - **target**：一次实际执行或验证的完整身份，即 `(carrier, provider, model)`。用户选择模型时可以省略渠道，但解析结果不得省略。
 - `carriers.*.providers.*.models` 是**可选目标目录**，不要求等于宿主全量模型；`carriers.*.default` 是**显式选择该 carrier 后可展开的默认目标集合**。两者分别回答“可以选什么”与“选中该范围后默认展开什么”，default 不是无参数执行授权。
 - 宿主自己的默认模型与模型范围设置（例如默认 provider/model、enabled/scoped models）只属于宿主适配层，不在本仓配置中另设 `scope_models` 或全局 `validation_targets`。
+
+同级 CLI / ephemeral-client 的 `kind`、`clientRef` 与 `channelsFrom` 契约见 [ephemeral-client.md](./ephemeral-client.md)。
 
 #### 配置结构
 

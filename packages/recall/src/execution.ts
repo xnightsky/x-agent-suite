@@ -1,6 +1,6 @@
 /**
  * @module @x-agent-suite/recall/execution
- * 按 effects 与场景需求选择 direct/borrowed 实现；不在 Plan DSL 暴露 mode/cliRef。
+ * 按 Carrier kind、effects 与场景需求选择内置 direct、borrowed 或临时 Client Adapter；不在 Plan DSL 暴露 mode/cliRef。
  * 不变量：live 与 TargetTags fail-closed；borrowed 候选与注册 profile 的交集必须唯一。
  */
 import {
@@ -22,7 +22,9 @@ export interface RecallResolvedExecution {
   readonly mode: TargetAccessMode;
   /** borrowed 的唯一注册 profile。 */
   readonly cliRef?: string;
-  /** borrowed 创建 Driver 的实现。 */
+  /** ephemeral-client 的注册实现引用。 */
+  readonly clientRef?: string;
+  /** CLI 或临时 Client 创建 Driver 的注册实现。 */
   readonly profile?: RecallExecutionProfile;
 }
 
@@ -166,6 +168,26 @@ function selectBorrowed(
   };
 }
 
+/** 选择 ephemeral-client 的自定义 direct Adapter；不得回退内置 direct。 */
+function selectEphemeralClient(
+  target: ResolvedLiveTarget,
+  catalog: TargetTagCatalog,
+  effects: RecallEffects,
+  registry: RecallRegistry,
+  liveReviewApproved: boolean,
+): RecallResolvedExecution {
+  const selected = selectDirect(target, catalog, effects, liveReviewApproved);
+  const clientRef = target.clientRef;
+  const profile = clientRef ? registry.profiles[clientRef] : undefined;
+  if (!clientRef || profile?.carrier !== target.carrier) {
+    throw new Error(
+      "Recall ephemeral-client 执行实现未唯一确定：" +
+        JSON.stringify({ carrier: target.carrier, clientRef }),
+    );
+  }
+  return { ...selected, clientRef, profile };
+}
+
 /** 解析一个 target；requireBorrowed 由显式 effects 或场景 provision 在外层推导。 */
 export function resolveRecallExecution(options: {
   readonly target: ResolvedLiveTarget;
@@ -175,6 +197,15 @@ export function resolveRecallExecution(options: {
   readonly requireBorrowed: boolean;
   readonly liveReviewApproved: boolean;
 }): RecallResolvedExecution {
+  if (options.target.kind === "ephemeral-client") {
+    return selectEphemeralClient(
+      options.target,
+      options.catalog,
+      options.effects,
+      options.registry,
+      options.liveReviewApproved,
+    );
+  }
   return options.requireBorrowed
     ? selectBorrowed(
         options.target,

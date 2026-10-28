@@ -34,11 +34,19 @@ pnpm check  # boundary + typecheck + test + ittest
 
 PTY、headless、sandbox 是机制，smoke 是抽样范围，contract 是验证目的：这些词可以出现在文件 stem、测试标题和 catalog，但不形成新的终止后缀。为何不继续细分，见[测试文件命名调研](../research/test-file-naming-taxonomy.md)。
 
+## 临时 Client 真实 Live 验证
+
+术语定义以根目录 [`CONTEXT.md`](../../CONTEXT.md#live-与执行风险) 的**临时 Client 真实 Live 验证（`ephemeral-client live`）**为锚。
+
+判定测试车道时，live 配置、Client 生命周期和 live 审批都不是独立依据；实际访问真实 provider 才进入 token 风险车道。`ephemeral-client live` 使用 `*.token.ittest.ts` 和显式 `ittest:token:*` 入口，不新增 live 测试后缀。
+
+该验证只证明这份配置能驱动新建 Client 完成该 Client 的真实执行路径，不自动证明其他 Client、direct/borrowed 模式或长期运行实例已通过。
+
 ## Recall 显式执行验证
 
-`packages/recall/tests/effects.test.ts`、`compile.test.ts`、`discovery.test.ts` 与 `recall.test.ts` 都属于单元测试：临时 live YAML、合成 TargetTags、fake transport 和 MockDriver 不访问真实 provider，也不读取真实 home 配置。它们覆盖无参数拒绝、carrier 多 default、provider/model 过滤、默认无 effects、文件内 plans/context 继承覆盖、inline 权限、direct/borrowed、live 审批、资源清理和报告归因，进入 `pnpm test` 与 `pnpm check`。
+`packages/recall/tests/effects.test.ts`、`compile.test.ts`、`discovery.test.ts` 与 `recall.test.ts` 都属于单元测试：临时 live YAML、合成 TargetTags、fake transport 和 MockDriver 不访问真实 provider，也不读取真实 home 配置。它们覆盖无参数拒绝、carrier 多 default、provider/model 过滤、默认无 effects、文件内 plans/context 继承覆盖、inline 权限、direct/borrowed、ephemeral-client Adapter、live 审批、资源清理和报告归因，进入 `pnpm test` 与 `pnpm check`。`packages/llm-fixture/tests/live-config-carriers.test.ts` 另行覆盖 kind 缺省 cli、clientRef、channelsFrom、非法引用与 target 归因。
 
-真实 Recall live 调用会消耗 token，只能在显式 live 配置和 `--approve-live`（策略为 review-required 时）下执行。本次没有新增 `*.token.ittest.ts` 或 `ittest:token:recall`，不得以 fake transport 的成功推断真实 direct/borrowed 已获 live 验证。
+真实 Recall live 调用会消耗 token，只能在显式 live 配置和 `--approve-live`（策略为 review-required 时）下执行。当前没有新增 `*.token.ittest.ts` 或 `ittest:token:recall`，不得以 fake transport 或 MockDriver 的成功推断真实 direct/borrowed/ephemeral-client 已获 live 验证。
 
 ## token 级安全门
 

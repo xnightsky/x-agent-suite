@@ -74,6 +74,19 @@ export interface LiveChannel {
   readonly pricing?: LiveChannelPricing;
 }
 
+/** Carrier 执行实现类型；缺省配置按 cli 归一。 */
+export type LiveCarrierKind = "cli" | "ephemeral-client";
+
+/** Carrier 的执行实现与可选渠道来源。 */
+export interface LiveCarrierResolution {
+  /** 执行实现类型。 */
+  readonly kind: LiveCarrierKind;
+  /** ephemeral-client 的注册实现引用。 */
+  readonly clientRef?: string;
+  /** channelsFrom 指向的渠道目录 Carrier；自有渠道时缺省。 */
+  readonly channelCarrier?: string;
+}
+
 /** 模型与所属 provider 的引用；完整执行目标还需结合 carrier。 */
 export interface LiveTargetRef {
   readonly provider: string;
@@ -97,6 +110,8 @@ export type LiveConfigLoad =
       readonly path: string;
       /** 按 carrier 索引的合法渠道声明。 */
       readonly channels: Readonly<Record<string, LiveChannel>>;
+      /** 按 carrier 索引的执行实现与渠道来源；旧结构缺省时按 cli 处理。 */
+      readonly carriers?: Readonly<Record<string, LiveCarrierResolution>>;
       /** 按 carrier 索引的全部可选目标。 */
       readonly available: Readonly<Record<string, readonly LiveChannel[]>>;
       /** 按 carrier 索引的默认验证目标；空数组表示不默认执行。 */
@@ -134,6 +149,12 @@ export interface LiveTargetSelection {
 export interface ResolvedLiveTarget {
   readonly carrier: string;
   readonly channel: LiveChannel;
+  /** 执行实现类型；旧结构缺省时按 cli 处理。 */
+  readonly kind?: LiveCarrierKind;
+  /** ephemeral-client 的注册实现引用。 */
+  readonly clientRef?: string;
+  /** 渠道目录来源 Carrier；自有渠道时缺省。 */
+  readonly channelCarrier?: string;
 }
 
 /** 多目标选择结果；任一失败均返回可读原因而不抛异常。 */

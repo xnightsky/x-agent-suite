@@ -5,6 +5,7 @@
  */
 import type {
   LiveConfigLoad,
+  LiveChannel,
   LiveTargetRef,
   LiveTargetSelection,
   LiveTargetsResult,
@@ -108,7 +109,7 @@ export function expandCarrier(
       },
     };
   }
-  const defaults = normalizeDefaults(
+  const defaults = normalizeDefaultTargets(
     record.default,
     available.map(({ target }) => target),
   );
@@ -124,7 +125,7 @@ export function expandCarrier(
 }
 
 /** 将 default 支持的简写归一成目标引用。 */
-function normalizeDefaults(
+export function normalizeDefaultTargets(
   raw: unknown,
   catalog: readonly LiveTargetRef[],
 ): { readonly targets: LiveTargetRef[] } | { readonly reason: string } {
@@ -175,6 +176,24 @@ function resolveDefaultEntry(
   return "default 条目必须是非空字符串或 { provider, model }";
 }
 
+/** 把 Carrier 执行元数据附加到完整 target；旧结构缺省按 cli。 */
+function resolvedTarget(
+  load: Extract<LiveConfigLoad, { kind: "loaded" }>,
+  carrier: string,
+  channel: LiveChannel,
+): ResolvedLiveTarget {
+  const metadata = load.carriers?.[carrier];
+  return {
+    carrier,
+    channel,
+    kind: metadata?.kind ?? "cli",
+    ...(metadata?.clientRef ? { clientRef: metadata.clientRef } : {}),
+    ...(metadata?.channelCarrier
+      ? { channelCarrier: metadata.channelCarrier }
+      : {}),
+  };
+}
+
 /** 汇总显式选择候选；完整 provider/model 或精确模型优先于模糊匹配。 */
 function explicitCandidates(
   load: Extract<LiveConfigLoad, { kind: "loaded" }>,
@@ -188,7 +207,7 @@ function explicitCandidates(
             (!selection.carrier || carrier === selection.carrier) &&
             (!selection.provider || channel.provider === selection.provider),
         )
-        .map((channel) => ({ carrier, channel })),
+        .map((channel) => resolvedTarget(load, carrier, channel)),
   );
   const qualified = candidates.filter(
     ({ channel }) =>
@@ -263,7 +282,9 @@ export function resolveLiveTargets(
     : Object.keys(load.available);
   const targets = carriers
     .flatMap((carrier) =>
-      (load.defaults[carrier] ?? []).map((channel) => ({ carrier, channel })),
+      (load.defaults[carrier] ?? []).map((channel) =>
+        resolvedTarget(load, carrier, channel),
+      ),
     )
     .filter(
       ({ channel }) =>

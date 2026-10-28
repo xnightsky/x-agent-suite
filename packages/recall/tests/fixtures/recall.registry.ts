@@ -1,4 +1,4 @@
-/** 测试注册表：Criterion、fake transport、borrowed profile 与 EffectsProfile；零真实网络。 */
+/** 测试注册表：Criterion、fake transport、CLI/临时 Client profile 与 EffectsProfile；零真实网络。 */
 import { MockDriver } from "@x-agent-suite/driver";
 import { textContains } from "@x-agent-suite/criteria";
 import type { RecallRegistry } from "../../src/registry.ts";
@@ -6,7 +6,9 @@ import type { RecallRegistry } from "../../src/registry.ts";
 export interface RecallRegistryTestState {
   transports: { model: string; messageCount: number }[];
   profiles: {
-    cliRef: string;
+    cliRef?: string;
+    clientRef?: string;
+    backendCarrier: string;
     effects: string;
     provision: unknown;
   }[];
@@ -42,6 +44,21 @@ const registry: RecallRegistry = {
       createDriver: (context) => {
         globalState.__xasRecallRegistryTest!.profiles.push({
           cliRef: context.cliRef,
+          ...(context.clientRef ? { clientRef: context.clientRef } : {}),
+          backendCarrier: context.backend.carrier,
+          effects: context.effects.attribution,
+          provision: context.spec.provision,
+        });
+        return new MockDriver();
+      },
+    },
+    "fixture-client-0": {
+      carrier: "fixture-ephemeral",
+      createDriver: (context) => {
+        globalState.__xasRecallRegistryTest!.profiles.push({
+          ...(context.cliRef ? { cliRef: context.cliRef } : {}),
+          ...(context.clientRef ? { clientRef: context.clientRef } : {}),
+          backendCarrier: context.backend.carrier,
           effects: context.effects.attribution,
           provision: context.spec.provision,
         });
