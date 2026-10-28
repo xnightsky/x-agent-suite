@@ -20,17 +20,17 @@ export const CORE_EXPORT_NAMES = [
   "assertions",
 ] as const;
 
-/** 核心包运行所需的公开标签文件白名单，不复制消费者私密配置。 */
-export const CORE_TARGET_TAG_FILES = [
-  "config/target-tags/keys.yaml",
-  "config/target-tags/instances.yaml",
-] as const;
-
 /** 核心聚合包保持外置的标准运行时依赖及其精确版本范围。 */
 export const CORE_EXTERNAL_DEPENDENCIES = {
   tsx: "^4.21.0",
   yaml: "^2.9.0",
 } as const;
+
+/** 随核心包交付的公共资源白名单；禁止整体复制配置目录或私密文件。 */
+export const CORE_RESOURCE_FILES = [
+  "config/target-tags/keys.yaml",
+  "config/target-tags/instances.yaml",
+] as const;
 
 /** 声明文件的制品形态。 */
 export type DeclarationFlavor = "core" | "pty";
@@ -96,7 +96,7 @@ export function createCorePackageManifest(version: string): PackageManifest {
     engines: { node: ">=24.0.0" },
     exports,
     bin: { "x-agent-suite": "./dist/cli.js" },
-    files: ["dist", "types", ...CORE_TARGET_TAG_FILES, "README.md", "LICENSE"],
+    files: ["dist", "types", "README.md", "LICENSE", ...CORE_RESOURCE_FILES],
     sideEffects: false,
     dependencies: CORE_EXTERNAL_DEPENDENCIES,
   };

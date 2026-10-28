@@ -166,6 +166,7 @@ test("core consumer 独立安装，PTY consumer 刻意混装核心制品以验�
   assert.match(coreSmoke, /buildMcpServerSpec/);
   assert.match(coreSmoke, /resolve\("tsx\/esm"\)/);
   assert.match(coreSmoke, /fileURLToPath/);
+  assert.match(coreSmoke, /catalog\.dictionary\.keys\.length/);
   assert.match(coreSmoke, /loadTargetTagCatalog\(\{ homeDir: tagHome \}\)/);
   assert.match(coreSmoke, /loadRecall\([\s\S]*"live":"disallowed"/);
   assert.match(coreSmoke, /loaded\.executions\[0\]\.mode, "direct"/);

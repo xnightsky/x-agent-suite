@@ -1,13 +1,14 @@
 /**
  * @module @x-agent-suite/llm-fixture/target-tags
  * TargetTags 词典与四层实例 YAML 的加载、校验和引用归一。
- * 不变量：只读标签文件，不读取 live 秘密配置，不发起网络请求。
+ * 不变量：只读包元数据、标签及显式传入的私密覆盖，不发现凭据、不发起网络请求。
  */
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
+import { TargetTagDefinitionError } from "./target-tag-error.ts";
 import type {
   LoadTargetTagCatalogOptions,
   ModelTags,
@@ -32,13 +33,7 @@ export const TARGET_TAG_INSTANCES_FILE = "config/target-tags/instances.yaml";
 export const TARGET_TAG_GLOBAL_INSTANCES_FILE =
   ".env.target-tags.instances.yaml";
 
-/** TargetTags 静态定义或实例校验错误。 */
-export class TargetTagDefinitionError extends Error {
-  constructor(message: string, options?: ErrorOptions) {
-    super(message, options);
-    this.name = "TargetTagDefinitionError";
-  }
-}
+export { TargetTagDefinitionError } from "./target-tag-error.ts";
 
 function fail(message: string): never {
   throw new TargetTagDefinitionError(message);
@@ -449,21 +444,35 @@ async function readPrivateOverlay(
   );
 }
 
+async function defaultTagRoot(): Promise<string> {
+  let directory = dirname(fileURLToPath(import.meta.url));
+  while (true) {
+    try {
+      const manifest = JSON.parse(
+        await readFile(join(directory, "package.json"), "utf8"),
+      ) as { readonly name?: unknown };
+      if (manifest.name === "x-agent-suite") return directory;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw new TargetTagDefinitionError("无法定位 TargetTags 所属包", {
+          cause: error,
+        });
+      }
+    }
+    const parent = dirname(directory);
+    if (parent === directory) fail("无法定位 TargetTags 所属包");
+    directory = parent;
+  }
+}
+
 /**
  * 加载公共标签并合并 home/live 私有实例，格式或文件错误显式抛出。
- * 显式文件路径优先，其次 repoRoot；默认按源码或安装包布局定位公共文件，
- * 不依赖消费者 cwd，也不将配置写入 home。
+ * 显式文件路径优先，其次 repoRoot；缺省定位源码或制品所属包根，不依赖消费者 cwd。
  */
 export async function loadTargetTagCatalog(
   options: LoadTargetTagCatalogOptions = {},
 ): Promise<TargetTagCatalog> {
-  const moduleDir = dirname(fileURLToPath(import.meta.url));
-  // 源码位于 packages/llm-fixture/src，聚合制品的各入口位于包根 dist。
-  const repoRoot =
-    options.repoRoot ??
-    (basename(moduleDir) === "dist"
-      ? join(moduleDir, "..")
-      : join(moduleDir, "..", "..", ".."));
+  const repoRoot = options.repoRoot ?? (await defaultTagRoot());
   const dictionaryPath =
     options.dictionaryPath ?? join(repoRoot, TARGET_TAG_DICTIONARY_FILE);
   const instancesPath =

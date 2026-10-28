@@ -28,7 +28,13 @@ packages/llm-fixture/src/
 └── target-tag-decision.ts     # direct / borrowed / live 纯决策
 ```
 
-公共两份 YAML 随核心制品按白名单安装在包根的 `config/target-tags/`。默认加载以当前模块位置为基准：源码态从 `packages/llm-fixture/src/` 定位源码根，安装态从聚合包 `dist/` 定位包根，不依赖消费者 cwd。显式 `dictionaryPath` / `instancesPath` 仍优先于 `repoRoot`；两者都未提供时才使用该默认布局。home 和 live overlay 保持原合并规则，私有文件不进入制品。
+### 源码与制品中的资源定位
+
+核心聚合包按文件白名单携带上述两份公共 YAML，PTY 包不重复携带。无参数 `loadTargetTagCatalog()` 从模块位置向上定位名为 `x-agent-suite` 的包根，源码态读取仓库资源，安装态读取自身包内资源；不读取消费者 cwd 下的同名目录，也不要求消费者取得源码仓。
+
+显式 `dictionaryPath/instancesPath` 优先；未显式指定的文件从 `repoRoot` 加相对路径读取，未给 `repoRoot` 时才使用所属包根。文件缺失、不可读、YAML 非法或包元数据解析失败均显式报错，不换用消费者目录或其他文件。home 私有实例与调用方传入的 `liveConfig.path` 覆盖仍按既有规则合并，私有文件不随包交付。
+
+隔离安装布局回归覆盖默认加载、消费者同名目录不干扰、显式覆盖和缺文件不回退；正式打包还会在仓库外从实际 tarball 安装，并在空临时 home 中按默认路径加载目录，验证资源确实进入制品。
 
 ### 词典
 

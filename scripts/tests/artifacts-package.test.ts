@@ -56,6 +56,20 @@ test("核心聚合包导出全部稳定子路径并外置 YAML/TSX 依赖", asyn
   assert.equal(manifest.dependencies?.yaml, fixtureManifest.dependencies.yaml);
 });
 
+test("核心包只显式分发公共 TargetTags YAML，PTY 包不重复携带", () => {
+  const core = createCorePackageManifest("0.7.0");
+  const pty = createPtyPackageManifest("0.7.0");
+  const resources = [
+    "config/target-tags/keys.yaml",
+    "config/target-tags/instances.yaml",
+  ];
+  for (const resource of resources) {
+    assert.ok(core.files.includes(resource), resource);
+    assert.ok(!pty.files.includes(resource), resource);
+  }
+  assert.ok(!core.files.includes("config"));
+});
+
 test("PTY 包独立声明原生依赖并与核心包 lockstep", () => {
   const manifest = createPtyPackageManifest("0.2.0");
   assert.equal(manifest.name, "@x-agent-suite/pty-driver");
