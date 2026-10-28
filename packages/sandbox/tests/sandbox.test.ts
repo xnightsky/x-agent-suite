@@ -8,7 +8,17 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { rm, realpath } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -237,5 +247,71 @@ test("cleanupSandbox：E2E_KEEP_SANDBOX=1 时保留目录", async () => {
     else process.env.E2E_KEEP_SANDBOX = saved;
     await rm(sandbox.homeDir, { recursive: true, force: true });
     await rm(sandbox.cwd, { recursive: true, force: true });
+  }
+});
+
+test("cleanupSandbox：只读目录与文件不阻碍删除", async () => {
+  const sandbox = await createSandbox();
+  const readonly = join(sandbox.cwd, "readonly");
+  const deeper = join(readonly, "deeper");
+  await mkdir(deeper, { recursive: true });
+  await writeFile(join(deeper, "file.txt"), "ro");
+  await chmod(join(deeper, "file.txt"), 0o444);
+  await chmod(deeper, 0o555);
+  await chmod(readonly, 0o555);
+  await cleanupSandbox(sandbox);
+  assert.ok(!existsSync(sandbox.cwd), "只读 cwd 树必须被删除");
+  assert.ok(!existsSync(sandbox.homeDir), "只读 cwd 树不得拖累 homeDir 清理");
+});
+
+test("cleanupSandbox：树内符号链接只删链接，不改链接目标", async () => {
+  const sandbox = await createSandbox();
+  const outside = await mkdtemp(join(tmpdir(), "xas-cleanup-outside-"));
+  const sentinel = join(outside, "sentinel.txt");
+  await writeFile(sentinel, "keep");
+  await chmod(sentinel, 0o600);
+  const sentinelMode = (await stat(sentinel)).mode & 0o777;
+  const outsideMode = (await stat(outside)).mode & 0o777;
+  await symlink(sentinel, join(sandbox.cwd, "link-file.txt"));
+  await symlink(outside, join(sandbox.cwd, "link-dir"), "junction");
+  try {
+    await cleanupSandbox(sandbox);
+    assert.ok(!existsSync(sandbox.cwd), "含链接的 cwd 必须被删除");
+    assert.equal(
+      (await stat(sentinel)).mode & 0o777,
+      sentinelMode,
+      "链接目标文件权限不得被改写",
+    );
+    assert.equal(await readFile(sentinel, "utf8"), "keep");
+    assert.equal(
+      (await stat(outside)).mode & 0o777,
+      outsideMode,
+      "链接目标目录权限不得被改写",
+    );
+  } finally {
+    await rm(outside, { recursive: true, force: true });
+  }
+});
+
+test("cleanupSandbox：根被替换为符号链接时不触碰链接目标", async () => {
+  const sandbox = await createSandbox();
+  const outside = await mkdtemp(join(tmpdir(), "xas-cleanup-swap-"));
+  const payload = join(outside, "payload.txt");
+  await writeFile(payload, "payload");
+  const outsideMode = (await stat(outside)).mode & 0o777;
+  await rm(sandbox.cwd, { recursive: true, force: true });
+  await symlink(outside, sandbox.cwd, "junction");
+  try {
+    await cleanupSandbox(sandbox);
+    assert.ok(!existsSync(sandbox.cwd), "根链接本身必须被删除");
+    assert.ok(existsSync(outside), "链接目标目录不得被删除");
+    assert.equal(
+      (await stat(outside)).mode & 0o777,
+      outsideMode,
+      "链接目标目录权限不得被改写",
+    );
+    assert.equal(await readFile(payload, "utf8"), "payload");
+  } finally {
+    await rm(outside, { recursive: true, force: true });
   }
 });

@@ -4,12 +4,16 @@
  *
  * 不变量：E2E_KEEP_SANDBOX=1 时打印路径并跳过删除（供事后诊断）；
  * configDirs / runtimeDir 均位于 homeDir 下，随 homeDir 一并删除。
+ * POSIX 只读目录在删除前补写位；通过不跟随叶链接的目录句柄 chmod。
+ * 前置条件：调用方先停止目录树的写入进程；路径遍历不提供原子的并发隔离。
  *
  * win32 实测：宿主拉起的插件子进程在 PTY kill 后不会立即退出，仍持有托管插件目录句柄，
  * 直删会 EBUSY，故采用有限退避重试；穷尽后只警告不报错（临时目录泄漏不应把一个已通过
  * 的测试拘红，留给 OS 回收）。
  */
-import { rm } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat, open, readdir, rm } from "node:fs/promises";
+import { join } from "node:path";
 import type { SandboxContext } from "@x-agent-suite/contracts";
 
 /** 退避重试间隔（毫秒）；总等待上限约 3.1s。 */
@@ -58,6 +62,70 @@ async function rmWithRetry(dir: string, label: string): Promise<void> {
 }
 
 /**
+ * 递归解锁受管目录树：为真实目录补写位，供后续 rm 删除。
+ *
+ * 不变量：先 lstat，再以 O_NOFOLLOW | O_DIRECTORY 打开并核对 inode；只对同一目录句柄 chmod。
+ * 检查后或打开后被替换的叶链接不会成为 chmod 目标；遍历祖先的并发修改仍须由调用方排除。
+ *
+ * @param dir 待解锁的绝对路径。
+ */
+async function unlockManagedDirs(dir: string): Promise<void> {
+  const info = await lstat(dir);
+  if (!info.isDirectory()) return;
+  const handle = await open(
+    dir,
+    constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_DIRECTORY,
+  ).catch((error: { code?: string }) => {
+    if (["ELOOP", "ENOTDIR", "ENOENT"].includes(error.code ?? "")) return;
+    throw error;
+  });
+  if (handle === undefined) return;
+  try {
+    const opened = await handle.stat();
+    if (opened.dev !== info.dev || opened.ino !== info.ino) return;
+    await handle.chmod(0o700);
+    const current = await lstat(dir);
+    if (current.dev !== opened.dev || current.ino !== opened.ino) return;
+    for (const name of await readdir(dir)) {
+      await unlockManagedDirs(join(dir, name));
+    }
+  } finally {
+    await handle.close();
+  }
+}
+
+/**
+ * 删除前尽力解锁目录树；失败只做显式诊断，不改变原有 rm 策略。
+ *
+ * @param dir 待删除的绝对路径。
+ * @param label 日志标签（与 rmWithRetry 一致）。
+ */
+async function unlockBeforeRemoval(dir: string, label: string): Promise<void> {
+  // Windows 的目录权限不采用 POSIX 写位；由既有 rm 策略处理只读文件。
+  if (process.platform === "win32") return;
+  try {
+    await unlockManagedDirs(dir);
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "ENOENT") return;
+    console.error(
+      `[sandbox] 清理前解锁${label}失败（仍按原策略删除）：${dir} ← ${code ?? error}`,
+    );
+  }
+}
+
+/**
+ * 先解锁再按原重试策略删除一个沙箱目录。
+ *
+ * @param dir 待删目录绝对路径。
+ * @param label 日志标签。
+ */
+async function removeSandboxDir(dir: string, label: string): Promise<void> {
+  await unlockBeforeRemoval(dir, label);
+  await rmWithRetry(dir, label);
+}
+
+/**
  * 清理沙箱：删除 homeDir 与 cwd（homeDir 下的按需目录随之删除）。
  *
  * @param sandbox 待清理的沙箱上下文。
@@ -70,7 +138,7 @@ export async function cleanupSandbox(sandbox: SandboxContext): Promise<void> {
     return;
   }
   await Promise.all([
-    rmWithRetry(sandbox.homeDir, "homeDir"),
-    rmWithRetry(sandbox.cwd, "cwd"),
+    removeSandboxDir(sandbox.homeDir, "homeDir"),
+    removeSandboxDir(sandbox.cwd, "cwd"),
   ]);
 }
