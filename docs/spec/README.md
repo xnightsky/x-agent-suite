@@ -24,6 +24,7 @@
 | [live-auth-config.md](./live-auth-config.md)             | 可选 `.env.auth.yaml`：provider 凭据、来源优先级与失败语义            |
 | [packaging.md](./packaging.md)                           | 包分发、安装方式、版本管理与原生依赖分层                              |
 | [global-cli-install.md](./global-cli-install.md)         | 指定制品集的全局 CLI 安装、校验、副作用与跨仓路径边界                 |
+| [versioning.md](./versioning.md)                         | lockstep 版本、发布准备与 tag 时机、固定版本重打及升级说明            |
 | [scenario-evaluation.md](./scenario-evaluation.md)       | 评分层：Dry / Hard / Fuzzy / enumerate / 报告                         |
 | [scoring-aggregation.md](./scoring-aggregation.md)       | 打分聚合机：维度声明、knockout/absent 三态、静态打分出口              |
 | [matrix.md](./matrix.md)                                 | `runMatrix`：变体串行、carrier 并行、对照表与报告                     |

@@ -1,13 +1,17 @@
 # 变更记录
 
-本文件记录影响消费者接口、行为、安装、配置、协议或报告格式的变化。版本遵循 [Semantic Versioning 2.0.0](https://semver.org/)；源码 workspace 的 `0.0.0` 是不可发布占位值，制品版本由 Git history 与稳定 tag 管理。历史章节与本仓稳定 tag 一一对应，不记录未发布的版本号。
+本文件记录影响消费者接口、行为、安装、配置、协议或报告格式的变化。版本遵循 [Semantic Versioning 2.0.0](https://semver.org/)；源码 workspace 的 `0.0.0` 是不可发布占位值，制品版本由 Git history 与稳定 tag 管理。开发中的变化记入 `Unreleased`；发布准备时允许先提交目标版本章节，完整验收成功后再生成对应稳定 tag。版本章节本身不表示制品已形成，流程见 [版本治理](docs/spec/versioning.md)。
 
 ## Unreleased
 
+## 0.7.0 - 2026-10-28
+
 ### Added
 
-- 原生 `@x-agent-suite/recall`：复用 `.recall/` 目录，提供确定发现、严格 YAML v1、context 只读 provision、全量前置校验、case/repeat 独立执行和 `x-agent-suite recall` CLI；聚合包新增 `x-agent-suite/recall` 子路径与统一 `bin`。
-- Recall 显式执行收敛：移除 `x-agent-suite.config.ts` 依赖，新增显式 carrier/provider/model 选择、独立 Criterion/profile/EffectsProfile registry、effects-only Plan、文件内 `plans/context.plan`、direct 纯文本与唯一 borrowed profile；无执行级 ProvisionPlan，Runner 不合并 provision，并保留 target/mode/cliRef/provision/effects 报告归因。
+- 原生 `@x-agent-suite/recall`：复用 `.recall/` 目录，提供确定发现、严格 YAML v1、context 只读 provision、全量前置校验、case/repeat 独立执行和 `x-agent-suite recall` CLI；聚合包新增 `x-agent-suite/recall` 子路径与统一 `bin`。采用显式 carrier/provider/model、独立 Criterion/profile/EffectsProfile registry、effects-only Plan、文件内 `plans/context.plan`、direct 纯文本与唯一 borrowed profile，并保留 target/mode/cliRef/provision/effects 报告归因。
+- 通用 `@x-agent-suite/judge`：批量 rubric 返回具名 boolean verdict，不直接出分；支持可注入 client、超时、重试及 TargetTags 驱动的 direct/borrowed 选择。通过 `x-agent-suite/judge` 子路径分发，不新增独立制品。
+- TargetTags：YAML 词典、CLI/provider/provider-model/model 四层实例、私密覆盖、能力与 wire 检查、live 门禁及单/多目标决策；公共实例不携带秘密，不以标签或来源隐式授权真实调用。
+- live 支持多 provider/model 可选目录、carrier 范围内的 defaults、`resolveLiveTargets` 显式选择及结构化兼容告警；token 教程同步多目标执行和模型参数透传。
 - live 新增可选 `.env.auth.yaml`：按 provider ID 或 `auth.provider` 显式绑定 API key，支持 `E2E_AUTH_CONFIG_PATH`、repo/home 发现、runtime > auth-file > model-config 优先级、失败不回退及 backend/sniff 统一脱敏；配置参考与教程同步。
 - `install:global` package script：显式接收正式制品目录，先校验清单、SHA-256 与路径边界，再全局安装核心 CLI；不自动构建/发布，不安装 PTY，不初始化用户配置，新增失败回归与隔离全局安装验收说明。
 - Recall 单次 `--execution-params <JSON对象>` / `executionParams` API：按 case/repeat 隔离透传给已选 Profile/Adapter，不改变渠道、权限或路由；新增独立消费者入口 `x-agent-suite/profiles/pi-config`，复用原生模型配置并默认继承宿主思考档位，仅显式 `thinkingLevel` 覆盖隔离 settings。
@@ -19,6 +23,26 @@
 - 核心制品按白名单携带公共 TargetTags 词典与实例，默认加载兼容源码和安装后的 `dist/` 布局，不再要求消费者指向源码仓；仓库外冒烟增加隔离 home 的默认公共标签、Recall 前置装载和独立 CLI live 拒绝门禁验证（零 token）。
 - Recall Carrier 路由修正（行为变更）：`kind: cli`（含省略 kind）始终选择真实 CLI 的唯一 borrowed Profile，不再内建 HTTP direct；纯渠道调用须迁移为 `kind: ephemeral-client + clientRef`。borrowed 接受真实 api-payg/api-credit/api-free，不必伪造 subscription；unknown 与审批门禁不变。
 - Pi live 配置不再套用 fixture 的 `reasoning:false` / `defaultThinkingLevel:"off"`；保留原生 provider ID、模型能力、思考映射与分档采样，仅在隔离目录写入已选渠道/凭据，不改真实 HOME。制品冒烟增加默认思考保真断言。
+
+### Changed
+
+- 多目标执行必须显式给出 carrier/provider/model 之一，不允许无参数执行全部 defaults；`LiveConfigLoad` loaded 分支新增必填 `available/defaults/warnings`，手工构造该类型的适配或测试替身需同步。
+- 聚合包以统一 CLI 承接原 Runner 的 eval/run/diff 与新 Recall；Recall 不读取 `x-agent-suite.config.ts`，执行级 Plan 只声明 effects，不承载 driver、判据或 provision 配置。
+
+### Deprecated
+
+- 旧 `carriers.*.provider/model` 单模型格式继续兼容，但会产生 `deprecated-carrier-model` 告警；建议迁移到 `providers/default`，暂无移除日期。
+
+### Fixed
+
+- TargetTags 默认资源定位兼容源码仓和安装包：核心制品按白名单携带两份公共 YAML，从所属包根加载，不误读取消费者同名目录；包内资源缺失显式失败，新增隔离安装布局回归和仓库外安装冒烟。
+- live 策略合并不因 provider 或 provider-model 缺层而掩盖另一层的 disallowed/review-required 限制。
+- 开发态 `node-pty@1.1.0` 补丁恢复 macOS prebuild 的 spawn-helper 可执行位，修复本仓 PTY 启动失败；不改变 PTY 制品的依赖形态。
+- CI 集成测试步骤修正为 `pnpm ittest`。
+
+### 升级说明
+
+- 相对 `0.6.1` 的配置、类型替身、安装及授权注意事项见 [0.7.0 升级说明](docs/spec/versioning.md#从-061-升级到-070)。Recall/Judge 的未发布中间态不视为上一稳定版接口；YAML schema 版本不随制品版本机械递增。
 
 ## 0.6.1 - 2026-10-19
 

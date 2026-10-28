@@ -120,7 +120,7 @@ artifacts/<version>/
 - 核心包与 PTY 包的兼容版本；
 - 构建时间与构建命令标识。
 
-tarball 只包含运行所需的 `dist/`、类型声明、README、LICENSE 与精简后的 `package.json`；核心包另以白名单交付公共 `config/target-tags/keys.yaml` 和 `config/target-tags/instances.yaml`。不得包含测试、home/live 私密配置、绝对路径、源码仓临时文件或消费者专属 profile。核心包把 `yaml` 声明为普通运行时依赖并保持 external，不把其源码和 sourcemap 内容复制进聚合 bundle；安装时由 pnpm/npm 或内部 registry 按 lockfile 解析。
+tarball 只包含运行所需的 `dist/`、类型声明、README、LICENSE、精简后的 `package.json`，以及核心包的两份公共 TargetTags YAML（`config/target-tags/keys.yaml`、`config/target-tags/instances.yaml`）。资源按文件白名单复制，不能整体打包 `config/`；PTY 包不重复携带。默认资源从所属包根定位，源码态和安装态共用机制，不依赖消费者同名目录；显式路径覆盖仍有效，资源缺失或不可读即显式失败。不得包含测试、home/live 私密配置、绝对路径、源码仓临时文件或消费者专属 profile。核心包把 `yaml` 声明为普通运行时依赖并保持 external，不把其源码和 sourcemap 内容复制进聚合 bundle；安装时由 pnpm/npm 或内部 registry 按 lockfile 解析。
 
 核心包仓库外安装冒烟不仅验证导入，还在空临时 home 中用默认路径加载公共 TargetTags，并通过合成配置调用 Recall 前置装载。随后对已安装的独立 CLI bundle 执行 `live.disallowed` 拒绝探针，并预加载禁止 `fetch` 的钩子；不传源码 `repoRoot`、不调用真实 provider，避免源码布局或用户 home 掩盖漏打包/安装态定位错误。
 
@@ -371,117 +371,7 @@ pnpm exec x-agent-suite recall (--carrier <id> | --provider <id> | --model <id>)
 
 ## 版本管理
 
-### 起始版本与版本策略
-
-- `0.0.0` 仅是仓库占位版本，不作为可安装制品版本。
-- 首个版本化基线使用 `0.1.0`。
-- 初期两个对外分发包采用 **lockstep versioning**：聚合包与 PTY 包使用同一版本；内部 workspace 仍是不可发布实现模块。
-- 版本身份独立于公开发布；本地 tarball、远程制品同样必须有正式版本。
-- 在多包兼容关系尚未形成真实独立演进需求前，不采用 independent versioning。
-
-### `0.y.z` 期间的递增规则
-
-本库遵循 SemVer 2.0.0，并对 major-zero 阶段收紧约定：
-
-| 变更                             | 版本递增   | 示例                                |
-| -------------------------------- | ---------- | ----------------------------------- |
-| 破坏公共接口、改变协议或删除能力 | MINOR      | `0.1.0` → `0.2.0`                   |
-| 向后兼容的新功能                 | MINOR      | `0.2.0` → `0.3.0`                   |
-| 向后兼容的修复、性能或内部重构   | PATCH      | `0.2.0` → `0.2.1`                   |
-| 仅 docs/style/test/chore         | 不单独发版 | 保留到下一次可发布变更              |
-| 候选验证                         | prerelease | `0.3.0-alpha.0` → `beta.0` → `rc.0` |
-
-`1.0.0` 表示公共接口进入稳定承诺期；至少应满足：主线验收闭环、两个独立消费者验证、安装制品稳定、破坏性接口已有迁移纪律。
-
-### 单一版本真相源
-
-- Git history 与当前提交上的稳定 tag 是版本真相源；根 package 和内部 workspace 的 `0.0.0` 只是不可发布占位值。
-- Git tag 使用 `v<version>`，例如 `v0.1.0`；本次已获授权，稳定 `artifacts:pack` 成功后自动创建 annotated tag。
-- 核心包、PTY 包、artifact 目录、tarball 文件名与 manifest 必须使用同一推导版本。
-- `CHANGELOG.md` 归集消费者可见变化，不承担机器版本真相源。
-- 一个版本一旦形成可消费制品，其内容不得覆盖或替换；任何修改都产生新版本。
-- Git commit 写入 manifest，不塞入 SemVer build metadata，避免同版本出现多个内容。
-
-### 固定版本与 HEAD 对齐
-
-稳定版本 `V` 必须与一个干净的 release commit 一一对应，`v<V>` annotated tag 指向该提交。首次形成制品时 tag 不是前置条件，而是完整验收成功后的原子收口；重打历史固定版本时 tag 是首选构建来源，完整 commit SHA 仅用于恢复异常历史。
-
-| 目标                         | 正确构建来源                         | 制品版本示例                 |
-| ---------------------------- | ------------------------------------ | ---------------------------- |
-| 重打已发布稳定版             | 对应 `v<V>` 或其完整 release commit  | `0.1.0`                      |
-| 把当前 HEAD 形成新稳定版     | 先提交功能与 changelog，再从该提交打 | `0.2.0`                      |
-| 共享尚未发布的当前 HEAD      | 干净且已提交的 HEAD                  | `0.1.0-dev.20260828.df7759b` |
-| 工作区含未提交或未跟踪的变更 | **不得形成共享制品**                 | —                            |
-| 从旧稳定线修复               | 从旧 release commit 分支出的新提交   | `0.1.0` → `0.1.1`            |
-
-当源码占位 version 与当前 HEAD 不对应时：
-
-- 要打既有固定版本，切到该版本的 release commit/tag 后打包，不从当前 HEAD 强行覆盖版本号；
-- 要把当前 HEAD 打成稳定版本，先完成行为与 changelog 提交，再由 Git history 推导 lockstep 制品版本；
-- 只需要给兄弟仓库试用当前 HEAD，则打唯一 snapshot，不冒充既有稳定版本。
-
-固定版本的推荐过程：
-
-1. 选择 `v<V>` 对应的 release commit，确认 changelog 覆盖该版本的消费者可见变化；
-2. 确认该提交的工作树干净，并运行 `pnpm check`；
-3. 从该 tag 或完整 commit 创建隔离的 detached worktree；
-4. 在隔离目录执行 frozen install、构建、pack 和仓库外安装冒烟测试；
-5. manifest 记录 `version: V`、完整 commit 和 `dirty: false`，再生成 SHA-256；
-6. 只有同一 tag/commit 可以重打同版本；不同 commit 必须形成新版本。
-
-重打固定历史版本使用隔离 worktree，避免当前 HEAD 污染目标版本：
-
-```bash
-release_ref=v0.1.0 # 没有 tag 时使用完整 commit SHA
-artifact_output="$(pwd)/artifacts/0.1.0"
-release_root="$(mktemp -d)"
-release_dir="$release_root/repo"
-git worktree add --detach "$release_dir" "$release_ref"
-(
-  cd "$release_dir"
-  corepack pnpm install --frozen-lockfile
-  pnpm check
-  pnpm artifacts:pack -- --version 0.1.0 --output "$artifact_output"
-)
-git worktree remove "$release_dir"
-rmdir "$release_root"
-```
-
-### 开发 HEAD 的 snapshot 版本
-
-snapshot 只允许来自干净且已提交的 HEAD，格式为 `<自动推导稳定版本>-dev.<YYYYMMDD>.<short-sha>`。例如首次基线是 `0.1.0-dev.20260828.df7759b`；已有稳定版后，由后续 Git history 自动选择 `0.1.1-dev...` 或 `0.2.0-dev...`。日期便于排序，commit 负责唯一定位源码。
-
-- snapshot 的版本改写应发生在隔离打包区，不要求把每个 snapshot version 提交回主分支；manifest 仍记录完整 commit。
-- snapshot 不创建稳定 tag，不使用 registry 的 `latest`，也不得覆盖同名 tarball。
-- 兄弟仓库必须钉住完整 tarball URL/路径和 SHA-256，不能依赖“最新 snapshot”浮动别名。
-- dirty working tree 没有可复现的 commit 身份；需要共享时先形成提交，再生成 snapshot。
-- snapshot 验证通过不等于正式发布；转稳定版时仍需独立的版本准备提交和完整制品验收。
-
-### 变更记录
-
-采用根级 `CHANGELOG.md` 记录 lockstep 版本变化，不为七个内部模块分别维护重复 changelog。每个版本按需包含：
-
-- Added：新增能力；
-- Changed：接口或行为变化；
-- Fixed：修复；
-- Deprecated / Removed：弃用与移除；
-- Breaking：破坏性变化与迁移说明；
-- Boundary debt：新增或回收的重要边界债务。
-
-影响消费者接口、行为、安装、配置、协议或报告格式的变更必须进入 changelog；纯测试重构、无行为格式化可省略。
-
-### 版本流程
-
-版本化、形成制品、上传远端和发布 registry 是四个独立动作：
-
-1. 按 Conventional Commits 提交行为与 changelog；
-2. `artifacts:pack` 从最近稳定 tag 后的提交自动判断 SemVer 级别；
-3. 命令运行 `pnpm check`、构建与仓库外安装冒烟；
-4. 从同一 commit 生成 tarball、manifest 与 SHA256SUMS；
-5. 全部成功后自动创建 annotated `v<version>` tag；
-6. 按需要停在本地，另行授权后再上传远端制品存储、push tag 或发布 registry。
-
-当前自动规则只覆盖单一 lockstep 制品线，不引入 Changesets。将来出现并行 release line、prerelease channel 或独立包版本后，再评估专用发布工具。
+Git history 与稳定 tag 是版本真相源，核心包和 PTY 包采用 lockstep；源码 workspace 的 `0.0.0` 不改。完整递增规则、changelog 发布准备、tag 时机、固定版本重打、snapshot 和 `0.6.1 → 0.7.0` 升级说明见 [版本治理与发布准备](./versioning.md)。
 
 ## 制品验证
 
@@ -491,10 +381,11 @@ snapshot 只允许来自干净且已提交的 HEAD，格式为 `<自动推导稳
 2. 检查 core 的 JS 与 sourcemap 不再包含 `yaml` 源码；
 3. TypeScript 编译所有公开子路径的最小示例；
 4. 运行 JSONL / sandbox / fixture / matrix 冒烟测试；
-5. 安装 PTY tarball，并在支持的平台运行 PTY 冒烟测试；
-6. 通过临时 HTTP 地址重复远程 tarball 安装；
-7. publish 前通过临时 registry 重复按包名安装；
-8. 检查 tarball 内容、版本、commit 与 SHA-256 一致。
+5. 在仓库外调用无参数 `loadTargetTagCatalog()`，确认包内词典和实例可加载，并保留 fake client 的 Judge 行为冒烟；
+6. 安装 PTY tarball，并在支持的平台运行 PTY 冒烟测试；
+7. 开通远程分发时，通过临时 HTTP 地址重复远程 tarball 安装；
+8. 发布 registry 前，通过临时 registry 重复按包名安装；
+9. 检查 tarball 内容、版本、commit 与 SHA-256 一致。
 
 只有 workspace 测试通过，不能替代制品安装验证。
 
