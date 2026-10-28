@@ -62,6 +62,14 @@ pnpm tutorial:pty:pi  # 真实 Pi + fake provider；默认 skip，零 token
 
 兄弟仓库的本地 tarball、git 源码自构建、远程 GET、未来 registry 安装配置，以及固定版本重打方式，见 [`docs/spec/packaging.md`](docs/spec/packaging.md)。`artifacts/` 是本地交付输出并已加入 `.gitignore`。
 
+需要任意目录可调用的全局 CLI 时，从本源码仓安装已交付的核心制品（不自动构建、不发布）：
+
+```bash
+pnpm run install:global -- "/path/to/artifacts/<version>"
+```
+
+脚本先校验 manifest 与 SHA-256，只安装核心 CLI，不安装 PTY、不写用户配置。全局 bin/PATH 前置及跨仓使用边界见[全局 CLI 安装](docs/spec/global-cli-install.md)。
+
 ## 流水线阶段：每段都是可替换槽位
 
 评测流水线由若干**阶段槽位**组成：槽位是契约（数据形状），默认实现只是槽位的一个取值。

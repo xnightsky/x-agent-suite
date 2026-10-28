@@ -362,7 +362,7 @@ pnpm exec x-agent-suite recall (--carrier <id> | --provider <id> | --model <id>)
 
 `x-agent-suite/recall` 同一子路径导出显式 target 装载/执行、独立 registry、effects-only Plan 和场景资源物化 API，并复用聚合包内现有 llm-fixture live resolver/TargetTags 与 harness hooks。统一 CLI 不再读取 `x-agent-suite.config.ts`；没有新增子路径、制品种类或 token 冒烟入口，消费者 Criterion/profile/EffectsProfile 仍通过显式 `--registry` 提供。
 
-若以后确实需要全局软件安装，可复用同一 tarball 或 registry 包执行 `pnpm add -g`；全局安装是额外验收面，不反向改变库接口。
+需要任意目录可调用的全局 CLI 时，使用 `pnpm run install:global -- <制品目录>`：校验正式 manifest 与校验和后只安装核心包，不隐式构建、不发布、不初始化用户配置。全局 bin/PATH 须由执行者准备；详细前置、跨仓路径规则和验收边界见[全局 CLI 安装](./global-cli-install.md)。
 
 ## 版本管理
 

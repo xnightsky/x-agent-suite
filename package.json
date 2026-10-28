@@ -25,6 +25,7 @@
   "author": "xnightsky",
   "scripts": {
     "artifacts:pack": "tsx scripts/artifacts-pack.ts",
+    "install:global": "tsx scripts/install-global.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "tutorial": "tsx --test examples/tutorial/01-mock-report.test.ts",
