@@ -5,7 +5,7 @@
  */
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import type {
@@ -449,13 +449,21 @@ async function readPrivateOverlay(
   );
 }
 
-/** 从正式 YAML 加载词典与真实实例；显式路径优先于 repoRoot 默认路径。 */
+/**
+ * 加载公共标签并合并 home/live 私有实例，格式或文件错误显式抛出。
+ * 显式文件路径优先，其次 repoRoot；默认按源码或安装包布局定位公共文件，
+ * 不依赖消费者 cwd，也不将配置写入 home。
+ */
 export async function loadTargetTagCatalog(
   options: LoadTargetTagCatalogOptions = {},
 ): Promise<TargetTagCatalog> {
+  const moduleDir = dirname(fileURLToPath(import.meta.url));
+  // 源码位于 packages/llm-fixture/src，聚合制品的各入口位于包根 dist。
   const repoRoot =
     options.repoRoot ??
-    join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+    (basename(moduleDir) === "dist"
+      ? join(moduleDir, "..")
+      : join(moduleDir, "..", "..", ".."));
   const dictionaryPath =
     options.dictionaryPath ?? join(repoRoot, TARGET_TAG_DICTIONARY_FILE);
   const instancesPath =

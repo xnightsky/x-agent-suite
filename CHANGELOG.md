@@ -10,6 +10,10 @@
 - Recall 显式执行收敛：移除 `x-agent-suite.config.ts` 依赖，新增显式 carrier/provider/model 选择、独立 Criterion/profile/EffectsProfile registry、effects-only Plan、文件内 `plans/context.plan`、direct 纯文本与唯一 borrowed profile；无执行级 ProvisionPlan，Runner 不合并 provision，并保留 target/mode/cliRef/provision/effects 报告归因。
 - live 新增可选 `.env.auth.yaml`：按 provider ID 或 `auth.provider` 显式绑定 API key，支持 `E2E_AUTH_CONFIG_PATH`、repo/home 发现、runtime > auth-file > model-config 优先级、失败不回退及 backend/sniff 统一脱敏；配置参考与教程同步。
 
+### Fixed
+
+- 核心制品按白名单携带公共 TargetTags 词典与实例，默认加载兼容源码和安装后的 `dist/` 布局，不再要求消费者指向源码仓；仓库外冒烟增加隔离 home 的默认公共标签、Recall 前置装载和独立 CLI live 拒绝门禁验证（零 token）。
+
 ## 0.6.1 - 2026-10-19
 
 ### Fixed

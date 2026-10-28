@@ -24,6 +24,7 @@ import { build } from "esbuild";
 import {
   CORE_EXPORT_NAMES,
   CORE_EXTERNAL_DEPENDENCIES,
+  CORE_TARGET_TAG_FILES,
   createCorePackageManifest,
   createPtyPackageManifest,
   rewriteDeclarationSpecifiers,
@@ -273,6 +274,14 @@ async function preparePackage(
     cp(join(root, "README.md"), join(stage, "README.md")),
     cp(join(root, "LICENSE"), join(stage, "LICENSE")),
   ]);
+  if (flavor === "core") {
+    await mkdir(join(stage, "config", "target-tags"), { recursive: true });
+    await Promise.all(
+      CORE_TARGET_TAG_FILES.map((file) =>
+        cp(join(root, file), join(stage, file)),
+      ),
+    );
+  }
 }
 
 async function rewriteDeclarationTree(

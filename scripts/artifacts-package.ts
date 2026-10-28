@@ -19,6 +19,12 @@ export const CORE_EXPORT_NAMES = [
   "judge",
 ] as const;
 
+/** 核心包运行所需的公开标签文件白名单，不复制消费者私密配置。 */
+export const CORE_TARGET_TAG_FILES = [
+  "config/target-tags/keys.yaml",
+  "config/target-tags/instances.yaml",
+] as const;
+
 /** 核心聚合包保持外置的标准运行时依赖及其精确版本范围。 */
 export const CORE_EXTERNAL_DEPENDENCIES = {
   tsx: "^4.21.0",
@@ -81,7 +87,7 @@ export function createCorePackageManifest(version: string): PackageManifest {
     engines: { node: ">=24.0.0" },
     exports,
     bin: { "x-agent-suite": "./dist/cli.js" },
-    files: ["dist", "types", "README.md", "LICENSE"],
+    files: ["dist", "types", ...CORE_TARGET_TAG_FILES, "README.md", "LICENSE"],
     sideEffects: false,
     dependencies: CORE_EXTERNAL_DEPENDENCIES,
   };

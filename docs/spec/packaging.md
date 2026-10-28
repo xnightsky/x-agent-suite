@@ -119,7 +119,9 @@ artifacts/<version>/
 - 核心包与 PTY 包的兼容版本；
 - 构建时间与构建命令标识。
 
-tarball 只包含运行所需的 `dist/`、类型声明、README、LICENSE 与精简后的 `package.json`。不得包含测试、私密配置、绝对路径、源码仓临时文件或消费者专属 profile。核心包把 `yaml` 声明为普通运行时依赖并保持 external，不把其源码和 sourcemap 内容复制进聚合 bundle；安装时由 pnpm/npm 或内部 registry 按 lockfile 解析。
+tarball 只包含运行所需的 `dist/`、类型声明、README、LICENSE 与精简后的 `package.json`；核心包另以白名单交付公共 `config/target-tags/keys.yaml` 和 `config/target-tags/instances.yaml`。不得包含测试、home/live 私密配置、绝对路径、源码仓临时文件或消费者专属 profile。核心包把 `yaml` 声明为普通运行时依赖并保持 external，不把其源码和 sourcemap 内容复制进聚合 bundle；安装时由 pnpm/npm 或内部 registry 按 lockfile 解析。
+
+核心包仓库外安装冒烟不仅验证导入，还在空临时 home 中用默认路径加载公共 TargetTags，并通过合成配置调用 Recall 前置装载。随后对已安装的独立 CLI bundle 执行 `live.disallowed` 拒绝探针，并预加载禁止 `fetch` 的钩子；不传源码 `repoRoot`、不调用真实 provider，避免源码布局或用户 home 掩盖漏打包/安装态定位错误。
 
 ## 生产端如何打包
 

@@ -184,6 +184,19 @@ function withLivePolicy(
   );
 }
 
+test("源码默认公共路径与显式 repoRoot 一致，home 使用隔离目录", async () => {
+  const homeDir = await mkdtemp(join(os.tmpdir(), "target-tags-source-"));
+  try {
+    const explicit = await loadTargetTagCatalog({
+      repoRoot: REPO_ROOT,
+      homeDir,
+    });
+    assert.deepEqual(await loadTargetTagCatalog({ homeDir }), explicit);
+  } finally {
+    await rm(homeDir, { recursive: true, force: true });
+  }
+});
+
 test("正式 YAML：四层真实实例可加载，k3 与 kimi-for-coding 不共享 canonical identity", async () => {
   const catalog = await loadTargetTagCatalog({
     repoRoot: REPO_ROOT,

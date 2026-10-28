@@ -29,6 +29,8 @@ test("核心聚合包导出全部稳定子路径并外置 YAML/TSX 依赖", asyn
   assert.ok(CORE_EXPORT_NAMES.includes("recall"));
   assert.ok(CORE_EXPORT_NAMES.includes("judge"));
   assert.equal(manifest.bin?.["x-agent-suite"], "./dist/cli.js");
+  assert.ok(manifest.files.includes("config/target-tags/keys.yaml"));
+  assert.ok(manifest.files.includes("config/target-tags/instances.yaml"));
   assert.deepEqual(
     Object.keys(manifest.exports),
     CORE_EXPORT_NAMES.map((name) => `./${name}`),

@@ -142,14 +142,78 @@ function createSmokeTsconfig(): object {
   };
 }
 
+/** 真实安装后加载包内公共标签，隔离 home，避免源码路径或用户配置掩盖漏包。 */
+function createTargetTagsRuntimeSmoke(): string {
+  return `const { loadTargetTagCatalog } = await import("x-agent-suite/llm-fixture");
+const tagHome = await mkdtemp(join((await import("node:os")).tmpdir(), "xas-tag-home-"));
+try {
+  const catalog = await loadTargetTagCatalog({ homeDir: tagHome });
+  assert.ok(catalog.dictionary.keys.length > 0);
+  assert.ok(catalog.instances.cli.length > 0);
+  ${createRecallLoadSmoke()}
+} finally {
+  await rm(tagHome, { recursive: true, force: true });
+}`;
+}
+
+/** 只运行 Recall 前置装载：验证独立聚合入口的公共标签定位，不创建 Driver。 */
+function createRecallLoadSmoke(): string {
+  return `const { loadRecall } = await import("x-agent-suite/recall");
+  await writeFile(join(tagHome, "live.yaml"), JSON.stringify({
+    carriers: { artifact: {
+      providers: { "artifact-provider": {
+        wire: "openai-chat", baseUrl: "https://artifact.invalid/v1", models: ["artifact-model"],
+      } },
+      default: { provider: "artifact-provider", model: "artifact-model" },
+    } },
+    targetTags: { version: 1,
+      providers: [{ id: "artifact-provider", tags: ["provider.usage.api-free", "provider.usage.live.allowed"] }],
+      providerModels: [{ id: "artifact-target", providerRef: "artifact-provider", model: "artifact-model",
+        wire: "openai-chat", modelRef: "artifact-canonical", tags: ["provider-model.api.complete"] }],
+      models: [{ id: "artifact-canonical", tags: ["model.inference.chat"] }],
+    },
+  }));
+  await writeFile(join(tagHome, "recall.yaml"), JSON.stringify({
+    version: 1, id: "artifact-install", cases: [{ id: "artifact", turns: [{ send: "offline installation check" }] }],
+  }));
+  const loaded = await loadRecall({
+    cwd: tagHome, homeDir: tagHome, selection: { carrier: "artifact" },
+    liveConfigPath: "live.yaml", target: "recall.yaml",
+  });
+  assert.equal(loaded.executions[0].mode, "direct");
+  ${createRecallCliGateSmoke()}
+  assert.equal(loaded.scenarios.length, 1);`;
+}
+
+/** 用 live 拒绝门禁验证已安装 CLI 的独立 bundle；网络预加载钩子提供第二道防线。 */
+function createRecallCliGateSmoke(): string {
+  return `const { spawnSync } = await import("node:child_process");
+  const liveFile = join(tagHome, "live.yaml");
+  const denied = JSON.parse(await readFile(liveFile, "utf8"));
+  denied.targetTags.providers[0].tags = ["provider.usage.api-free", "provider.usage.live.disallowed"];
+  await writeFile(liveFile, JSON.stringify(denied));
+  const guardFile = join(tagHome, "deny-network.cjs");
+  await writeFile(guardFile, 'globalThis.fetch = () => { throw new Error("NETWORK_FORBIDDEN"); };');
+  const cliEntry = fileURLToPath(new URL("./cli.js", import.meta.resolve("x-agent-suite/recall")));
+  const cli = spawnSync(process.execPath, [
+    "--require", guardFile, cliEntry, "recall", "--carrier", "artifact",
+    "--live-config", liveFile, join(tagHome, "recall.yaml"),
+  ], { cwd: tagHome, env: { HOME: tagHome, PATH: process.env.PATH }, encoding: "utf8" });
+  if (cli.error) throw cli.error;
+  assert.equal(cli.status, 2);
+  assert.match(cli.stderr, /"live":"disallowed"/);
+  assert.doesNotMatch(cli.stderr, /keys\\.yaml|instances\\.yaml|NETWORK_FORBIDDEN/);`;
+}
+
 function createCoreRuntimeSmoke(runtimeImports: readonly string[]): string {
   return `import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 await Promise.all([${runtimeImports.join(",")}]);
+${createTargetTagsRuntimeSmoke()}
 const { judge } = await import("x-agent-suite/judge");
 const judgeOutcome = await judge(
   { output: "smoke", rubrics: [{ name: "fact", rubric: "Is the answer factual?" }] },

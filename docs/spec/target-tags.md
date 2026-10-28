@@ -28,6 +28,8 @@ packages/llm-fixture/src/
 └── target-tag-decision.ts     # direct / borrowed / live 纯决策
 ```
 
+公共两份 YAML 随核心制品按白名单安装在包根的 `config/target-tags/`。默认加载以当前模块位置为基准：源码态从 `packages/llm-fixture/src/` 定位源码根，安装态从聚合包 `dist/` 定位包根，不依赖消费者 cwd。显式 `dictionaryPath` / `instancesPath` 仍优先于 `repoRoot`；两者都未提供时才使用该默认布局。home 和 live overlay 保持原合并规则，私有文件不进入制品。
+
 ### 词典
 
 `keys.yaml` 注册合法标签。TagId 形态为：
