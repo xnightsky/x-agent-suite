@@ -117,13 +117,19 @@ snapshot 只允许来自干净且已提交的 HEAD，格式为 `<自动推导稳
 
 当前自动规则只覆盖单一 lockstep 制品线，不引入 Changesets。将来出现并行 release line、prerelease channel 或独立包版本后，再评估专用发布工具。
 
+## 2026-10-28 主线与 0.7.0 标签校准
+
+本次操作者明确授权重写已推送的主线，并将 `v0.7.0` 从旧 release commit `b40fec7` 校准到 rebase 后重新验收的 release commit；这是一次性例外，不放宽默认的禁止强推和稳定版本不可变纪律。核对时 GitHub 尚无 `v0.7.0` Release；本地旧版制品与旧 main/tag 对象另行备份，不作为新版本交付。
+
+新 `v0.7.0` 由稳定打包入口在检查、构建、仓库外安装冒烟和校验和生成全部成功后创建；远端 main 与标签使用精确旧对象约束的 `--force-with-lease` 原子更新，远端变化即停止。消费者若已缓存旧标签或制品，必须以新 manifest 的完整 commit 与 SHA-256 重新核对并更新依赖锁定，不混用同名旧包。
+
 ## 从 0.6.1 升级到 0.7.0
 
 ### 安装与版本身份
 
 - 核心包 `x-agent-suite` 与可选 `@x-agent-suite/pty-driver` 同步升级到 `0.7.0`，来自同一次构建，并校验 `SHA256SUMS`。消费者更新依赖来源及 lockfile，不引用内部 workspace 包。
 - 源码 package 的 `0.0.0` 保持不变；本次不引入 Changesets，也不单独提升内部包版本。
-- 核心包新增 `x-agent-suite/recall`、`x-agent-suite/judge` 子路径和统一 `x-agent-suite` CLI，原 `eval/run/diff` 语义保留。新增能力不要求已有 Runner 消费者迁移到 Recall。
+- 核心包新增 `x-agent-suite/recall`、`x-agent-suite/judge`、`x-agent-suite/assertions`、`x-agent-suite/profiles/pi-config`、`x-agent-suite/profiles/pi-recall` 子路径和统一 `x-agent-suite` CLI，原 `eval/run/diff` 语义保留。旧 `criteria` 与 observation 检查入口保留兼容重导出。
 
 ### live 配置与目标选择
 
@@ -135,7 +141,9 @@ snapshot 只允许来自干净且已提交的 HEAD，格式为 `<自动推导稳
 ### TargetTags、Recall 与 Judge
 
 - 核心包携带公共 `config/target-tags/keys.yaml` 和 `instances.yaml`，默认从自身包根加载，不要求消费者复制源码仓或准备同名目录。显式 `dictionaryPath/instancesPath` 优先于 `repoRoot`，未覆盖时使用包内资源；显式资源失败不静默回退。
-- 私有 `targetTags` 仍放在已选 live 配置内；公共目录出现某实例不代表其 live 已授权，unknown/disallowed 不自动放行。详见 [target-tags.md](./target-tags.md)。
+- 私有实例按公共目录 → home 的 `.env.target-tags.instances.yaml` → 已选 live 配置内 `targetTags` 合并；公共目录出现某实例不代表其 live 已授权，unknown/disallowed 不自动放行。详见 [target-tags.md](./target-tags.md)。
 - Recall 与 Judge 均为本次首次发布。Recall 不读 `x-agent-suite.config.ts`，按显式目标、独立 registry 和 effects-only Plan 执行；曾试用未发布中间态的调用方按 [recall.md](./recall.md) 调整，但这些中间态不列作相对 `0.6.1` 的删除接口。
+- Recall 的 `kind: cli`（含省略 kind）只走消费者注册的唯一 borrowed Profile；原试用态 HTTP direct 调用需迁移为 `kind: ephemeral-client + clientRef`，详见 [临时 Client](./ephemeral-client.md)。
+- `--execution-params` / `executionParams` 只对本次执行透传偏好，不更改渠道、权限或路由；消费者 Profile/Adapter 负责解释，原生宿主配置投影的边界见 [宿主配置保真](./host-config-projection.md)。
 - Recall、Plan 与 TargetTags 的 YAML 版本保持 `1`，live 配置继续兼容旧结构，不因制品升到 `0.7.0` 就机械修改 schema 版本。
 - 默认验收只运行零 token 测试。真实 provider、借用登录态和 token 测试仍需单次显式授权；本次稳定打包不代表完成这些验证。

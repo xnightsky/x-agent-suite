@@ -10,7 +10,7 @@
 
 - 原生 `@x-agent-suite/recall`：复用 `.recall/` 目录，提供确定发现、严格 YAML v1、context 只读 provision、全量前置校验、case/repeat 独立执行和 `x-agent-suite recall` CLI；聚合包新增 `x-agent-suite/recall` 子路径与统一 `bin`。采用显式 carrier/provider/model、独立 Criterion/profile/EffectsProfile registry、effects-only Plan、文件内 `plans/context.plan`、direct 纯文本与唯一 borrowed profile，并保留 target/mode/cliRef/provision/effects 报告归因。
 - 通用 `@x-agent-suite/judge`：批量 rubric 返回具名 boolean verdict，不直接出分；支持可注入 client、超时、重试及 TargetTags 驱动的 direct/borrowed 选择。通过 `x-agent-suite/judge` 子路径分发，不新增独立制品。
-- TargetTags：YAML 词典、CLI/provider/provider-model/model 四层实例、私密覆盖、能力与 wire 检查、live 门禁及单/多目标决策；公共实例不携带秘密，不以标签或来源隐式授权真实调用。
+- TargetTags：YAML 词典、CLI/provider/provider-model/model 四层实例、home 私有实例与 live 覆盖、能力与 wire 检查、live 门禁及单/多目标决策；公共实例不携带秘密，不以标签或来源隐式授权真实调用。
 - live 支持多 provider/model 可选目录、carrier 范围内的 defaults、`resolveLiveTargets` 显式选择及结构化兼容告警；token 教程同步多目标执行和模型参数透传。
 - live 新增可选 `.env.auth.yaml`：按 provider ID 或 `auth.provider` 显式绑定 API key，支持 `E2E_AUTH_CONFIG_PATH`、repo/home 发现、runtime > auth-file > model-config 优先级、失败不回退及 backend/sniff 统一脱敏；配置参考与教程同步。
 - `install:global` package script：显式接收正式制品目录，先校验清单、SHA-256 与路径边界，再全局安装核心 CLI；不自动构建/发布，不安装 PTY，不初始化用户配置，新增失败回归与隔离全局安装验收说明。
@@ -18,16 +18,11 @@
 - `x-agent-suite/assertions`：统一原有检查原语与确定性判据，旧 `criteria` 和 observation 检查入口保留兼容重导出，不保留重复实现；新增 `createJudgeAssertion`，将调用方注入的 Judge client 与每轮 `expect` 适配为 `TurnCriterion`，不可评测与缺证据显式报错。
 - `x-agent-suite/profiles/pi-recall`：提供显式注册的单轮 Pi 工厂，复用 Harness 与原生配置投影；限制工具、路径、预算与子进程环境，支持调用方显式追加系统提示，不增加核心宿主契约或默认注册。
 
-### Fixed
-
-- 核心制品按白名单携带公共 TargetTags 词典与实例，默认加载兼容源码和安装后的 `dist/` 布局，不再要求消费者指向源码仓；仓库外冒烟增加隔离 home 的默认公共标签、Recall 前置装载和独立 CLI live 拒绝门禁验证（零 token）。
-- Recall Carrier 路由修正（行为变更）：`kind: cli`（含省略 kind）始终选择真实 CLI 的唯一 borrowed Profile，不再内建 HTTP direct；纯渠道调用须迁移为 `kind: ephemeral-client + clientRef`。borrowed 接受真实 api-payg/api-credit/api-free，不必伪造 subscription；unknown 与审批门禁不变。
-- Pi live 配置不再套用 fixture 的 `reasoning:false` / `defaultThinkingLevel:"off"`；保留原生 provider ID、模型能力、思考映射与分档采样，仅在隔离目录写入已选渠道/凭据，不改真实 HOME。制品冒烟增加默认思考保真断言。
-
 ### Changed
 
 - 多目标执行必须显式给出 carrier/provider/model 之一，不允许无参数执行全部 defaults；`LiveConfigLoad` loaded 分支新增必填 `available/defaults/warnings`，手工构造该类型的适配或测试替身需同步。
 - 聚合包以统一 CLI 承接原 Runner 的 eval/run/diff 与新 Recall；Recall 不读取 `x-agent-suite.config.ts`，执行级 Plan 只声明 effects，不承载 driver、判据或 provision 配置。
+- Recall Carrier 路由修正：`kind: cli`（含省略 kind）始终选择真实 CLI 的唯一 borrowed Profile，不再内建 HTTP direct；纯渠道调用须迁移为 `kind: ephemeral-client + clientRef`。borrowed 接受真实 api-payg/api-credit/api-free，不必伪造 subscription；unknown 与审批门禁不变。
 
 ### Deprecated
 
@@ -35,7 +30,11 @@
 
 ### Fixed
 
-- TargetTags 默认资源定位兼容源码仓和安装包：核心制品按白名单携带两份公共 YAML，从所属包根加载，不误读取消费者同名目录；包内资源缺失显式失败，新增隔离安装布局回归和仓库外安装冒烟。
+- TargetTags 默认资源定位兼容源码仓和安装包：核心制品按白名单携带两份公共 YAML，从所属包根加载，不误读取消费者同名目录；包内资源缺失显式失败，新增隔离安装布局回归，以及隔离 home 的公共标签、Recall 前置装载和独立 CLI live 拒绝门禁的仓库外冒烟（零 token）。
+- Pi live 配置不再套用 fixture 的 `reasoning:false` / `defaultThinkingLevel:"off"`；保留原生 provider ID、模型能力、思考映射与分档采样，仅在隔离目录写入已选渠道/凭据，不改真实 HOME。制品冒烟增加默认思考保真断言。
+- JSON-RPC 严格按响应 ID 的类型与值配对，避免字符串 ID 错配数值请求。
+- borrowed Judge 在启动期间取消或超时后，不再因延迟启动完成而继续发送请求。
+- Runner 在驱动启动失败时仍执行资源清理；全局安装测试按规范路径断言，兼容 macOS 临时目录别名。
 - live 策略合并不因 provider 或 provider-model 缺层而掩盖另一层的 disallowed/review-required 限制。
 - 开发态 `node-pty@1.1.0` 补丁恢复 macOS prebuild 的 spawn-helper 可执行位，修复本仓 PTY 启动失败；不改变 PTY 制品的依赖形态。
 - CI 集成测试步骤修正为 `pnpm ittest`。
@@ -43,6 +42,7 @@
 ### 升级说明
 
 - 相对 `0.6.1` 的配置、类型替身、安装及授权注意事项见 [0.7.0 升级说明](docs/spec/versioning.md#从-061-升级到-070)。Recall/Judge 的未发布中间态不视为上一稳定版接口；YAML schema 版本不随制品版本机械递增。
+- 本次按操作者明确授权 rebase 主线并重新校准 `v0.7.0`，旧标签曾指向 `b40fec7`；新标签仅在重新完成稳定制品验收后形成。已取得旧版制品的消费者须按新 manifest 的 commit 与 SHA-256 重新核对，不混用新旧 `0.7.0` 制品。此次为一次性历史修正，不改变默认的版本不可变规则。
 
 ## 0.6.1 - 2026-10-19
 
