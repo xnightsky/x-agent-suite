@@ -55,6 +55,24 @@ x-agent-suite recall --carrier pi --live-config private-live.yaml \
 
 省略 `--execution-params` 或传 `{}` 均继承宿主；显式覆盖只对当前 case/repeat 的隔离配置生效。参数不记录为原始报告字段，也不得承载凭据；secret 继续走 live/auth 配置及既有脱敏器。
 
+## Pi Recall 单轮工厂
+
+不需要自持 Driver 时，可显式注册根 `profiles/pi-recall.ts` 的工厂；它仍复用 Harness 与 `writePiLiveConfig`，不在核心包识别宿主，不改变 TargetTags 或 live 审批。
+
+```ts
+import { createPiRecallDriver } from "x-agent-suite/profiles/pi-recall";
+
+const profiles = {
+  pi: { carrier: "pi", createDriver: createPiRecallDriver },
+};
+```
+
+- 只支持单轮，创建时拒绝多轮；`executionParams` 只支持 `thinkingLevel`，默认继承原生配置。
+- `appendSystemPrompt` 只接受受信任调用方显式提供的字符串，不自动读取消费者提示词；`commandOverride` 仅为零 token 测试注入。
+- `tools: none` 禁用工具；`read-only` / `allowlist` 使用固定的 `read,grep,find,ls`，不开放 shell。非空命令许可与不支持的能力在启动前拒绝。
+- guard 按 realpath 检查工具路径，保留完成、错误、usage 和预算证据；只向子进程投影环境白名单，不复制真实 HOME 或认证状态。
+- 这不是 OS 级沙箱。默认测试只覆盖 fake CLI 和实际加载的 guard handler；真实模型发起工具调用的完整宿主链与跨版本行为尚未验收，不宣称完成安全隔离认证。
+
 ## 安全与验证边界
 
 - API-credit/payg/free 可以成为 CLI borrowed 候选，不需要冒充 subscription；unknown usage/live 仍拒绝，review-required 仍需本次批准。
