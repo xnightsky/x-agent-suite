@@ -101,15 +101,23 @@ test("driver 生命周期：正常结束与异常均 close", async () => {
   });
   assert.equal(tracked.closeCalled, true);
 
+  const failingLog: string[] = [];
   const failing: AgentDriver = {
-    start: async () => {},
-    sendPrompt: () => Promise.reject(new Error("驱动爆炸")),
+    start: async () => {
+      failingLog.push("start");
+    },
+    sendPrompt: () => {
+      failingLog.push("sendPrompt");
+      return Promise.reject(new Error("驱动爆炸"));
+    },
     events: () => ({
       [Symbol.asyncIterator]: () => ({
         next: () => Promise.resolve({ done: true, value: undefined }),
       }),
     }),
-    close: async () => {},
+    close: async () => {
+      failingLog.push("close");
+    },
   };
   await assert.rejects(
     () =>
@@ -119,18 +127,67 @@ test("driver 生命周期：正常结束与异常均 close", async () => {
       }),
     /驱动爆炸/,
   );
+  assert.deepEqual(failingLog, ["start", "sendPrompt", "close"]);
 });
 
-test("轮次超时显式抛错", async () => {
-  const stalled: AgentDriver = {
-    start: async () => {},
-    sendPrompt: () => new Promise<Observation>(() => {}),
+test("start 分配资源后失败仍 close，不 sendPrompt 不 evaluate，原异常传播", async () => {
+  const log: string[] = [];
+  let evaluations = 0;
+  const counted: Criterion = {
+    name: "counted",
+    scope: "turn",
+    evaluate: () => {
+      evaluations += 1;
+      return { pass: true, score: 1, reason: "" };
+    },
+  };
+  const startFailing: AgentDriver = {
+    start: async () => {
+      log.push("start:allocated");
+      throw new Error("启动失败");
+    },
+    sendPrompt: async () => {
+      log.push("sendPrompt");
+      return { text: "", toolCalls: [], toolCallsCount: 0, events: [] };
+    },
     events: () => ({
       [Symbol.asyncIterator]: () => ({
         next: () => Promise.resolve({ done: true, value: undefined }),
       }),
     }),
-    close: async () => {},
+    close: async () => {
+      log.push("close");
+    },
+  };
+  await assert.rejects(
+    runScenarioSpec(makeSpec(), {
+      createDriver: () => startFailing,
+      criteria: [counted],
+    }),
+    (error: unknown) => error instanceof Error && error.message === "启动失败",
+  );
+  assert.deepEqual(log, ["start:allocated", "close"]);
+  assert.equal(evaluations, 0);
+});
+
+test("轮次超时显式抛错", async () => {
+  const log: string[] = [];
+  const stalled: AgentDriver = {
+    start: async () => {
+      log.push("start");
+    },
+    sendPrompt: () => {
+      log.push("sendPrompt");
+      return new Promise<Observation>(() => {});
+    },
+    events: () => ({
+      [Symbol.asyncIterator]: () => ({
+        next: () => Promise.resolve({ done: true, value: undefined }),
+      }),
+    }),
+    close: async () => {
+      log.push("close");
+    },
   };
   await assert.rejects(
     () =>
@@ -140,6 +197,7 @@ test("轮次超时显式抛错", async () => {
       }),
     /超时/,
   );
+  assert.deepEqual(log, ["start", "sendPrompt", "close"]);
 });
 
 test("driver 提供的 metadata 透传进 TurnObservation（领域证据自由区）", async () => {

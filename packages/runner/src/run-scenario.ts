@@ -4,7 +4,8 @@
  *
  * 不变量：
  * - 基础设施失败（启动失败、超时、driver 报错）显式抛错；评分不达标只进 Result；
- * - driver 由消费者工厂注入，runner 只负责 start/逐轮 sendPrompt/finally close；
+ * - driver 由消费者工厂注入，runner 取得后即负责清理：start/逐轮 sendPrompt 同在
+ *   try 内，start 失败也走 finally close；
  * - 源 spec 只读，一切状态写入发生在 driver 自己的 sandbox 内。
  */
 
@@ -78,8 +79,8 @@ export async function runScenarioSpec(
   const observations: Observation[] = [];
   const startedAt = Date.now();
 
-  await driver.start();
   try {
+    await driver.start();
     for (const [index, turn] of spec.turns.entries()) {
       const timeoutMs =
         turn.timeoutMs ?? spec.timeoutMs ?? deps.defaultTurnTimeoutMs ?? 60_000;

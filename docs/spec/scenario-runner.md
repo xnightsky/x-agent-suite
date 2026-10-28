@@ -75,7 +75,7 @@ export function runScenarioSpec(
 - 逐轮 `sendPrompt`，超时显式抛错（基础设施失败抛错；评分不达标进 Result 不抛）；
 - `dryPass` = 每轮 `dryChecks` 全过；`hardPass` = 聚合出口（无 `aggregate` 时 = 判据全过）；
   `fuzzyPass` = 判据全过；
-- driver `close` 在 finally 中幂等调用。
+- driver 取得后由 runner 负责清理：`start()` 与逐轮 `sendPrompt` 同在 try 内，任何路径（含 start 失败、发送失败、轮次超时）都在 finally 中幂等 close。
 
 ## CLI 形态（未决事项的暂定答案）
 
