@@ -39,7 +39,7 @@ test("TargetTagCatalog 不读取认证文件且不生成 auth 标签", async (t)
     warnings: [],
   };
 
-  const catalog = await loadTargetTagCatalog({ liveConfig });
+  const catalog = await loadTargetTagCatalog({ liveConfig, homeDir: root });
   const tags = [
     ...catalog.instances.cli,
     ...catalog.instances.providers,

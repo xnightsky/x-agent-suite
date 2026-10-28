@@ -234,7 +234,7 @@ async function readReports(directory: string) {
 test("无 target 参数与旧 --config 均在 Driver 前返回定义错误", async (t) => {
   const ws = await workspace(t);
   assert.equal(
-    await main(args(ws, join(ws.cwd, "reports"), [], false), { cwd: ws.cwd }),
+    await main(args(ws, join(ws.cwd, "reports"), [], false), { cwd: ws.cwd, homeDir: ws.cwd }),
     2,
   );
   assert.equal(
@@ -243,7 +243,7 @@ test("无 target 参数与旧 --config 均在 Driver 前返回定义错误", asy
         "--config",
         join(ws.cwd, ".recall", "x-agent-suite.config.ts"),
       ]),
-      { cwd: ws.cwd },
+      { cwd: ws.cwd, homeDir: ws.cwd },
     ),
     2,
   );
@@ -255,7 +255,7 @@ test("direct 默认无 effects，复用单 Runner 并保留多轮与执行归因
   const ws = await workspace(t);
   const outDir = join(ws.cwd, "reports");
   assert.equal(
-    await main(args(ws, outDir, ["--repeat", "2"]), { cwd: ws.cwd }),
+    await main(args(ws, outDir, ["--repeat", "2"]), { cwd: ws.cwd, homeDir: ws.cwd }),
     0,
   );
   assert.equal(state().transports.length, 2);
@@ -278,7 +278,7 @@ test("direct 默认无 effects，复用单 Runner 并保留多轮与执行归因
 test("carrier 展开多个 default 并逐 target 出报告，provider 过滤不追加其他 default", async (t) => {
   const ws = await workspace(t, { targetCount: 2 });
   const allDir = join(ws.cwd, "reports-all");
-  assert.equal(await main(args(ws, allDir), { cwd: ws.cwd }), 0);
+  assert.equal(await main(args(ws, allDir), { cwd: ws.cwd, homeDir: ws.cwd }), 0);
   assert.equal(state().transports.length, 2);
   const allReports = await readReports(allDir);
   assert.equal(allReports.length, 2);
@@ -309,7 +309,7 @@ test("carrier 展开多个 default 并逐 target 出报告，provider 过滤不�
 test("场景 provision 无 Plan 拒绝，显式 effects:none 才经唯一 borrowed profile", async (t) => {
   const ws = await workspace(t, { provision: true });
   assert.equal(
-    await main(args(ws, join(ws.cwd, "reports-denied")), { cwd: ws.cwd }),
+    await main(args(ws, join(ws.cwd, "reports-denied")), { cwd: ws.cwd, homeDir: ws.cwd }),
     2,
   );
   assert.equal(state().profiles.length, 0);
@@ -319,7 +319,7 @@ test("场景 provision 无 Plan 拒绝，显式 effects:none 才经唯一 borrow
   await writeFile(planPath, "version: 1\neffects: none\n");
   const outDir = join(ws.cwd, "reports-borrowed");
   assert.equal(
-    await main(args(ws, outDir, ["--plan", planPath]), { cwd: ws.cwd }),
+    await main(args(ws, outDir, ["--plan", planPath]), { cwd: ws.cwd, homeDir: ws.cwd }),
     0,
   );
   assert.equal(state().profiles.length, 1);
@@ -348,7 +348,7 @@ effects:
   );
   const outDir = join(ws.cwd, "reports");
   assert.equal(
-    await main(args(ws, outDir, ["--plan", planPath]), { cwd: ws.cwd }),
+    await main(args(ws, outDir, ["--plan", planPath]), { cwd: ws.cwd, homeDir: ws.cwd }),
     0,
   );
   assert.equal(state().profiles.length, 1);
@@ -364,7 +364,7 @@ effects:
 test("live review-required 未审批拒绝，--approve-live 仅放行当前调用", async (t) => {
   const ws = await workspace(t, { livePolicy: "review-required" });
   assert.equal(
-    await main(args(ws, join(ws.cwd, "reports-denied")), { cwd: ws.cwd }),
+    await main(args(ws, join(ws.cwd, "reports-denied")), { cwd: ws.cwd, homeDir: ws.cwd }),
     2,
   );
   assert.equal(state().transports.length, 0);
@@ -457,7 +457,7 @@ export default {
   assert.equal(
     await main(
       args(ws, join(ws.cwd, "reports-denied"), ["--carrier", "fixture-ephemeral"], false),
-      { cwd: ws.cwd },
+      { cwd: ws.cwd, homeDir: ws.cwd },
     ),
     2,
   );
@@ -473,7 +473,7 @@ test("ephemeral-client Adapter 接收场景 provision 与显式 effects Plan", a
   assert.equal(
     await main(
       args(ws, outDir, ["--carrier", "fixture-ephemeral", "--plan", planPath], false),
-      { cwd: ws.cwd },
+      { cwd: ws.cwd, homeDir: ws.cwd },
     ),
     0,
   );

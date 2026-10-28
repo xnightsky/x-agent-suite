@@ -251,6 +251,13 @@
           "reason": "路径常量，暂无独立 recipe；见 docs/spec/target-tags.md。"
         },
         {
+          "name": "TARGET_TAG_GLOBAL_INSTANCES_FILE",
+          "category": "advanced",
+          "purpose": "home 级私有全局 TargetTags 实例文件名。",
+          "risk": "safe",
+          "reason": "路径常量，暂无独立 recipe；见 docs/spec/target-tags.md。"
+        },
+        {
           "name": "TARGET_TAG_INSTANCES_FILE",
           "category": "advanced",
           "purpose": "默认公共 TargetTags 实例的仓库相对路径。",

@@ -29,6 +29,7 @@ const REPO_ROOT = join(
   "..",
   "..",
 );
+const EMPTY_HOME = join(REPO_ROOT, ".tmp", "empty-target-tags-home");
 
 const DICTIONARY_YAML = `
 version: 1
@@ -184,7 +185,10 @@ function withLivePolicy(
 }
 
 test("正式 YAML：四层真实实例可加载，k3 与 kimi-for-coding 不共享 canonical identity", async () => {
-  const catalog = await loadTargetTagCatalog({ repoRoot: REPO_ROOT });
+  const catalog = await loadTargetTagCatalog({
+    repoRoot: REPO_ROOT,
+    homeDir: EMPTY_HOME,
+  });
   assert.ok(
     !catalog.instances.providers.some((provider) => provider.id === "co"),
   );
@@ -256,6 +260,7 @@ targetTags:
     if (load.kind !== "loaded") return;
     const catalog = await loadTargetTagCatalog({
       repoRoot: REPO_ROOT,
+      homeDir: EMPTY_HOME,
       liveConfig: { ...load, path },
     });
     const providers = catalog.instances.providers.filter(
@@ -426,7 +431,10 @@ test("live 策略：unknown 与 allowed 区分，非 live 判断不被 live 门�
 });
 
 test("正式实例：真实 target 的 usage/live 未声明时保持 unknown 且不放行", async () => {
-  const catalog = await loadTargetTagCatalog({ repoRoot: REPO_ROOT });
+  const catalog = await loadTargetTagCatalog({
+    repoRoot: REPO_ROOT,
+    homeDir: EMPTY_HOME,
+  });
   const decision = firstDecision(
     catalog,
     {},

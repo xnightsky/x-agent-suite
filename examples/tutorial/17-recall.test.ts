@@ -121,6 +121,7 @@ targetTags:
     const selection = { carrier: "tutorial-carrier" };
     const loaded = await loadRecall({
       cwd,
+      homeDir: cwd,
       selection,
       liveConfigPath: livePath,
       registryPath,
@@ -153,7 +154,7 @@ targetTags:
         outDir,
         recallPath,
       ],
-      { cwd },
+      { cwd, homeDir: cwd },
     );
     assert.equal(exitCode, 0);
     const files = (await reportFiles(outDir)).filter(

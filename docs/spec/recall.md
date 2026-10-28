@@ -38,7 +38,7 @@ x-agent-suite recall \
 ```text
 --carrier/--provider/--model + --live-config
   → loadLiveConfig / resolveLiveTargets
-  → loadTargetTagCatalog（含同文件私密 overlay）
+  → loadTargetTagCatalog（公共实例 + home 私有全局实例 + 同文件私密 overlay）
   → 每个 target 经 TargetTags/live 审批
   → 根据 Carrier kind、effects 与场景 provision 选择内置 direct、唯一 borrowed profile 或临时 Client Adapter
   → 原有 ScenarioSpec / runScenarioRepeat

@@ -136,10 +136,12 @@ export interface TargetDecisionOptions extends TargetAccessDecisionOptions {
   readonly selection?: LiveTargetSelection;
 }
 
-/** TargetTags 文件加载参数；显式路径优先，liveConfig 用于合并同文件根级私密覆盖。 */
+/** TargetTags 文件加载参数；homeDir 用于私有全局实例，liveConfig 用于当前文件覆盖。 */
 export interface LoadTargetTagCatalogOptions {
   readonly repoRoot?: string;
   readonly dictionaryPath?: string;
   readonly instancesPath?: string;
+  /** 私有全局实例的发现 home；缺省为 os.homedir()。 */
+  readonly homeDir?: string;
   readonly liveConfig?: LiveConfigLoad;
 }

@@ -45,6 +45,7 @@ PTY、headless、sandbox 是机制，smoke 是抽样范围，contract 是验证�
 ## Recall 显式执行验证
 
 `packages/recall/tests/effects.test.ts`、`compile.test.ts`、`discovery.test.ts` 与 `recall.test.ts` 都属于单元测试：临时 live YAML、合成 TargetTags、fake transport 和 MockDriver 不访问真实 provider，也不读取真实 home 配置。它们覆盖无参数拒绝、carrier 多 default、provider/model 过滤、默认无 effects、文件内 plans/context 继承覆盖、inline 权限、direct/borrowed、ephemeral-client Adapter、live 审批、资源清理和报告归因，进入 `pnpm test` 与 `pnpm check`。`packages/llm-fixture/tests/live-config-carriers.test.ts` 另行覆盖 kind 缺省 cli、clientRef、channelsFrom、非法引用与 target 归因。
+`packages/llm-fixture/tests/target-tags-home.test.ts` 使用临时 home 覆盖公共实例、home 私有全局实例与 live overlay 的合并顺序，并验证后续 `live.allowed` 不会放松此前的 `review-required`；生产默认 home 与测试注入 home 分离。
 
 真实 Recall live 调用会消耗 token，只能在显式 live 配置和 `--approve-live`（策略为 review-required 时）下执行。当前没有新增 `*.token.ittest.ts` 或 `ittest:token:recall`，不得以 fake transport 或 MockDriver 的成功推断真实 direct/borrowed/ephemeral-client 已获 live 验证。
 

@@ -109,7 +109,7 @@ direct 需要 `provider-model.api.complete`、`model.inference.chat` 和 API 类
 
 1. `loadLiveConfig` 读取现有配置并注入 borrow hooks；
 2. `resolveLiveTargets` 得到完整 target；
-3. `loadTargetTagCatalog({ liveConfig })` 加载公共实例与同文件可选私密覆盖；
+3. `loadTargetTagCatalog({ liveConfig, homeDir })` 合并公共实例、home 私有全局实例与同文件可选私密覆盖；
 4. `createJudgeClient` 按 TargetTags 唯一候选创建客户端；
 5. `judge()` 执行。
 

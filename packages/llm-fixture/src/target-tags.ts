@@ -4,6 +4,7 @@
  * 不变量：只读标签文件，不读取 live 秘密配置，不发起网络请求。
  */
 import { readFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
@@ -26,6 +27,9 @@ export const TARGET_TAG_DICTIONARY_FILE = "config/target-tags/keys.yaml";
 
 /** 默认真实实例相对路径。 */
 export const TARGET_TAG_INSTANCES_FILE = "config/target-tags/instances.yaml";
+
+/** home 级私有全局实例文件名。 */
+export const TARGET_TAG_GLOBAL_INSTANCES_FILE = ".env.target-tags.instances.yaml";
 
 /** TargetTags 静态定义或实例校验错误。 */
 export class TargetTagDefinitionError extends Error {
@@ -414,6 +418,24 @@ function mergeInstances(
   return merged;
 }
 
+/** 读取 home 私有全局实例；文件不存在时跳过，其他错误显式失败。 */
+async function readGlobalInstances(
+  path: string,
+  dictionary: TargetTagDictionary,
+): Promise<TargetTagInstances | undefined> {
+  try {
+    return parseTargetTagInstances(await readTagFile(path), dictionary);
+  } catch (error) {
+    if (
+      error instanceof TargetTagDefinitionError &&
+      (error.cause as NodeJS.ErrnoException | undefined)?.code === "ENOENT"
+    ) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
 async function readPrivateOverlay(
   path: string,
   dictionary: TargetTagDictionary,
@@ -443,6 +465,12 @@ export async function loadTargetTagCatalog(
   ]);
   const dictionary = parseTargetTagDictionary(dictionaryText);
   let instances = parseTargetTagInstances(instancesText, dictionary);
+  const homeDir = options.homeDir ?? homedir();
+  const globalInstances = await readGlobalInstances(
+    join(homeDir, TARGET_TAG_GLOBAL_INSTANCES_FILE),
+    dictionary,
+  );
+  if (globalInstances) instances = mergeInstances(instances, globalInstances);
   if (options.liveConfig?.kind === "loaded") {
     const overlay = await readPrivateOverlay(
       options.liveConfig.path,

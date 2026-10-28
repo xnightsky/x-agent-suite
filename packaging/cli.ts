@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 /** 分发统一 CLI；不改变既有 eval <config> 语义。 */
 export async function main(
   argv: readonly string[],
-  options: { readonly cwd?: string } = {},
+  options: { readonly cwd?: string; readonly homeDir?: string } = {},
 ): Promise<number> {
   return argv[0] === "recall"
     ? recallMain(argv.slice(1), options)

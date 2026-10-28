@@ -28,6 +28,8 @@ import { isNonEmptyString, isPositiveInteger, isRecord } from "./validation.ts";
 export interface LoadRecallOptions {
   /** 调用 cwd。 */
   readonly cwd?: string;
+  /** 私有全局 TargetTags 的发现 home；测试可注入隔离目录。 */
+  readonly homeDir?: string;
   /** 显式考卷 YAML 或目录。 */
   readonly target?: string;
   /** 显式 target 选择器。 */
@@ -96,12 +98,14 @@ function validateSelection(selection: LiveTargetSelection): void {
 function liveConfigOptions(
   cwd: string,
   liveConfigPath?: string,
+  homeDir?: string,
 ): LiveConfigOptions {
   const env = { ...process.env };
   if (liveConfigPath) env[LIVE_CONFIG_PATH_ENV] = liveConfigPath;
   return {
     env,
     repoRoot: cwd,
+    ...(homeDir ? { homeDir } : {}),
     ...createHarnessLiveConfigHooks(),
   };
 }
@@ -146,7 +150,10 @@ async function resolveExecutions(options: {
   if (resolved.kind !== "configured") {
     throw new Error("Recall live target 未配置：" + resolved.reason);
   }
-  const catalog = await loadTargetTagCatalog({ liveConfig: live });
+  const catalog = await loadTargetTagCatalog({
+    liveConfig: live,
+    homeDir: options.config.homeDir,
+  });
   return resolved.targets.map((target) =>
     resolveRecallExecution({
       target,
@@ -195,7 +202,7 @@ export async function loadRecall(
   const liveConfigPath = options.liveConfigPath
     ? resolve(cwd, options.liveConfigPath)
     : undefined;
-  const config = liveConfigOptions(cwd, liveConfigPath);
+  const config = liveConfigOptions(cwd, liveConfigPath, options.homeDir);
   const executions = await resolveExecutions({
     config,
     selection: options.selection,

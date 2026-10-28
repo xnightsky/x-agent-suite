@@ -63,6 +63,7 @@ export {
   TargetTagDefinitionError,
   TARGET_TAG_DICTIONARY_FILE,
   TARGET_TAG_INSTANCES_FILE,
+  TARGET_TAG_GLOBAL_INSTANCES_FILE,
 } from "./target-tags.ts";
 export type {
   CliTags,

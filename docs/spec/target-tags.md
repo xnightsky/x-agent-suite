@@ -20,6 +20,8 @@ config/target-tags/
 ├── keys.yaml                  # TagKey/TagValue 词典，不含真实实例
 └── instances.yaml             # 可公开复用且有证据的四层实例
 
+~/.env.target-tags.instances.yaml  # 可选 home 私有全局实例，不含渠道或凭据
+
 packages/llm-fixture/src/
 ├── target-tag-types.ts        # 公开类型
 ├── target-tags.ts             # YAML 加载、校验与私密覆盖合并
@@ -80,6 +82,12 @@ CLI 条目当前是**产品能力目录**，不是默认执行状态。例如 `c
 
 空 `tags` 表示未声明，不表示官方禁止。账号 auth、usage 和 live 不得从 `from/credential/apiKey`、`.env.auth.yaml`、`auth.provider` 或历史调用成功推断。`provider.auth.*` / `provider-model.auth.*` 均可省略；只有消费者把某 auth 标签列入 requirements 时，未声明才表现为能力缺失。
 
+### home 私有全局实例
+
+`~/.env.target-tags.instances.yaml` 是可选的 home 级私有实例文件，结构直接复用 `version/cli/providers/providerModels/models`，不嵌套 `targetTags`，也不包含 `carriers`、endpoint 或凭据。它用于跨 live 配置复用公司或个人的 Provider/ProviderModel/Model 元数据；账号 usage 与 live 策略仍须显式维护，不从凭据或历史调用推断。
+
+合并顺序固定为：**公共实例 < home 私有全局实例 < 当前 live 文件的 `targetTags` overlay**。`LoadTargetTagCatalogOptions.homeDir` 可注入隔离 home，缺省为 `os.homedir()`；文件不存在时跳过，存在但非法时显式失败，不回退。
+
 ### 私密 `targetTags`
 
 私有或自定义渠道留在私密 live 配置，不进入公共 `instances.yaml`。现有配置文件可在根级增加与 `carriers` 并列的可选 `targetTags`：
@@ -111,7 +119,7 @@ targetTags:
 
 这样，非规范模型别名可以在本机声明自己的 canonical `modelRef`，无需把私有渠道写进仓库。真实 `~/.env.e2e.yaml` 不由框架自动修改。
 
-调用 `loadTargetTagCatalog({ liveConfig })` 且 `liveConfig.kind === "loaded"` 时，加载器复用已经发现的 `liveConfig.path`，读取同文件根级 `targetTags` 并与公共实例合并；不另建配置发现顺序，也不把 `carriers` 或凭据返回在 catalog 中。
+调用 `loadTargetTagCatalog({ liveConfig, homeDir })` 时，加载器先合并公共实例与 home 私有全局实例；若 `liveConfig.kind === "loaded"`，再复用已经发现的 `liveConfig.path` 读取同文件根级 `targetTags` 并执行最后覆盖。catalog 不包含 `carriers` 或凭据。
 
 `loadTargetTagCatalog` 不读取 `.env.auth.yaml`；认证条目、显式 `auth.provider` 和实际 secret 均不进入 catalog。
 
@@ -188,10 +196,10 @@ disallowed > review-required > allowed > unknown
 零网络回归入口：
 
 ```bash
-pnpm exec tsx --test packages/llm-fixture/tests/target-tags.test.ts
+pnpm exec tsx --test packages/llm-fixture/tests/target-tags.test.ts packages/llm-fixture/tests/target-tags-home.test.ts
 pnpm --filter @x-agent-suite/llm-fixture typecheck
 ```
 
-覆盖词典与实例校验、私密合并且不带出凭据、provider 默认值、双候选、wire、live 优先级、真实公共实例 unknown 不放行，以及 target 解析失败透传。
+覆盖词典与实例校验、公共/home/live 三层合并且不带出凭据、live 严格策略不被后续 overlay 放松、provider 默认值、双候选、wire、真实公共实例 unknown 不放行，以及 target 解析失败透传。
 
 未验证项保持不变：CLI 各版本与参数组合的实际运行、具体账号套餐/授权、真实 direct/borrowed 调用和运行时健康均不由静态标签证明。

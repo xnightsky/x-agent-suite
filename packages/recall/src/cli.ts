@@ -11,7 +11,7 @@ type RecallArguments = Omit<LoadRecallOptions, "cwd">;
 /** Recall CLI 主入口；argv 不包含 recall 命令名。 */
 export async function main(
   argv: readonly string[],
-  options: { readonly cwd?: string } = {},
+  options: { readonly cwd?: string; readonly homeDir?: string } = {},
 ): Promise<number> {
   let args: RecallArguments;
   try {
@@ -22,7 +22,11 @@ export async function main(
     return 2;
   }
   try {
-    const result = await runRecall({ cwd: options.cwd, ...args });
+    const result = await runRecall({
+      cwd: options.cwd,
+      homeDir: options.homeDir,
+      ...args,
+    });
     for (const run of result.runs) {
       const implementation = run.cliRef
         ? run.mode + "/" + run.cliRef
