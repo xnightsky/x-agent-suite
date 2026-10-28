@@ -56,6 +56,14 @@ test("核心聚合包导出全部稳定子路径并外置 YAML/TSX 依赖", asyn
   assert.equal(manifest.dependencies?.yaml, fixtureManifest.dependencies.yaml);
 });
 
+test("核心制品携带与 GitHub 来源证明一致的仓库地址", () => {
+  const manifest = createCorePackageManifest("0.8.1");
+  assert.deepEqual(manifest.repository, {
+    type: "git",
+    url: "https://github.com/xnightsky/x-agent-suite.git",
+  });
+});
+
 test("核心包只显式分发公共 TargetTags YAML，PTY 包不重复携带", () => {
   const core = createCorePackageManifest("0.7.0");
   const pty = createPtyPackageManifest("0.7.0");

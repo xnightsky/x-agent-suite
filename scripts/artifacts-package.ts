@@ -1,6 +1,7 @@
 /**
  * @module scripts/artifacts-package
  * 生成对外制品清单，并把 declaration 中的 workspace 引用改写为包内路径。
+ * 不变量：npm 与 Release 复用同一核心制品，仓库地址必须与来源证明匹配。
  */
 import { posix } from "node:path";
 
@@ -46,6 +47,7 @@ interface PackageManifest {
   readonly description: string;
   readonly type: "module";
   readonly license: "MIT";
+  readonly repository?: { readonly type: "git"; readonly url: string };
   readonly engines: { readonly node: ">=24.0.0" };
   readonly exports: Readonly<Record<string, ExportTarget>>;
   readonly bin?: Readonly<Record<string, string>>;
@@ -93,6 +95,10 @@ export function createCorePackageManifest(version: string): PackageManifest {
     description: "通用 Agent 测试套件框架的聚合分发包。",
     type: "module",
     license: "MIT",
+    repository: {
+      type: "git",
+      url: "https://github.com/xnightsky/x-agent-suite.git",
+    },
     engines: { node: ">=24.0.0" },
     exports,
     bin: { "x-agent-suite": "./dist/cli.js" },

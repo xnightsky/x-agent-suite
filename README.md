@@ -61,7 +61,9 @@ pnpm tutorial:pty:pi  # 真实 Pi + fake provider；默认 skip，零 token
 
 运行入口已落地为库级 + CLI 双形态：`@x-agent-suite/runner` 提供 `runScenarioSpec` 与 `x-agent-suite eval <config>`；`@x-agent-suite/recall` 提供显式 carrier/provider/model、独立 registry、effects-only Plan、文件内场景 plans 和 `x-agent-suite recall`，不读取 `x-agent-suite.config.ts`。矩阵对照继续由 `@x-agent-suite/matrix` 自持。
 
-兄弟仓库的本地 tarball、git 源码自构建、远程 GET、未来 registry 安装配置，以及固定版本重打方式，见 [`docs/spec/packaging.md`](docs/spec/packaging.md)。`artifacts/` 是本地交付输出并已加入 `.gitignore`。
+兄弟仓库的本地 tarball、git 源码自构建、远程 GET、npm 核心包安装配置，以及固定版本重打方式，见 [`docs/spec/packaging.md`](docs/spec/packaging.md)。`artifacts/` 是本地交付输出并已加入 `.gitignore`。
+
+Release 工作流在同一构建中把主制品 `x-agent-suite-<version>.tgz` 上传 GitHub Release 并发布到 npm，包名为 `x-agent-suite`；不逐个发布内部 workspace。维护者在本仓 Actions Repository secrets 配置 `NPM_TOKEN`，经授权推送稳定 tag 后触发；首次成功发布后才可通过 npm 安装，详见[发布配置与安装](docs/spec/packaging.md#交付方式四npm-registry核心聚合包)。
 
 需要任意目录可调用的全局 CLI 时，从本源码仓安装已交付的核心制品（不自动构建、不发布）：
 
@@ -121,7 +123,7 @@ live 组合的凭证按三级阶梯解析，有下级就不用上级：
 
 ## 状态
 
-v0 · 内部版本化阶段。基础模块与本地制品打包已可用，远程上传和 registry 发布尚未执行；框架能力继续按路线图演进。
+v0 · 版本化交付阶段。基础模块与本地制品打包已可用，Release 工作流在同一构建中提供 GitHub 制品上传和 npm 主包发布；各版本是否可用以对应发布记录为准，框架能力继续按路线图演进。
 
 > [!CAUTION]
 > **AI CLI 自动化风险：风险自担！！！**

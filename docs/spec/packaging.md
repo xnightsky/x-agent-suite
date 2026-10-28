@@ -1,12 +1,12 @@
 # 包分发、安装与版本管理
 
-> 消费者在 `package.json` 中使用稳定包名，只切换依赖来源；框架维护同一版本和构建产物，同时支持本地包、远程下载、git 源码自构建与未来 registry。
+> 消费者在 `package.json` 中使用稳定包名，只切换依赖来源；框架维护同一版本和构建产物，同时支持本地包、远程下载、git 源码自构建与 npm registry。
 
 ## 与当前主线的关系
 
 版本管理现在即可开始，不以公开发布为前提。打包与远程分发属于功能主线之外的交付能力：本规范先固定接口、版本和验收规则，contracts、driver、scenario、criterion、report 等模块继续按路线图演进。
 
-`artifacts:pack` 已提供跨仓本地制品交付；远程上传与 registry 发布仍按需演进。workspace 源码引用只用于本仓开发，不作为稳定交付承诺；兄弟仓库消费版本化制品，不依赖本仓目录结构。
+`artifacts:pack` 提供跨仓本地制品交付；Release 工作流在同一轮构建后上传 GitHub Release，并将核心 tarball 发布到 npm。工作流接入不等于已完成首次 npm 发布，实际可用版本以成功发布记录为准。workspace 源码引用只用于本仓开发，不作为稳定交付承诺；兄弟仓库消费版本化制品，不依赖本仓目录结构。
 
 ## 核心决策
 
@@ -186,7 +186,7 @@ pnpm artifacts:pack -- --version 0.1.0 --output "$artifact_output"
 
 ## 安装方式
 
-> 本地 tarball 与 git 源码自构建当前即可用；远程 tarball 接口已固定、制品存储尚未开通；registry 配置是未来发布时保持不变的目标接口。`link:` 源码目录引用仍是开发态联调手段，不是交付能力。核心 tarball 对内部 workspace 自包含，但仍有 `yaml` 这一标准外部依赖；严格断网环境必须预热 pnpm store 或使用可达的内部 registry，不能只复制单个 core tarball 后期待首次安装完成。
+> 本地 tarball 与 git 源码自构建当前即可用；远程下载须确认对应 Release 已成功上传，npm 安装须确认该版本已成功发布。`link:` 源码目录引用仍是开发态联调手段，不是交付能力。核心 tarball 对内部 workspace 自包含，但仍有标准外部依赖；严格断网环境必须预热 pnpm store 或使用可达的内部 registry，不能只复制单个 core tarball 后期待首次安装完成。
 
 ### 开发态：本地源码目录引用
 
@@ -315,13 +315,28 @@ pnpm artifacts:pack -- --snapshot
 
 选型建议：能用制品方式（一/二/四）时不选本方式；本方式的价值在源码可见性与自构建兜底，不在便捷。
 
-### 交付方式四：未来 package registry
+### 交付方式四：npm registry（核心聚合包）
 
-registry 就绪后发布同版本、同内容的制品：
+当前自动发布只覆盖主分发包 `x-agent-suite`，不逐个发布内部 workspace，不要求创建 npm 组织。PTY 制品仍随 GitHub Release 交付，本次不发布到 npm；需要 PTY 时使用同版本的完整 tarball 制品集，不把本节当作 PTY 的 registry 安装承诺。
+
+#### 维护者配置与发布
+
+1. 在 npm 创建具有包发布写权限、允许 Bypass 2FA 的 granular access token；首次包尚不存在时，可临时使用短有效期的 All Packages Token，但须接受其对账号可访问包的写权限。
+2. 在当前 GitHub 仓库的 `Settings → Secrets and variables → Actions → Repository secrets` 保存 `NPM_TOKEN`。不要放到另一个仓库、提交到源码或输出到日志。首次发布后，新建仅授权 `x-agent-suite` 的 Token，更新同名 Secret 并撤销临时 Token。
+3. 按版本治理准备 changelog 与干净 release commit；经明确授权后推送稳定 annotated `v<version>` tag。既有 tag 不会自动获得这次工作流修改，不移动旧 tag 来补发。
+4. `.github/workflows/release.yml` 校验 tag 与默认分支来源，执行检查、构建和安装冒烟，生成完整制品集并上传 GitHub Release。
+5. 同一 job 直接执行 `npm publish artifacts/<V>/x-agent-suite-<V>.tgz --access public --provenance --registry https://registry.npmjs.org`，不从仓库根或 workspace 重新打包。`setup-node` 配置 npm registry，只有发布步骤接收 `NODE_AUTH_TOKEN`，`id-token: write` 用于来源证明。
+
+根 package 的 `private: true` 和 `0.0.0` 占位保持不变；实际 npm 包名与版本来自 staged manifest，核心包的 `repository.url` 与 GitHub 来源证明保持一致。首次成功发布时 npm 自动创建包，包名是否允许注册与 Token 权限由 npm 校验。
+
+缺少 Token、认证失败、包名冲突或版本已存在时，npm 步骤显式失败，不忽略错误。GitHub Release 先于 npm 创建，npm 失败不会撤销已有 Release；须分别检查两个渠道。npm 已发布版本不可覆盖，重跑前先核对该版本是否已成功发布；内容有改动必须生成新版本。
+
+#### 消费者安装
+
+以下 `0.1.0` 仅为版本格式示例，替换为 npm 上已成功发布的实际版本：
 
 ```bash
-pnpm add -D x-agent-suite@0.1.0
-pnpm add -D @x-agent-suite/pty-driver@0.1.0
+pnpm add -D --save-exact x-agent-suite@0.1.0
 ```
 
 对应的 `package.json` 必须钉住明确版本，不使用 `latest`：
@@ -329,13 +344,12 @@ pnpm add -D @x-agent-suite/pty-driver@0.1.0
 ```json
 {
   "devDependencies": {
-    "x-agent-suite": "0.1.0",
-    "@x-agent-suite/pty-driver": "0.1.0"
+    "x-agent-suite": "0.1.0"
   }
 }
 ```
 
-只使用核心能力时删除 PTY 依赖。对方的 lockfile 钉住 registry 解析结果。registry 只改变解析与下载入口，不改变模块接口、子路径、运行行为或测试口径。本地与远程 tarball 是 publish 前的真实安装验收面，避免出现“workspace 通过、发布包不可用”。
+对方的 lockfile 钉住 registry 解析结果。npm 只改变解析与下载入口，不改变模块接口、子路径、运行行为或测试口径。发布复用已完成本地安装验收的同一 tarball，不另构建一份 npm 专用产物。
 
 ## 兄弟仓库的依赖约定
 
@@ -391,13 +405,13 @@ Git history 与稳定 tag 是版本真相源，核心包和 PTY 包采用 lockst
 
 ## 阶段推进
 
-| 阶段           | 交付                                                               | 是否阻塞当前功能主线   |
-| -------------- | ------------------------------------------------------------------ | ---------------------- |
-| 文档与版本基线 | 本文、`0.1.0` 起始策略、根 changelog                               | 已完成                 |
-| 本地打包       | `dist/`、聚合包、PTY 拆分、`artifacts:pack`、本地 tarball 冒烟测试 | 已完成（含 YAML 外置） |
-| git 源码交付   | 消费方克隆固定 commit，统一入口自构建，降级承诺成文                | 已完成（本文）         |
-| 远程 GET       | 上传同一 tarball、manifest 与校验和，验证私有下载                  | 否，本地打包后按需做   |
-| registry       | 发布同一包、版本治理、临时 registry 验收                           | 否，未来按需做         |
+| 阶段           | 交付                                                               | 是否阻塞当前功能主线         |
+| -------------- | ------------------------------------------------------------------ | ---------------------------- |
+| 文档与版本基线 | 本文、`0.1.0` 起始策略、根 changelog                               | 已完成                       |
+| 本地打包       | `dist/`、聚合包、PTY 拆分、`artifacts:pack`、本地 tarball 冒烟测试 | 已完成（含 YAML 外置）       |
+| git 源码交付   | 消费方克隆固定 commit，统一入口自构建，降级承诺成文                | 已完成（本文）               |
+| 远程 GET       | 上传同一 tarball、manifest 与校验和，验证私有下载                  | 否，本地打包后按需做         |
+| registry       | 核心主包复用同一 tarball 发布 npm；独立 PTY 不在本次范围           | 工作流已接入，以发布记录为准 |
 
 ## 验收条件
 

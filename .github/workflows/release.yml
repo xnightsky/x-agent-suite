@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write # npm provenance 来源证明
 
 jobs:
   release:
@@ -36,6 +37,7 @@ jobs:
         with:
           node-version: 24
           cache: "pnpm"
+          registry-url: https://registry.npmjs.org
 
       - name: 安装依赖
         run: pnpm install --frozen-lockfile
@@ -71,3 +73,12 @@ jobs:
           body_path: release-body.md
           draft: false
           prerelease: false
+
+      # 发布同一份主制品，不从仓库根目录或内部 workspace 重新打包。
+      - name: 发布 npm 主包
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          : "${NODE_AUTH_TOKEN:?请配置当前仓库的 NPM_TOKEN Secret}"
+          npm publish "artifacts/$VERSION/x-agent-suite-$VERSION.tgz" --access public --provenance --registry https://registry.npmjs.org
