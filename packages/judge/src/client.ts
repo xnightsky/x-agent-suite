@@ -139,7 +139,8 @@ function selectCandidate(
 /** 每个 attempt 创建独立 backend，避免复用失败会话状态。 */
 function createBackend(options: JudgeClientBaseOptionsForFactory): LiveBackend {
   return new LiveBackend({
-    carrier: options.target.carrier,
+    // channelsFrom 的借用渠道与凭据锚定来源 Carrier；执行归因仍使用 target.carrier。
+    carrier: options.target.channelCarrier ?? options.target.carrier,
     channel: options.target.channel,
     config: options.config,
     ...("transport" in options ? { transport: options.transport } : {}),

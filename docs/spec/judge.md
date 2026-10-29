@@ -103,6 +103,8 @@ direct 需要 `provider-model.api.complete`、`model.inference.chat` 和 API 类
 
 `JudgeClient.mode + target + cliRef` 供报告归因；不同 mode 的结果不得默认可比。
 
+`target.channelCarrier`（来自 `channelsFrom`）仅作为 `LiveBackend` 的借用渠道与凭据来源，backend carrier 为 `channelCarrier ?? carrier`；显式 `channel.harness` 仍优先于该来源。`target.carrier` 与 `JudgeClient.target` 始终保留原执行归因，不改写 target 对象。借用来源缺失或端点不一致必须在模型请求前显式失败，不跨渠道 fallback。
+
 ## 与现有模型配置组合
 
 配置解析仍由调用方负责：
