@@ -21,7 +21,7 @@
 ```bash
 x-agent-suite recall \
   --carrier <id> [--provider <id>] [--model <id>] \
-  [--live-config <path>] [--registry <module.ts>] [--plan <yaml>] \
+  [--live-config <path>] [--registry <module.ts>] [--plan <yaml|use:profile>] \
   [--execution-params <json-object>] [--approve-live] [--repeat <n>] [--out-dir <path>] [--root-dir <path>] \
   [YAML|目录]
 ```
@@ -115,6 +115,10 @@ export default registry;
 框架只校验对象与可序列化形状。消费者 Profile/Adapter 必须校验字段和类型、拒绝不支持的参数，并映射到宿主原生参数/隔离 settings。参数不得改变 target、凭据、权限 Plan 或 live 审批；禁止经此入口注入 secret、原始命令或任意宿主配置。Pi 的 `thinkingLevel` 由独立消费者入口解释，未提供时继承宿主默认，不在 Recall case YAML、Plan 或 TargetTags 中建第二份事实源。
 
 ## 执行 Plan DSL：仅 effects
+
+命令可直接用 `--plan use:<name>` 显式选择当前 registry 的 `effectsProfiles[name]`，
+无需为已有权限配置另建 YAML。未注册或空名称在执行前失败；省略 `--plan` 仍为 `effects: none`。
+`use:` 为保留前缀，同名本地文件需以 `./use:<name>` 显式指定；目录发现只排除实际 Plan 文件，不把权限引用当作文件路径。
 
 顶层只接受 `version` 和必填 `effects`；`provision/plans` 或其他字段均拒绝。
 

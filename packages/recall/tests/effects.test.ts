@@ -94,6 +94,19 @@ effects:
   );
 });
 
+test("显式 use: 引用直接解析已注册权限，不需要额外执行文件", async () => {
+  const selected = await loadRecallEffectsPlan("use:safe-read", registry);
+  assert.equal(selected.kind, "use");
+  assert.equal(selected.attribution, "use:safe-read");
+  assert.equal(selected.tools, "read-only");
+  assert.equal(isRecallCommandAllowed(selected, "read-file"), false);
+  await assert.rejects(
+    loadRecallEffectsPlan("use:missing", registry),
+    /未注册/,
+  );
+  await assert.rejects(loadRecallEffectsPlan("use:", registry), /非空/);
+});
+
 test("执行 Plan 不含 provision/plans，非法 effects 与权限形状 fail-closed", async (t) => {
   const invalid = [
     ["version: 1\nprovision: none\neffects: none\n", /provision|未知字段/],

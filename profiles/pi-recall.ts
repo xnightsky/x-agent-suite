@@ -4,7 +4,7 @@
  *
  * 不变量：
  * - 只服务 live borrowed 执行：不读 auth.json、不写真实 HOME，凭据只经 writePiLiveConfig 投影进隔离目录；
- * - 默认关闭所有发现面；受信任 Profile 可显式开启隔离工作区的上下文文件，工具策略单独由 effects 兑现；
+ * - 默认关闭所有发现面；受信任 Profile 可显式开启隔离工作区的上下文与 Skill，工具策略由 effects 兑现；
  * - --tools 只是工具集裁剪（read-only 与 allowlist 都只放行固定四个原生只读工具）；文件系统边界与步数预算
  *   由守卫扩展兑现，守卫只覆盖当前 tools/path/maxSteps；
  * - 证据只认原生事件：agent_end 判完成，tool_execution_end 判工具成败，message_end 的 stopReason/usage
@@ -40,7 +40,7 @@ const PI_HOME_DIR = "piHome";
 const GUARD_FILE = "pi-recall-guard.ts";
 /** 原生只读工具集；仅裁剪工具集，不构成文件系统沙箱。 */
 const READ_ONLY_TOOLS = ["read", "grep", "find", "ls"] as const;
-/** 默认干净启动参数；项目上下文仅由受信任选项显式开启。 */
+/** 默认干净启动参数；项目上下文与 Skill 仅由受信任选项显式开启。 */
 const CLEAN_START_ARGS = [
   "--mode",
   "json",
@@ -75,6 +75,8 @@ export interface PiRecallDriverOptions {
   readonly appendSystemPrompt?: string;
   /** 默认 off；project 允许宿主原生发现隔离工作区中的项目上下文文件。 */
   readonly contextFiles?: "off" | "project";
+  /** 默认 off；project 允许宿主原生发现隔离工作区中的 Skill。 */
+  readonly skills?: "off" | "project";
 }
 
 /** 原生 usage 累计值。 */
@@ -100,12 +102,14 @@ function assertSupported(
   { spec, executionParams, effects }: RecallProfileDriverContext,
   options: PiRecallDriverOptions,
 ): void {
-  if (
-    options.contextFiles !== undefined &&
-    options.contextFiles !== "off" &&
-    options.contextFiles !== "project"
-  ) {
-    throw new Error("Pi Recall Driver contextFiles 只支持 off/project");
+  for (const key of ["contextFiles", "skills"] as const) {
+    if (
+      options[key] !== undefined &&
+      options[key] !== "off" &&
+      options[key] !== "project"
+    ) {
+      throw new Error("Pi Recall Driver " + key + " 只支持 off/project");
+    }
   }
   if (spec.turns.length > 1) {
     throw new Error(
@@ -290,7 +294,9 @@ function createProfile(
     headlessArgs: (prompt) => [
       ...CLEAN_START_ARGS.filter(
         (flag) =>
-          flag !== "--no-context-files" || options.contextFiles !== "project",
+          (flag !== "--no-context-files" ||
+            options.contextFiles !== "project") &&
+          (flag !== "--no-skills" || options.skills !== "project"),
       ),
       ...(context.effects.tools === "none"
         ? ["--no-tools"]

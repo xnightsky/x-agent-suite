@@ -68,7 +68,7 @@ const profiles = {
 ```
 
 - 只支持单轮，创建时拒绝多轮；`executionParams` 只支持 `thinkingLevel`，默认继承原生配置。
-- `contextFiles` 是受信任 Profile 选项，默认 `off`；显式 `project` 后启用隔离工作区中 AGENTS/CLAUDE 文件的原生发现，不把文件正文拼进追加系统提示词。场景资源仍只来自 `spec.provision`，不复制真实 HOME 的规则；Skill、扩展发现、MCP 与提示模板保持关闭。
+- `contextFiles` 与 `skills` 是受信任 Profile 选项，均默认 `off`；显式 `project` 后分别启用隔离工作区的 AGENTS/CLAUDE 与 Skill 原生发现，不把正文拼进追加系统提示词。场景资源仍只来自 `spec.provision`，不复制真实 HOME 的规则或 Skill；扩展发现、MCP 与提示模板保持关闭。Skill 正文由模型通过显式只读工具权限读取。
 - `appendSystemPrompt` 只接受受信任调用方显式提供的字符串，不自动读取消费者提示词；`commandOverride` 仅为零 token 测试注入。
 - `tools: none` 禁用工具；`read-only` / `allowlist` 使用固定的 `read,grep,find,ls`，不开放 shell。非空命令许可与不支持的能力在启动前拒绝。
 - guard 按 realpath 检查工具路径，保留完成、错误、usage 和预算证据；只向子进程投影环境白名单，不复制真实 HOME 或认证状态。

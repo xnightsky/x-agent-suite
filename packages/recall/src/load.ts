@@ -39,7 +39,7 @@ export interface LoadRecallOptions {
   readonly liveConfigPath?: string;
   /** 独立 Criterion/profile/EffectsProfile 注册表。 */
   readonly registryPath?: string;
-  /** effects-only 执行 Plan。 */
+  /** effects-only 执行 Plan 文件或 use:权限引用。 */
   readonly planPath?: string;
   /** 仅当前调用的 live 审批。 */
   readonly approveLive?: boolean;
@@ -183,14 +183,16 @@ export async function loadRecall(
     ? resolve(cwd, options.registryPath)
     : undefined;
   const planPath = options.planPath
-    ? resolve(cwd, options.planPath)
+    ? options.planPath.startsWith("use:")
+      ? options.planPath
+      : resolve(cwd, options.planPath)
     : undefined;
   const registry = await loadRecallRegistry(registryPath);
   const effects = await loadRecallEffectsPlan(planPath, registry);
   const files = await findRecallFiles({
     cwd,
     target: options.target,
-    excludePath: planPath,
+    excludePath: planPath?.startsWith("use:") ? undefined : planPath,
   });
   const rootDir = options.rootDir ? resolve(cwd, options.rootDir) : cwd;
   const scenarios = await loadScenarios(files, rootDir, registry);

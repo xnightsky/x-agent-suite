@@ -145,12 +145,18 @@ function parsePlan(source: string, path: string): unknown {
   return document.effects;
 }
 
-/** 加载执行 Plan；无路径时返回 effects:none，不读取任何默认 Plan。 */
+/** 加载执行 Plan 或显式 use:权限引用；无输入时返回 effects:none。 */
 export async function loadRecallEffectsPlan(
   path?: string,
   registry: Pick<RecallRegistry, "effectsProfiles"> = EMPTY_REGISTRY,
 ): Promise<RecallEffects> {
   if (path === undefined) return normalizeEffects({}, "none", "none");
+  if (path.startsWith("use:")) {
+    return parseEffects(
+      { use: requiredString(path.slice(4), "Recall Plan use") },
+      registry,
+    );
+  }
   const filePath = resolve(path);
   const source = await readFile(filePath, "utf8").catch((cause: unknown) => {
     throw new Error("无法读取 Recall 执行 Plan：" + filePath, { cause });
