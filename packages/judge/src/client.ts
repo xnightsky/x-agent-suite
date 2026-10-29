@@ -59,15 +59,7 @@ function judgeRequirements(
           ? ["cli.tools.none"]
           : ["cli.tools.allowlist", "cli.tools.read-only"]),
       ],
-      anyOf: [
-        [
-          "provider-model.usage.cli-subscription",
-          "provider-model.usage.ci-subscription",
-          "provider-model.usage.third-party-subscription",
-          "provider-model.usage.cli-free",
-        ],
-        ["cli.io.text", "cli.io.jsonl"],
-      ],
+      anyOf: [["cli.io.text", "cli.io.jsonl"]],
     },
   };
 }
