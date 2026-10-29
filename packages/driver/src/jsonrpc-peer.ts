@@ -13,7 +13,8 @@
  * - 流断且仍有悬挂请求 / 解析失败 / 无法路由时 failPending：显式拒绝所有悬挂请求；
  *   流自然结束且无悬挂请求属正常结束，不产生失败；
  * - close 幂等（closePromise ??=），先停消费循环，再关 JsonlProcess 并拒绝残留；
- *   消费循环或结束回调失败不阻断清理，错误仍由 close 显式暴露。
+ *   消费循环或结束回调失败不阻断清理，错误仍由 close 显式暴露；
+ * - 后台消费拒绝从 start 起即被观察，原 Promise 保留失败状态供稍后 close 暴露。
  */
 import { JsonlProcess } from "./proc.ts";
 
@@ -121,7 +122,7 @@ export class JsonRpcPeer {
     this.streamEndHandler = handler;
   }
 
-  /** 启动消费循环；重复 start 显式抛错。 */
+  /** 启动消费循环并即时观察后台拒绝；原错误保留给 close，重复 start 显式抛错。 */
   start(): void {
     if (this.consumePromise) {
       throw new Error("JsonRpcPeer: 重复 start");
