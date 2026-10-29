@@ -1,6 +1,6 @@
 /**
  * @module scripts/tests/target-tags-artifact
- * 验证 TargetTags 在源码和模拟安装布局中的默认资源定位及显式覆盖。
+ * 验证 TargetTags 在源码和模拟安装布局中的资源定位、显式覆盖及 Judge 准入。
  * 不变量：只构建通用模块、读取公共 YAML；不启动宿主、不读私密配置、零 token。
  */
 import assert from "node:assert/strict";
@@ -10,6 +10,8 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { after, before, test } from "node:test";
 import { build } from "esbuild";
+import type { createJudgeClient } from "@x-agent-suite/judge";
+import type { ResolvedLiveTarget } from "@x-agent-suite/llm-fixture";
 import { loadTargetTagCatalog } from "@x-agent-suite/llm-fixture";
 import { createCorePackageManifest } from "../artifacts-package.ts";
 
@@ -18,6 +20,7 @@ let stage: string;
 let packageRoot: string;
 let customRoot: string;
 let loadInstalled: typeof loadTargetTagCatalog;
+let createInstalledJudgeClient: typeof createJudgeClient;
 
 before(async () => {
   stage = await mkdtemp(join(tmpdir(), "xas-target-tags-artifact-"));
@@ -40,10 +43,13 @@ before(async () => {
   );
   await writeCustomCatalog(customRoot);
   await writeCustomCatalog(join(stage, "consumer"));
-  const outfile = join(packageRoot, "dist/llm-fixture.js");
+  const outdir = join(packageRoot, "dist");
   await build({
-    entryPoints: [join(ROOT, "packaging/entries/llm-fixture.ts")],
-    outfile,
+    entryPoints: [
+      join(ROOT, "packaging/entries/llm-fixture.ts"),
+      join(ROOT, "packaging/entries/judge.ts"),
+    ],
+    outdir,
     bundle: true,
     format: "esm",
     platform: "node",
@@ -53,7 +59,10 @@ before(async () => {
     },
   });
   ({ loadTargetTagCatalog: loadInstalled } = await import(
-    pathToFileURL(outfile).href
+    pathToFileURL(join(outdir, "llm-fixture.js")).href
+  ));
+  ({ createJudgeClient: createInstalledJudgeClient } = await import(
+    pathToFileURL(join(outdir, "judge.js")).href
   ));
 });
 
@@ -113,4 +122,78 @@ test("包内资源缺失显式失败，不回退到消费者或源码仓", async
   } finally {
     await rename(`${path}.backup`, path);
   }
+});
+
+test("打包 Judge 公开入口接受本次获批的 API-credit borrowed 候选", async (t) => {
+  const { dictionary } = await loadTargetTagCatalog({
+    repoRoot: ROOT,
+    homeDir: stage,
+  });
+  const target = {
+    carrier: "fixture-carrier",
+    channel: {
+      wire: "openai-chat",
+      baseUrl: "https://fixture.invalid/v1",
+      provider: "fixture-provider",
+      model: "fixture-model",
+    },
+  } satisfies ResolvedLiveTarget;
+  let factoryCalls = 0;
+  t.mock.method(globalThis, "fetch", () => {
+    throw new Error("NETWORK_FORBIDDEN");
+  });
+  const client = createInstalledJudgeClient({
+    target,
+    mode: "borrowed",
+    liveReviewApproved: true,
+    tags: {
+      dictionary,
+      instances: {
+        cli: [
+          {
+            id: "fixture-cli",
+            carrier: target.carrier,
+            wires: [target.channel.wire],
+            tags: [
+              "cli.execution.one-shot",
+              "cli.execution.unattended",
+              "cli.session.ephemeral",
+              "cli.context.context-files.off",
+              "cli.context.extensions.off",
+              "cli.context.skills.off",
+              "cli.tools.none",
+              "cli.io.text",
+            ],
+          },
+        ],
+        providers: [
+          {
+            id: target.channel.provider,
+            tags: [
+              "provider.usage.api-credit",
+              "provider.usage.live.review-required",
+            ],
+          },
+        ],
+        providerModels: [
+          {
+            id: "fixture-provider/fixture-model",
+            providerRef: target.channel.provider,
+            model: target.channel.model,
+            modelRef: "fixture-canonical",
+            wire: target.channel.wire,
+            tags: ["provider-model.api.complete"],
+          },
+        ],
+        models: [{ id: "fixture-canonical", tags: ["model.inference.chat"] }],
+      },
+    },
+    createDriver: () => {
+      factoryCalls += 1;
+      throw new Error("工厂选择阶段不得创建 driver");
+    },
+  });
+  assert.equal(client.mode, "borrowed");
+  assert.equal(client.cliRef, "fixture-cli");
+  assert.equal(factoryCalls, 0);
 });

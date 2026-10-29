@@ -99,7 +99,7 @@ type JudgeOutcome =
 | `none`      | borrowed 需要 `cli.tools.none`                                | 保留既有协议：任何工具调用都失败。                                                   |
 | `read-only` | 仅 borrowed，需要 `cli.tools.allowlist + cli.tools.read-only` | 允许保留工具证据；createDriver 必须兑现实际只读策略，不得降级 direct 或 tools.none。 |
 
-direct 需要 `provider-model.api.complete`、`model.inference.chat` 和 API 类 usage。borrowed 需要 one-shot、unattended、ephemeral、context-files/extensions/skills.off、chat、CLI/订阅类 usage，以及 text 或 jsonl 输出。`from/credential` 只描述来源，不等于 usage 或 live 授权。
+direct 需要 `provider-model.api.complete`、`model.inference.chat` 和 API 类 usage。borrowed 需要 one-shot、unattended、ephemeral、context-files/extensions/skills.off、chat，以及 text 或 jsonl 输出，不按非 live 的 usage 计费分类过滤；live 审批与其余能力要求保持不变。`from/credential` 只描述来源，不等于 usage 或 live 授权。
 
 `JudgeClient.mode + target + cliRef` 供报告归因；不同 mode 的结果不得默认可比。
 
@@ -174,11 +174,11 @@ const directClient = createJudgeClient({
 
 不同 Judge 形态不得共享一套模糊标签要求。场景、静态能力和真实证据按下面分别验收：
 
-| 场景                    | 必需 TargetTags                                                                                                                  | 执行与 token 证据                                                                                | 当前状态                                        |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| direct 自定义 client    | `model.inference.chat`、API 类 usage、live；当前工厂另需 `provider-model.api.complete`，其他 client 自己声明 API 需求            | 真实 API 完成一次 verdict，校验认证、usage、live、响应解析与清理，不检查 CliTags                 | 本次未覆盖，需另选明确允许 direct 的账号/target |
-| borrowed 纯文本 verdict | one-shot、unattended、ephemeral、context-files/extensions/skills.off、`cli.tools.none`、chat、CLI/订阅类 usage、live、text/jsonl | 真实 CLI 无会话、无上下文/扩展/skills/工具污染，一次 verdict，无重试/并发/fallback，finally 清理 | `client-live.token.ittest.ts` 精确入口覆盖      |
-| borrowed 只读证据       | 与纯文本相同的干净基线，但以 `cli.tools.allowlist + cli.tools.read-only` 替代 tools.none                                         | 真实 driver 执行只读证据读取，证明无写入、最终 verdict 与清理；缺 tag/策略不得降级               | 当前未验证；Pi 公共实例尚无 read-only 证据      |
+| 场景                    | 必需 TargetTags                                                                                                                          | 执行与 token 证据                                                                                | 当前状态                                        |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| direct 自定义 client    | `model.inference.chat`、API 类 usage、live；当前工厂另需 `provider-model.api.complete`，其他 client 自己声明 API 需求                    | 真实 API 完成一次 verdict，校验认证、usage、live、响应解析与清理，不检查 CliTags                 | 本次未覆盖，需另选明确允许 direct 的账号/target |
+| borrowed 纯文本 verdict | one-shot、unattended、ephemeral、context-files/extensions/skills.off、`cli.tools.none`、chat、live、text/jsonl；不按非 live 计费分类过滤 | 真实 CLI 无会话、无上下文/扩展/skills/工具污染，一次 verdict，无重试/并发/fallback，finally 清理 | `client-live.token.ittest.ts` 精确入口覆盖      |
+| borrowed 只读证据       | 与纯文本相同的干净基线，但以 `cli.tools.allowlist + cli.tools.read-only` 替代 tools.none                                                 | 真实 driver 执行只读证据读取，证明无写入、最终 verdict 与清理；缺 tag/策略不得降级               | 当前未验证；Pi 公共实例尚无 read-only 证据      |
 
 client 也可先读取证据再注入 prompt，此时模型侧仍是纯文本 `tools.none`，不得为了给模型 bash 而放宽工具权限。中文、title + body + filepath 等输出格式属于具体 prompt/rubric，不属于 TargetTags。
 

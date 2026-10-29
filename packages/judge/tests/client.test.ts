@@ -59,6 +59,7 @@ interface CatalogOverrides {
   readonly cli?: boolean;
   readonly cliTags?: readonly string[];
   readonly providerTags?: readonly string[];
+  readonly modelTags?: readonly string[];
   readonly extraCli?: boolean;
 }
 
@@ -102,7 +103,12 @@ function catalogWith(overrides: CatalogOverrides = {}): TargetTagCatalog {
           tags: ["provider-model.api.complete"],
         },
       ],
-      models: [{ id: "fixture-canonical", tags: ["model.inference.chat"] }],
+      models: [
+        {
+          id: "fixture-canonical",
+          tags: overrides.modelTags ?? ["model.inference.chat"],
+        },
+      ],
     },
   };
 }
@@ -238,6 +244,75 @@ test("live review-required 仅本次显式审批放行", () => {
   assert.throws(() => createJudgeClient(options), JudgeDefinitionError);
   const client = createJudgeClient({ ...options, liveReviewApproved: true });
   assert.equal(client.mode, "borrowed");
+});
+
+test("borrowed 不按非 live 计费分类过滤，其他准入与 direct 要求不变", () => {
+  let factoryCalls = 0;
+  const providerTags = [
+    "provider.usage.api-credit",
+    "provider.usage.live.review-required",
+  ];
+  const options = {
+    target,
+    mode: "borrowed" as const,
+    tags: catalogWith({ providerTags }),
+    liveReviewApproved: true,
+    createDriver: () => {
+      factoryCalls += 1;
+      return driverWith(async () => observation("{}"), []);
+    },
+  };
+  const rejects = (overrides: Partial<BorrowedJudgeClientOptions>) =>
+    assert.throws(
+      () => createJudgeClient({ ...options, ...overrides }),
+      JudgeDefinitionError,
+    );
+  const client = createJudgeClient(options);
+  assert.equal(client.mode, "borrowed");
+  assert.equal(factoryCalls, 0);
+
+  for (const [liveTag, approved] of [
+    [undefined, true],
+    ["provider.usage.live.disallowed", true],
+    ["provider.usage.live.review-required", false],
+  ] as const) {
+    rejects({
+      tags: catalogWith({
+        providerTags: [
+          "provider.usage.api-credit",
+          ...(liveTag ? [liveTag] : []),
+        ],
+      }),
+      liveReviewApproved: approved,
+    });
+  }
+
+  for (const missing of [...CLEAN_CLI_TAGS, "model.inference.chat"]) {
+    rejects({
+      tags: catalogWith({
+        providerTags,
+        cliTags: CLEAN_CLI_TAGS.filter((tag) => tag !== missing),
+        ...(missing === "model.inference.chat" ? { modelTags: [] } : {}),
+      }),
+    });
+  }
+
+  rejects({ tags: catalogWith({ providerTags, extraCli: true }) });
+  assert.throws(
+    () =>
+      createJudgeClient({
+        target,
+        mode: "direct",
+        tags: catalogWith({
+          providerTags: [
+            "provider.usage.third-party-subscription",
+            "provider.usage.live.allowed",
+          ],
+        }),
+      }),
+    JudgeDefinitionError,
+  );
+  assert.equal(factoryCalls, 0);
 });
 
 test("borrowed 每次 attempt 新 driver，单发且 finally close；失败不切 direct", async () => {
