@@ -43,6 +43,8 @@ export interface JsonlProcess {
 
 - `closeStdinAfterStart`：某些 CLI 在 stdin 为 pipe 且 prompt 已作 argv 传入时仍会阻塞等 stdin EOF，需要启动后即关闭 stdin。
 - 重复 start 显式抛错；send 到已关闭进程抛错。
+- stdin 在启动时绑定 `error` 监听；`send()` 的异步写入失败（如对端关闭输入后的 `EPIPE`）经 write callback 与流错误事件统一进入异步队列，保留首次错误并附命令上下文，由 `lines()` 迭代方捕获，不产生未处理的流错误事件。沿用队列结束语义：stdout EOF 已结束队列后，迟到的写入错误不再改变迭代结果。
+- 隔离 Node 进程回归覆盖两种时序：对端 `process.stdin.destroy()` 后写入 128 KiB，即使错误迟于 EOF 也正常退出；对端显式关闭输入 fd 后发送就绪消息，调用者写入 128 KiB，必须通过 `lines()` 捕获 `EPIPE`、关闭子进程并正常退出。两种情况均无需全局异常处理。
 
 ## PtyProcess
 
@@ -148,4 +150,5 @@ packages/driver/src/
 - `PtyProcess` 能拉起至少一个宿主 TUI，并用 `waitForScreen` 稳定等到就绪提示。
 - Windows ConPTY 枚举助手在无效或已退出 PID 下安静回退，测试 stderr 不出现辅助进程异常。
 - 重复 start / send 到已关闭进程均显式抛错。
+- stdin 写入在 stdout EOF 前触发 `EPIPE` 时，`lines()` 能捕获带命令上下文的错误；无论错误是否迟于 EOF，调用者均正常退出且 stderr 无未处理异常。
 - 屏幕文本只用于同步，不进入断言。

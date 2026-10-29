@@ -1,7 +1,7 @@
 /**
  * @module @x-agent-suite/driver/tests/proc
- * JsonlProcess 分帧回归：Unicode 分隔符、stdout 错误传播和 stderr 有界诊断。
- * 不变量：只启动通用测试子进程，零 token；分帧错误必须能由调用方捕获，不得逃逸事件回调。
+ * JsonlProcess 回归：Unicode 分隔符、流错误传播和 stderr 有界诊断。
+ * 不变量：只启动通用测试子进程，零 token；流错误必须能由调用方捕获，不得逃逸事件回调。
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -103,6 +103,55 @@ for (const [name, output] of [
     assert.equal(result.signal, null);
     assert.equal(result.stderr, "");
     assert.equal(result.stdout, "caught\n");
+  });
+}
+
+for (const [name, closeInput, requireFailure] of [
+  ["stdin destroy 后 EPIPE 不崩溃", "process.stdin.destroy()", false],
+  ["stdin EPIPE 可捕获", "require('node:fs').closeSync(0)", true],
+] as const) {
+  test(`JsonlProcess：${name}且调用者正常退出`, () => {
+    const source = `
+    import assert from 'node:assert/strict';
+    import { JsonlProcess } from ${JSON.stringify(new URL("../src/proc.ts", import.meta.url).href)};
+    const proc = new JsonlProcess({
+      command: process.execPath,
+      args: ['-e', ${JSON.stringify(`${closeInput}; console.log(JSON.stringify({ready:true})); setTimeout(() => {}, 2000)`)}],
+    });
+    await proc.start();
+    try {
+      const lines = proc.lines()[Symbol.asyncIterator]();
+      assert.deepEqual(await lines.next(), { value: { ready: true }, done: false });
+      proc.send({ payload: 'x'.repeat(128 * 1024) });
+      let outcome = 'ended';
+      try {
+        assert.deepEqual(await lines.next(), { value: undefined, done: true });
+      } catch (error) {
+        assert.match(error.message, /JsonlProcess stdin 写入失败（command=.+）: .*EPIPE/);
+        outcome = 'caught';
+      }
+      if (${requireFailure}) assert.equal(outcome, 'caught');
+      process.stdout.write('handled\\n');
+    } finally {
+      await proc.close();
+    }
+  `;
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--import",
+        import.meta.resolve("tsx/esm"),
+        "--input-type=module",
+        "-e",
+        source,
+      ],
+      { encoding: "utf8", timeout: 10_000 },
+    );
+    assert.ifError(result.error);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.signal, null);
+    assert.equal(result.stderr, "");
+    assert.equal(result.stdout, "handled\n");
   });
 }
 
