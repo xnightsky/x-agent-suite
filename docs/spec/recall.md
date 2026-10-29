@@ -201,12 +201,33 @@ cases:
 
 ### resources 字段与路径
 
-| 字段          | 缺省   | 规则                                                                                                                                                                                                                             |
-| ------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `source`      | 必填   | 相对 `--root-dir`，realpath 后仍须在 rootDir 内；缺失、绝对路径、`..`/符号链接逃逸和 file/directory 类型不符均失败；目录资源内的符号链接（含指向 rootDir 内）一律拒绝；物化前按段 lstat 重验来源，祖先或叶被替换为链接同样失败。 |
-| `destination` | 必填   | 相对隔离 `sandbox.cwd` 的归一化路径；绝对路径、逃逸及任意前缀冲突均失败；目标根与逐段父目录均以 lstat 判定，任一段是既有符号链接即拒绝（不 realpath 后把链接目标当作合法根）。                                                   |
-| `kind`        | `file` | `file` 或 `directory`。                                                                                                                                                                                                          |
-| `readOnly`    | `true` | 当前仅允许 `true`；物化禁止覆盖（目标叶已存在的文件、目录与符号链接一律拒绝），并设置文件 0444 / 目录 0555。                                                                                                                     |
+| 字段          | 缺省     | 规则                                                                                                                                                                                                                                              |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `source`      | 必填     | 资源来源的非空路径字符串。启用时相对 `--root-dir`，realpath 后仍须在 rootDir 内；缺失、绝对路径、`..`/符号链接逃逸和 file/directory 类型不符均失败；目录资源内的符号链接一律拒绝，物化前按段 lstat 重验来源。禁用时不读取来源，也不要求实体存在。 |
+| `install`     | `true`   | 布尔值，控制是否把资源复制到本次隔离现场，不运行原生安装器。`false` 跳过该项；省略保持旧行为。字符串、数字或 null 均拒绝。                                                                                                                        |
+| `destination` | 条件必填 | `install: true` 或省略时必填；`install: false` 时禁止出现，包括 null。相对隔离 `sandbox.cwd` 的归一化路径；不接受 `~`、`~/` 主目录简写、绝对路径或逃逸路径。启用项之间任意目标前缀冲突均失败；目标根、父目录与目标叶的符号链接均拒绝，禁止覆盖。  |
+| `kind`        | `file`   | `file` 或 `directory`。                                                                                                                                                                                                                           |
+| `readOnly`    | `true`   | 当前仅允许 `true`；物化禁止覆盖（目标叶已存在的文件、目录与符号链接一律拒绝），并设置文件 0444 / 目录 0555。                                                                                                                                      |
+
+安装与跳过分别声明，其他输入资源可照常保留在两组计划中：
+
+```yaml
+plans:
+  installed:
+    resources:
+      - source: fixtures/resource-bundle
+        install: true
+        destination: resources/resource-bundle
+        kind: directory
+  absent:
+    resources:
+      - source: fixtures/resource-bundle
+        install: false
+```
+
+禁用项仍校验字段、source 字符串、install 类型、kind 与 readOnly，但不解析来源实体、不参与目标冲突检查，也不进入编译后的资源清单。跳过不负责卸载其他位置的资源；只有消费者隔离了其他启用的发现来源，才能把它作为未安装对照。context 的整块覆盖规则保持不变，不引入计划合并。
+
+安装位置由 destination 指定，框架不推断载体目录。保留既有运行时 sandbox，本轮不增加 `sandbox`、`base` 或 `skills` DSL 字段；资源只复制到隔离 cwd，源仓库与用户全局目录不作为安装目标。当前 repo 用于读取考卷、配置和来源，默认报告仍写入 `.tmp/x-agent-suite`；资源隔离由注册 Profile/Driver 兑现，不等同于操作系统级文件访问隔离。
 
 `materializeRecallProvision` 可供注册 profile 在 `sandboxSetup` 等 hook 中物化上述 provision。`cleanup: required` 由隔离 Driver 的 close/finally 兑现。**无执行级 ProvisionPlan**；挂载/物化成功也不等于模型实际读取，行为证据仍由 Observation/Criterion 提供。
 
@@ -226,7 +247,7 @@ Windows 仅保留文件只读语义，不保证 POSIX 的精确权限位。
 当前 `cedar/` 内维护 `.recall.yaml`、`AGENTS.md` 和任务素材，直接由 Recall 驱动并判定，无额外测试脚本包装。
 资源的 source 相对调用 cwd（或显式 `--root-dir`），由 Profile 物化到一次性隔离工作区；不直接在模板仓执行模型工具。
 Pi 的项目规则发现由显式消费者 registry 通过 `contextFiles: "project"` 开启，不在核心包枚举宿主语义。
-Skill 的安装由操作者按各场景仓自己的 README 准备；Recall 只消费已声明的安装态资源，不执行安装。
+Skill 的原生安装由操作者按各场景仓自己的 README 准备；Recall 只消费已声明的资源，`install` 仅控制隔离现场的资源复制，不运行原生安装器。
 `cedar/skills-def/change-summary/.recall.yaml` 覆盖自然任务触发、无关任务和未安装对照，真实调用通过显式只读权限引用执行。
 消费者判据 `skill-loaded` 使用 `{name, loaded}`：按名字匹配原生读取的 `SKILL.md`，不绑定源目录或安装目录；当前假设名字唯一，路径原样保留作诊断。
 `cedar/skills-def/change-report/.recall.yaml` 覆盖带脚本的生成、无关任务、仅解释方法与非法输入；显式命令许可通过 `use:skill-script` 选择。

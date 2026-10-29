@@ -2,7 +2,8 @@
  * @module @x-agent-suite/recall/resources
  * Recall 场景资源 realpath 校验与隔离工作区物化；不实现执行级 ProvisionPlan。
  * 不变量：source 不越出 rootDir，destination 不越出 sandbox.cwd 的物理子树，禁止覆盖，readOnly 恒 true；
- * 来源树内链接与来源祖先/叶链接一律拒绝（物化前按段 lstat 重验），目标链接拒绝。
+ * 来源树内链接与来源祖先/叶链接一律拒绝（物化前按段 lstat 重验），目标链接拒绝；
+ * install=false 不读取来源、不写目标，且禁止 destination。
  * 前置条件：物化期间调用方独占来源与目标目录树；路径校验不提供原子的并发隔离。
  */
 import {
@@ -26,12 +27,17 @@ import {
 } from "node:path";
 import type { SandboxContext } from "@x-agent-suite/contracts";
 import type { RecallResourceDefinition } from "./schema.ts";
+import {
+  normalizeResourceDestination,
+  shouldInstallRecallResource,
+} from "./resource-options.ts";
 import { isRecord } from "./validation.ts";
 
-/** 已完成 realpath 与类型校验的场景资源。 */
-export interface RecallCompiledResource extends RecallResourceDefinition {
-  readonly source: string;
-}
+/** 已过滤禁用项并完成来源 realpath 与类型校验的安装资源。 */
+export type RecallCompiledResource = Extract<
+  RecallResourceDefinition,
+  { readonly destination: string }
+>;
 
 function inside(root: string, candidate: string): boolean {
   const rel = relative(root, candidate);
@@ -145,7 +151,7 @@ async function assertPhysicalSource(
   }
 }
 
-/** 读取并校验一组场景资源；source 的 realpath 与 kind 必须匹配。 */
+/** 跳过禁用项；启用资源的 source realpath 与 kind 必须匹配。 */
 export async function readRecallResources(
   resources: readonly RecallResourceDefinition[],
   rootDir: string,
@@ -154,6 +160,7 @@ export async function readRecallResources(
   const rootReal = await realpath(rootDir);
   const compiled: RecallCompiledResource[] = [];
   for (const resource of resources) {
+    if (!shouldInstallRecallResource(resource)) continue;
     const source = await resolveSource(resource.source, rootReal, filePath);
     const info = await stat(source);
     if (resource.kind === "file" && !info.isFile()) {
@@ -285,7 +292,10 @@ async function materializeResource(
     await assertNoSymlinks(resource.source, resource.source);
   }
   const root = await physicalRoot(sandbox);
-  const destination = destinationPath(sandbox, resource.destination);
+  const destination = destinationPath(
+    sandbox,
+    normalizeResourceDestination(resource.destination),
+  );
   await ensureParentInside(root, destination);
   const existing = await lstatIfExists(destination);
   if (existing !== undefined) {
@@ -337,7 +347,8 @@ export async function materializeRecallProvision(
     typeof provision.plan === "string" &&
     Array.isArray(provision.resources)
   ) {
-    for (const resource of provision.resources as readonly RecallCompiledResource[]) {
+    for (const resource of provision.resources as readonly RecallResourceDefinition[]) {
+      if (!shouldInstallRecallResource(resource)) continue;
       await materializeResource(sandbox, resource);
     }
     return;

@@ -45,6 +45,33 @@ cases:
 
 全局 `context.plan` 默认作用于全部 case；case context 可整块覆盖，`plan: none` 清空，`files` 与 `plan` 互斥。不得跨 YAML 引用 plans，也没有执行级 ProvisionPlan。
 
+## 控制资源安装状态与位置
+
+`resources` 的 `install` 控制是否将资源复制到隔离现场，`destination` 控制隔离工作区内的位置：
+
+```yaml
+plans:
+  installed:
+    resources:
+      - source: fixtures/resource-bundle
+        install: true
+        destination: resources/resource-bundle
+        kind: directory
+  absent:
+    resources:
+      - source: fixtures/resource-bundle
+        install: false
+```
+
+- `install: true` 或省略时，destination 必填；省略与旧考卷行为一致。
+- `install: false` 时禁止填写 destination，包括 null；不读取来源，不要求它已存在，不复制，也不卸载其他位置的资源。
+- source 相对 `--root-dir`，destination 相对隔离 cwd。目标不接受 `~`、`~/`、绝对路径或逃逸路径；修改 destination 即可选择另一个载体支持的项目目录。
+- 目录沿用 `kind: directory`，普通文件沿用默认 `file`；此开关不调用载体安装器，也不改变模型工具权限。
+
+case 使用 `context: { plan: installed }` 或 `context: { plan: absent }` 切换现场，其他输入资源应保持一致。运行时 sandbox 沿用注册 Profile/Driver 的实现，不新增 sandbox DSL；未安装对照还需隔离载体的其他发现来源。
+
+## 执行权限与命令
+
 执行 Plan 只声明 effects：
 
 ```yaml
