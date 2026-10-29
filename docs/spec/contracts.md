@@ -187,7 +187,9 @@ type ProvisionHook = (context: {
 | `metadata` | 并入 Observation / SessionObservation 的证据字段      |
 | `evidence` | 销毁前采集规格：键为字段名，值为相对 workspace 的路径 |
 
-框架按 `evidence` 声明在 cleanup 前快照文件内容，**不解释键名**。产物内容、游标文件在 workspace 销毁后不可复得，采集时机因此是硬约束。
+以上是消费者侧 provision/采集约定，当前 Recall/Runner 不内建该 hook 的自动文件收集器。
+消费者须在 cleanup 前快照文件内容，再经 Observation metadata 等自由区提供判据；框架不解释证据键名。
+产物内容、游标文件在 workspace 销毁后不可复得，采集时机因此是硬约束。
 
 ## Scenario 与 Criterion
 

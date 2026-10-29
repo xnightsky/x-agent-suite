@@ -33,13 +33,15 @@ import {
   type RecallProfileDriverContext,
 } from "@x-agent-suite/recall";
 import { writePiLiveConfig } from "./pi-config.ts";
+import {
+  createPiRecallGuardSource,
+  PI_RECALL_READ_TOOLS,
+} from "./pi-recall-guard.ts";
 
 /** 隔离配置目录语义键：与 writePiLiveConfig 读取的 sandbox.configDirs.piHome 一致。 */
 const PI_HOME_DIR = "piHome";
 /** 守卫扩展文件名。 */
 const GUARD_FILE = "pi-recall-guard.ts";
-/** 原生只读工具集；仅裁剪工具集，不构成文件系统沙箱。 */
-const READ_ONLY_TOOLS = ["read", "grep", "find", "ls"] as const;
 /** 默认干净启动参数；项目上下文与 Skill 仅由受信任选项显式开启。 */
 const CLEAN_START_ARGS = [
   "--mode",
@@ -136,40 +138,6 @@ function assertSupported(
       "Pi Recall Driver 不提供命令执行工具，无法兑现 effects.commands.allow",
     );
   }
-}
-
-/** 守卫扩展源码：只兑现当前策略——工具白名单、工作区路径容器校验与轮次预算中断。 */
-function guardSource(workspace: string, maxSteps: number): string {
-  return [
-    "import { realpathSync } from 'node:fs';",
-    "import { isAbsolute, relative, resolve, sep } from 'node:path';",
-    "",
-    "export default function (pi) {",
-    "  const workspace = " + JSON.stringify(workspace) + ";",
-    "  const allowedTools = " + JSON.stringify([...READ_ONLY_TOOLS]) + ";",
-    "  pi.on('tool_call', (event) => {",
-    "    if (!allowedTools.includes(event.toolName)) {",
-    "      return { block: true, reason: 'Pi Recall Driver：工具不在只读白名单内' };",
-    "    }",
-    "    try {",
-    "      const target = realpathSync(resolve(workspace, event.input?.path ?? '.'));",
-    "      const nested = relative(workspace, target);",
-    "      if (nested === '..' || nested.startsWith('..' + sep) || isAbsolute(nested)) {",
-    "        return { block: true, reason: 'Pi Recall Driver：路径越出隔离工作区' };",
-    "      }",
-    "    } catch (error) {",
-    "      return { block: true, reason: 'Pi Recall Driver：路径不可用 ' + (error?.code ?? 'unknown') };",
-    "    }",
-    "    return undefined;",
-    "  });",
-    "  pi.on('turn_end', async (event, ctx) => {",
-    "    if (event.turnIndex >= " +
-      String(maxSteps - 1) +
-      ") await ctx.abort();",
-    "  });",
-    "}",
-    "",
-  ].join("\n");
 }
 
 /** 累计原生 usage；缺字段按 0 计，不臆造数值。 */
@@ -300,7 +268,7 @@ function createProfile(
       ),
       ...(context.effects.tools === "none"
         ? ["--no-tools"]
-        : ["--tools", READ_ONLY_TOOLS.join(",")]),
+        : ["--tools", PI_RECALL_READ_TOOLS.join(",")]),
       ...(options.appendSystemPrompt === undefined
         ? []
         : ["--append-system-prompt", options.appendSystemPrompt]),
@@ -323,7 +291,7 @@ function createProfile(
       guardPath = join(sandbox.configDirs![PI_HOME_DIR]!, GUARD_FILE);
       await writeFile(
         guardPath,
-        guardSource(sandbox.cwd, context.effects.maxSteps),
+        createPiRecallGuardSource(sandbox.cwd, context.effects),
         "utf8",
       );
     },
