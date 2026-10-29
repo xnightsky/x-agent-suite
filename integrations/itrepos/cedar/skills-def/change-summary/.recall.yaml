@@ -6,11 +6,21 @@ plans:
       - source: AGENTS.md
         destination: AGENTS.md
       - source: .pi/skills/change-summary/SKILL.md
+        install: true
         destination: .pi/skills/change-summary/SKILL.md
   base:
     resources:
       - source: AGENTS.md
         destination: AGENTS.md
+      - source: .pi/skills/change-summary/SKILL.md
+        install: false
+  alternate:
+    resources:
+      - source: AGENTS.md
+        destination: AGENTS.md
+      - source: .pi/skills/change-summary/SKILL.md
+        install: true
+        destination: .agents/skills/change-summary/SKILL.md
 context:
   plan: installed
 cases:
@@ -31,6 +41,16 @@ cases:
             loaded: false
           text-contains: ["51"]
           text-not-contains: [CHANGE_SUMMARY_OK]
+  - id: matching-task-alternate-location
+    context:
+      plan: alternate
+    turns:
+      - send: 请把这些改动整理成发布说明：新增 CSV 导出，修复空列表闪退。
+        expect:
+          skill-loaded:
+            name: change-summary
+            loaded: true
+          text-contains: [CHANGE_SUMMARY_OK, CSV, 空列表]
   - id: not-installed
     context:
       plan: base
