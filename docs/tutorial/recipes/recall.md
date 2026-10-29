@@ -102,6 +102,73 @@ x-agent-suite recall   --carrier consumer-carrier   --live-config private-live.y
 
 Runner 只消费场景 provision，不做执行 provision 合并。资源 source/destination 经过 realpath 与逃逸校验；profile 负责物化和 finally cleanup。挂载不等于模型实际读取，行为仍由 Observation/Criterion 验证。
 
+## Judge + Pi borrowed + Assertions
+
+现有公开能力可以直接组合，不需要消费者另写裁判启动、发送、清理或普通 verdict 转换。运行同一教程即可覆盖这条链：
+
+```bash
+pnpm tutorial:recall
+```
+
+最小接法如下（教程仓内使用 workspace 入口，外部消费者使用下列公开分发入口）：
+
+```ts
+import { createJudgeAssertion } from "@xnightsky/x-agent-suite/assertions";
+import { createJudgeClient } from "@xnightsky/x-agent-suite/judge";
+import { createPiRecallDriver } from "@xnightsky/x-agent-suite/profiles/pi-recall";
+
+const judgeEffects = {
+  kind: "none",
+  attribution: "none",
+  tools: "none",
+  commands: { allow: [], deny: [] },
+  maxSteps: 1,
+  timeoutMs: 30_000,
+  workspace: "isolated",
+  cleanup: "required",
+} as const;
+
+const client = createJudgeClient({
+  target,
+  tags,
+  config,
+  liveReviewApproved: approved, // 与主运行本次授权同源，分别显式传递。
+  mode: "borrowed",
+  toolPolicy: "none",
+  createDriver: ({ backend, target, cliRef }) =>
+    createPiRecallDriver({
+      backend,
+      target,
+      cliRef,
+      spec: { id: "judge/single-turn", turns: [{ send: "judge" }] },
+      effects: judgeEffects,
+      executionParams: {},
+    }),
+});
+
+const criterion = createJudgeAssertion({
+  name: "answer-quality",
+  client,
+  maxRetries: 0,
+});
+const registry = {
+  criteria: [criterion],
+  profiles: mainProfiles, // 主运行已有实现仍由消费者保留。
+  effectsProfiles: {},
+};
+```
+
+这里只有 `createDriver` 的上下文形状适配。Judge 仍负责每次 attempt 的 `start/sendPrompt/close`，Pi driver 仍负责单轮 JSONL、隔离配置和进程退出，Assertions 仍负责把明确 verdict 转为普通判据结果。裁判使用独立单轮 spec，不复用主运行的 spec/provision/workspace，只接收本轮文本与显式 rubrics。
+
+人话清单：
+
+- 可以删除：自写的裁判 `start/sendPrompt/close` 包装、每 attempt 创建 driver/backend 的重复代码，以及与现有语义相同的 `pass:false → score 0`、`not-evaluated/absent → 显式抛错` 转换。
+- 仍需保留：主运行 spec/provision/workspace、证据选择、主运行 profile、`target/tags/config`、本轮文本与 rubrics、秘密最小化策略，以及真实宿主/provider 的独立验收。
+- 一次用户授权可以覆盖主运行和裁判，但 Recall 与 Judge 要分别显式传参；不能从 `--approve-live` 自动推断 Judge 已批准。离线示例的 `commandOverride` 只用于合成 CLI，生产不应照抄。
+- `judge()` 和 `createJudgeAssertion` 当前没有外部 `signal` 选项；只有 `client.complete({ signal })` 的既有取消接缝。整场取消需要消费者另行接线，本示例没有扩张接口。
+
+教程源码为 [`examples/tutorial/fixtures/judge-pi.ts`](../../../examples/tutorial/fixtures/judge-pi.ts) 与 [`examples/tutorial/17-recall.test.ts`](../../../examples/tutorial/17-recall.test.ts)，公开打包回归为 [`scripts/tests/judge-pi-assertion-artifact.test.ts`](../../../scripts/tests/judge-pi-assertion-artifact.test.ts)。它们使用合成 JSONL 子进程验证真实工厂和生命周期，不证明真实 Pi/provider live 已验证。
+
 ## 教程断言
 
 `TUTORIAL_SUMMARY` 包含：

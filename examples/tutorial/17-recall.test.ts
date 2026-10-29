@@ -15,6 +15,20 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { existsSync } from "node:fs";
+import { createJudgeAssertion } from "@x-agent-suite/assertions";
+import { LiveBackend, loadTargetTagCatalog } from "@x-agent-suite/llm-fixture";
+import type { RecallEffects, RecallRegistry } from "@x-agent-suite/recall";
+import { runScenarioSpec } from "@x-agent-suite/runner";
+import { createPiRecallDriver } from "../../profiles/pi-recall.ts";
+import { createPiJudgeClient } from "./fixtures/judge-pi.ts";
+import {
+  createSyntheticConfig,
+  readSyntheticPiProbes,
+  syntheticTags,
+  syntheticTarget,
+  writeSyntheticPi,
+} from "./fixtures/judge-pi-fake.ts";
 import { loadRecall } from "@x-agent-suite/recall";
 import { main } from "../../packaging/cli.ts";
 import { printTutorialSummary, resolveTutorialOutDir } from "./support.ts";
@@ -178,5 +192,148 @@ targetTags:
     });
   } finally {
     await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+const EXAMPLE_EFFECTS: RecallEffects = {
+  kind: "none",
+  attribution: "none",
+  tools: "none",
+  commands: { allow: [], deny: [] },
+  maxSteps: 1,
+  timeoutMs: 5_000,
+  workspace: "isolated",
+  cleanup: "required",
+};
+
+test("tutorial/recall：公开 Judge + Pi borrowed + assertion 组合", async () => {
+  const root = await mkdtemp(join(tmpdir(), "xas-tutorial-judge-pi-"));
+  const previousSecret = process.env.XAS_FAKE_SECRET;
+  process.env.XAS_FAKE_SECRET = "USER_SECRET_CANARY";
+  try {
+    const { commandOverride, probeLog } = await writeSyntheticPi(root);
+    const target = syntheticTarget();
+    const tags = syntheticTags(
+      (await loadTargetTagCatalog({ homeDir: root })).dictionary,
+    );
+    const config = createSyntheticConfig(root);
+    const approved = true; // 本次合成调用的显式授权，分别传给主流程与 Judge。
+    if (!approved) throw new Error("合成示例必须显式授权");
+    const client = createPiJudgeClient({
+      target,
+      tags,
+      config,
+      liveReviewApproved: approved,
+      commandOverride,
+    });
+    const registry: RecallRegistry = {
+      criteria: [
+        createJudgeAssertion({
+          name: "answer-quality",
+          client,
+          maxRetries: 0,
+        }),
+      ],
+      profiles: {},
+      effectsProfiles: {},
+    };
+
+    for (const [marker, expectedError] of [
+      ["__SUCCESS__", undefined],
+      ["__PROVIDER_ERROR__", "[not-evaluated:client]"],
+      ["__INCOMPLETE__", "[not-evaluated:client]"],
+      ["__ABSENT__", "[absent]"],
+    ] as const) {
+      const spec = {
+        id: "tutorial/judge-pi",
+        turns: [
+          {
+            send: marker,
+            expect: {
+              "answer-quality": [
+                { name: "grounded", rubric: "回答是否基于本轮文本" },
+              ],
+            },
+          },
+        ],
+        provision: {
+          context: {
+            files: [{ path: "MAIN_ONLY.txt", content: "main run only" }],
+          },
+        },
+      };
+      let outcome;
+      let failure: unknown;
+      try {
+        outcome = await runScenarioSpec(spec, {
+          criteria: registry.criteria,
+          createDriver: (current) => {
+            const backend = new LiveBackend({
+              carrier: target.carrier,
+              channel: target.channel,
+              config,
+            });
+            return createPiRecallDriver(
+              {
+                spec: current,
+                backend,
+                target,
+                cliRef: "pi",
+                effects: EXAMPLE_EFFECTS,
+                executionParams: {},
+              },
+              { commandOverride },
+            );
+          },
+        });
+      } catch (error) {
+        failure = error;
+      }
+      if (expectedError === undefined) {
+        assert.equal(failure, undefined);
+        assert.equal(outcome?.hardPass, true);
+      } else {
+        assert.equal(outcome, undefined, "不可评测/absent 不得转成内容结果");
+        assert.ok(failure instanceof Error);
+        assert.match(failure.message, new RegExp("^\\" + expectedError));
+      }
+    }
+
+    const probes = await readSyntheticPiProbes(probeLog);
+    const starts = probes.filter((probe) => probe.event === "start");
+    const main = starts.filter((probe) => !probe.judge);
+    const judge = starts.filter((probe) => probe.judge);
+    assert.equal(main.length, 4);
+    assert.equal(judge.length, 4);
+    assert.equal(probes.filter((probe) => probe.event === "exit").length, 8);
+    for (const probe of starts) {
+      assert.deepEqual(probe.flags, {
+        noTools: true,
+        noSession: true,
+        noContextFiles: true,
+        noExtensions: true,
+        noSkills: true,
+      });
+      assert.equal(probe.secretPresent, false);
+      assert.equal(existsSync(probe.cwd!), false, "cwd 应在 close 后删除");
+      assert.equal(existsSync(probe.home!), false, "HOME 应在 close 后删除");
+    }
+    for (const probe of judge) {
+      assert.equal(probe.originalExam, false);
+      assert.equal(probe.secretInPrompt, false);
+      assert.equal(probe.files?.includes("MAIN_ONLY.txt"), false);
+    }
+    for (const probe of main) {
+      assert.equal(probe.files?.includes("MAIN_ONLY.txt"), true);
+      assert.equal(
+        judge.some((other) => other.cwd === probe.cwd),
+        false,
+        "主运行与裁判必须使用独立 workspace",
+      );
+    }
+  } finally {
+    if (previousSecret === undefined) delete process.env.XAS_FAKE_SECRET;
+    else process.env.XAS_FAKE_SECRET = previousSecret;
+    await rm(root, { recursive: true, force: true });
   }
 });
