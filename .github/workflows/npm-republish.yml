@@ -1,0 +1,62 @@
+name: Republish npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 已上传 GitHub Release 的稳定版本（不含 v）
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: 校验并补发既有主制品
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    steps:
+      - name: 验证版本输入
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "只允许不含 v 的稳定 SemVer" >&2
+            exit 1
+          fi
+
+      - name: 检出补发工具
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      # 只读现有 Release，禁止重新构建或覆盖附件。
+      - name: 下载既有制品并固定来源
+        id: artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          test "$(git cat-file -t "refs/tags/v$VERSION")" = tag
+          commit=$(git rev-parse "refs/tags/v$VERSION^{commit}")
+          git merge-base --is-ancestor "$commit" HEAD
+          test "$(gh release view "v$VERSION" --json isDraft --jq .isDraft)" = false
+          gh release download "v$VERSION" --pattern "x-agent-suite-$VERSION.tgz" --pattern manifest.json --pattern SHA256SUMS --dir "$RUNNER_TEMP/npm-republish"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+
+      - name: 校验并发布 npm 主包
+        env:
+          VERSION: ${{ inputs.version }}
+          RELEASE_COMMIT: ${{ steps.artifact.outputs.commit }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          node scripts/publish-release-core.mjs "$VERSION" "$RELEASE_COMMIT" "$RUNNER_TEMP/npm-republish"

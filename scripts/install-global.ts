@@ -84,7 +84,8 @@ function assertChecksum(
   if (expected !== actual) throw new Error(`制品校验和不匹配或缺失：${file}`);
 }
 
-async function verifyCore(
+/** 校验正式清单、路径边界和核心制品的双重 SHA-256，不执行安装或发布。 */
+export async function verifyCoreArtifact(
   directory: string,
 ): Promise<CoreArtifact & { path: string }> {
   const root = await realpath(directory);
@@ -133,7 +134,7 @@ export async function installGlobal(
   if (args.length !== 1 || !args[0]?.trim() || args[0].startsWith("-")) {
     throw new Error("用法：pnpm run install:global -- <正式制品目录>");
   }
-  const core = await verifyCore(resolve(args[0]));
+  const core = await verifyCoreArtifact(resolve(args[0]));
   install(core.path);
   console.log(
     `[install:global] 已全局安装 x-agent-suite@${core.version}；请确认 pnpm 全局 bin 已加入 PATH`,

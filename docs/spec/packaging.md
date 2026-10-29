@@ -331,6 +331,12 @@ pnpm artifacts:pack -- --snapshot
 
 缺少 Token、认证失败、包名冲突或版本已存在时，npm 步骤显式失败，不忽略错误。GitHub Release 先于 npm 创建，npm 失败不会撤销已有 Release；须分别检查两个渠道。npm 已发布版本不可覆盖，重跑前先核对该版本是否已成功发布；内容有改动必须生成新版本。
 
+若 GitHub Release 已成功、只有 npm 失败，更新凭据后不要直接重跑整个构建 job。经授权可从默认分支手动触发 `.github/workflows/npm-republish.yml`，输入不含 `v` 的稳定版本，例如 `0.7.1`。该入口只读既有 Release，校验 annotated tag 可达默认分支、清单版本与提交、manifest/core 双重 SHA-256，以及 tarball 内主包身份；全部通过后才发布同一文件，不重新构建、不移动标签、不覆盖附件、不执行包生命周期脚本。补发来源证明记录的是恢复工作流，原制品源码提交仍由 tag 与 manifest 核对。
+
+```bash
+gh workflow run npm-republish.yml --ref main -f version=0.7.1
+```
+
 #### 消费者安装
 
 以下 `0.1.0` 仅为版本格式示例，替换为 npm 上已成功发布的实际版本：
