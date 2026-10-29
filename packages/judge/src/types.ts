@@ -44,17 +44,26 @@ export interface JudgeVerdict {
   readonly reason: string;
 }
 
+const JUDGE_FAILURE_KINDS = [
+  "not-configured",
+  "timeout",
+  "rate-limited",
+  "transport",
+  "empty-response",
+  "parse",
+  "protocol",
+  "cleanup",
+  "client",
+] as const;
+const JUDGE_FAILURE_KIND_SET: ReadonlySet<string> = new Set(
+  JUDGE_FAILURE_KINDS,
+);
+const JUDGE_MODEL_ERROR_BRAND = Symbol.for(
+  "@x-agent-suite/judge/JudgeModelError",
+);
+
 /** 整体不可评测的失败类别。 */
-export type JudgeFailureKind =
-  | "not-configured"
-  | "timeout"
-  | "rate-limited"
-  | "transport"
-  | "empty-response"
-  | "parse"
-  | "protocol"
-  | "cleanup"
-  | "client";
+export type JudgeFailureKind = (typeof JUDGE_FAILURE_KINDS)[number];
 
 /** 整体不可评测的脱敏诊断。 */
 export interface JudgeFailure {
@@ -138,8 +147,25 @@ export class JudgeModelError extends Error {
   constructor(kind: JudgeFailureKind, message: string, options?: ErrorOptions) {
     super(message, options);
     this.name = "JudgeModelError";
+    Object.defineProperty(this, JUDGE_MODEL_ERROR_BRAND, { value: true });
     this.kind = kind;
   }
+}
+
+/** 跨独立 bundle 识别 JudgeModelError；品牌、Error 身份、已知类别与消息形状必须同时有效。 */
+export function isJudgeModelError(error: unknown): error is JudgeModelError {
+  if (!(error instanceof Error)) return false;
+  const candidate = error as Error & {
+    readonly [JUDGE_MODEL_ERROR_BRAND]?: unknown;
+    readonly kind?: unknown;
+  };
+  return (
+    Object.prototype.hasOwnProperty.call(candidate, JUDGE_MODEL_ERROR_BRAND) &&
+    candidate[JUDGE_MODEL_ERROR_BRAND] === true &&
+    typeof candidate.kind === "string" &&
+    JUDGE_FAILURE_KIND_SET.has(candidate.kind) &&
+    typeof candidate.message === "string"
+  );
 }
 
 /** 两种客户端工厂共用的目标、标签与审批配置。 */

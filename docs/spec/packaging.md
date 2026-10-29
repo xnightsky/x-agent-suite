@@ -389,7 +389,7 @@ pnpm exec x-agent-suite recall (--carrier <id> | --provider <id> | --model <id>)
 
 `@xnightsky/x-agent-suite/profiles/pi-config` 是独立消费者配置投影入口：源码在根 `profiles/`，不放入 `packages/*/src/`，不内建注册执行器，不给 Harness 契约添加 Pi 字段。核心制品显式打包该入口 JS/声明，并继续按白名单携带公共 `config/target-tags/{keys,instances}.yaml`；不打包任何私密 live/auth/宿主配置。仓库外安装冒烟覆盖入口导入/类型、隔离 settings 继承 high、单次覆盖 low、模型思考映射和宿主文件不变；只用合成配置，零 provider 请求，不新增 token 冒烟。
 
-`@xnightsky/x-agent-suite/assertions` 在核心聚合包内分发，不新增第三个 tarball；原有 `criteria` 和 observation 检查入口仍可使用。`@xnightsky/x-agent-suite/profiles/pi-recall` 同样显式打包 JS/声明，消费者自行注册 `createPiRecallDriver`，不会因 carrier 名自动启用。仓库外安装冒烟使用 fake Judge 与 fake CLI 验证适配、配置继承和清理，不接真实 provider。
+`@xnightsky/x-agent-suite/assertions` 在核心聚合包内分发，不新增第三个 tarball；原有 `criteria` 和 observation 检查入口仍可使用。`@xnightsky/x-agent-suite/profiles/pi-recall` 同样显式打包 JS/声明，消费者自行注册 `createPiRecallDriver`，不会因 carrier 名自动启用。仓库外安装冒烟使用 fake Judge 与 fake CLI 验证适配、配置继承和清理，不接真实 provider。`judge` 与 `assertions` 虽分别生成独立 bundle，跨入口 `JudgeModelError` 仍通过内部品牌与字段校验保留已知类别和重试预算；伪造、畸形与未知错误保持 `client`。对应回归只导入公开打包入口并使用 fake client/transport。
 
 需要任意目录可调用的全局 CLI 时，使用 `pnpm run install:global -- <制品目录>`：校验正式 manifest 与校验和后只安装核心包，不隐式构建、不发布、不初始化用户配置。全局 bin/PATH 须由执行者准备；详细前置、跨仓路径规则和验收边界见[全局 CLI 安装](./global-cli-install.md)。
 

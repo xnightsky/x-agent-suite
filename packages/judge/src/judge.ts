@@ -3,6 +3,7 @@ import { parseJudgeResponse } from "./parse.ts";
 import {
   JudgeDefinitionError,
   JudgeModelError,
+  isJudgeModelError,
   type JudgeFailure,
   type JudgeFailureKind,
   type JudgeInput,
@@ -100,7 +101,7 @@ async function completeAttempt(
 
 /** 把执行异常归一为脱敏失败；未知错误保守归为 client。 */
 function asFailure(error: unknown): JudgeFailure {
-  if (error instanceof JudgeModelError) {
+  if (isJudgeModelError(error)) {
     return { kind: error.kind, message: error.message };
   }
   return { kind: "client", message: "Judge 客户端调用失败" };

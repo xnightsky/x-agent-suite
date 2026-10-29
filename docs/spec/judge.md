@@ -253,6 +253,8 @@ pnpm ittest:token:judge
 
 定义错误（空/重名 rubric、非法 timeout/retry、缺 client、遗留 allowedModes、无候选、多候选未明确、cliRef 不匹配、direct + toolPolicy=read-only、live 未放行等）在调用前抛 `JudgeDefinitionError`，不返回 outcome。执行失败返回 `not-evaluated`，不得转换成 `pass=false` 或 score=0。诊断不得携带完整 prompt、完整响应、认证头或凭据。
 
+Judge 与 Assertions 来自独立公开 bundle 时，`JudgeModelError` 仍保留已知类别与对应重试预算。跨 bundle 识别必须同时满足内部共享品牌、Error 身份、已知 `kind` 与字符串 `message`；仅凭 `name/kind` 的伪造对象、畸形实例和未知普通错误仍归为 `client`，不重试并继续使用脱敏诊断。内部识别器不新增公开 API。
+
 ## 与 Criterion、decision、Recall 的关系
 
 Judge 的结果不是 `CriterionResult`。可用 `@x-agent-suite/assertions` 的 `createJudgeAssertion` 适配为 `TurnCriterion`，或由消费者自行映射；该薄适配按每轮 `expect: JudgeRubric[]` 取规则，缺证据与不可评测显式抛错。若需聚合，再把结果交给静态聚合机。weight、threshold、knockout、decision 和 absent 计分映射均不在 Judge 内。
