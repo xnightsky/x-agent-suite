@@ -12,6 +12,8 @@
  * - 未注册 handler 的反向请求必须回复 {error: {code: -32601}}，防止对端挂起；
  * - 流断且仍有悬挂请求 / 解析失败 / 无法路由时 failPending：显式拒绝所有悬挂请求；
  *   流自然结束且无悬挂请求属正常结束，不产生失败；
+ * - 消费终止原因在结束回调前保存；终止后的 request 立即拒绝且不分配 id、计时器或 pending，
+ *   不写进程；故障复用原 Error，自然 EOF 明确拒绝但结束通知仍为 null；已关闭错误优先；
  * - close 幂等（closePromise ??=），先停消费循环，再关 JsonlProcess 并拒绝残留；
  *   消费循环或结束回调失败不阻断清理，错误仍由 close 显式暴露；
  * - 后台消费拒绝从 start 起即被观察，原 Promise 保留失败状态供稍后 close 暴露。
@@ -94,6 +96,7 @@ export class JsonRpcPeer {
   private streamEndHandler: ((error: Error | null) => void) | null = null;
   private rpcId = 0;
   private consumePromise: Promise<void> | null = null;
+  private terminalError: Error | null = null;
   private stopConsume: (() => void) | null = null;
   private closePromise: Promise<void> | null = null;
 
@@ -132,7 +135,7 @@ export class JsonRpcPeer {
     void this.consumePromise.catch(() => undefined);
   }
 
-  /** 发一个 client→server 请求并等响应（id 配对，超时显式拒绝）。 */
+  /** 发请求并按 id 等响应；超时显式拒绝，消费终止后以原错或流结束错误立即拒绝且不写进程。 */
   request(
     method: string,
     params?: unknown,
@@ -140,6 +143,9 @@ export class JsonRpcPeer {
   ): Promise<unknown> {
     if (this.closePromise) {
       return Promise.reject(new Error("JsonRpcPeer: 已关闭，不能 request"));
+    }
+    if (this.terminalError) {
+      return Promise.reject(this.terminalError);
     }
     const id = ++this.rpcId;
     const budget = timeoutMs ?? this.defaultTimeoutMs;
@@ -220,6 +226,8 @@ export class JsonRpcPeer {
     } catch (error) {
       failure = error instanceof Error ? error : new Error(String(error));
     } finally {
+      this.terminalError =
+        failure ?? new Error("JsonRpcPeer: 对端流已结束，不能 request");
       if (failure) {
         this.failPending(failure);
       }

@@ -3,7 +3,8 @@
  * JsonRpcPeer wire 层单测：真实子进程跑脚本化假 JSON-RPC 服务端
  * （tests/fixtures/fake-jsonrpc-peer.ts + demo-peer-behavior.ts，虚构方法名），
  * 覆盖请求配对、通知回调、反向请求应答 / -32601、超时、非法 JSONL、
- * 结束回调抛错时的进程/请求/计时器清理与幂等 close，以及自然 EOF 后延迟关闭前的拒绝观察。
+ * 结束回调抛错时的进程/请求/计时器清理与幂等 close、自然 EOF 后延迟关闭前的拒绝观察，
+ * 以及消费终止后（含结束回调重入）请求立即拒绝、不写进程且不创建计时器。
  * 不变量：假 peer 是通用测试子进程、零 token、不起真实宿主，按分层约定归单元测试。
  */
 import assert from "node:assert/strict";
@@ -119,6 +120,68 @@ test("JsonRpcPeer：无悬挂请求时自然流结束属正常结束", async () 
   assert.equal(await ended, null);
   await assert.doesNotReject(peer.close());
 });
+
+for (const { name, output, reason } of [
+  {
+    name: "非法 JSONL",
+    output: "console.log('not-json')",
+    reason: /非 JSON 行/,
+  },
+  { name: "无法路由", output: "console.log('{}')", reason: /无法路由/ },
+  { name: "自然 EOF", output: "process.stdout.end()", reason: null },
+]) {
+  test(`JsonRpcPeer：${name}终止后及结束回调重入的请求立即拒绝且无副作用`, async (t) => {
+    const proc = new JsonlProcess({
+      command: process.execPath,
+      args: [
+        "-e",
+        `process.stdin.on('data', () => process.stderr.write('REQUEST_SENT_AFTER_FAILURE')); ${output}; setInterval(() => {}, 1000)`,
+      ],
+      killGraceMs: 100,
+    });
+    t.after(() => proc.close());
+    await proc.start();
+    const peer = new JsonRpcPeer({ proc });
+    t.after(() => peer.close());
+    const send = t.mock.method(proc, "send");
+    const schedule = t.mock.method(globalThis, "setTimeout");
+    let reentrant: Promise<unknown> | undefined;
+    const ended = new Promise<Error | null>((resolve) => {
+      peer.onStreamEnd((error) => {
+        reentrant = peer
+          .request("from-onStreamEnd", undefined, 100)
+          .catch((failure: unknown) => failure);
+        resolve(error);
+      });
+    });
+    peer.start();
+    const failure = await ended;
+    if (reason) {
+      assert.ok(failure instanceof Error);
+      assert.match(failure.message, reason);
+    } else {
+      assert.equal(failure, null);
+    }
+    const after = peer
+      .request("after-failure", undefined, 100)
+      .catch((error: unknown) => error);
+    // 只推进拒绝反应的微任务，不等待请求超时或进程 I/O。
+    await Promise.resolve();
+    for (const request of [reentrant!, after]) {
+      const result = await Promise.race([request, Promise.resolve("pending")]);
+      assert.ok(result instanceof Error, "终止后的请求必须立即拒绝");
+      if (failure) assert.equal(result, failure);
+      else assert.match(result.message, /对端流已结束/);
+    }
+    assert.equal(send.mock.callCount(), 0, "终止后不得写入进程");
+    assert.equal(schedule.mock.callCount(), 0, "终止后不得创建请求计时器");
+    schedule.mock.restore();
+    await peer.close();
+    assert.equal(proc.pid, undefined);
+    assert.doesNotMatch(proc.stderrTail(), /REQUEST_SENT_AFTER_FAILURE/);
+    await assert.rejects(peer.request("after-close"), /已关闭/);
+  });
+}
 
 test("JsonRpcPeer：自然 EOF 回调抛错不崩溃，延迟 close 仍清理并幂等拒绝原错", () => {
   const source = `
