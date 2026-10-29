@@ -2,7 +2,8 @@
  * @module @x-agent-suite/driver/tests/jsonrpc-peer
  * JsonRpcPeer wire 层单测：真实子进程跑脚本化假 JSON-RPC 服务端
  * （tests/fixtures/fake-jsonrpc-peer.ts + demo-peer-behavior.ts，虚构方法名），
- * 覆盖请求配对、通知回调、反向请求应答 / -32601、超时、非法 JSONL 与幂等 close。
+ * 覆盖请求配对、通知回调、反向请求应答 / -32601、超时、非法 JSONL、
+ * 结束回调抛错时的进程/请求/计时器清理与幂等 close。
  * 不变量：假 peer 是通用测试子进程、零 token、不起真实宿主，按分层约定归单元测试。
  */
 import assert from "node:assert/strict";
@@ -123,4 +124,75 @@ test("JsonRpcPeer：close 幂等，关闭后 request 显式抛错", async () => 
   await peer.close();
   await peer.close();
   await assert.rejects(peer.request("echo", {}, 100), /已关闭/);
+});
+
+test("JsonRpcPeer：结束回调抛错时 close 仍清理进程、悬挂请求与计时器，且幂等暴露原错", async (t) => {
+  const proc = new JsonlProcess({
+    command: process.execPath,
+    args: ["-e", "setInterval(() => {}, 1000)"],
+    killGraceMs: 100,
+  });
+  t.after(() => proc.close());
+  await proc.start();
+  const pid = proc.pid;
+  assert.ok(pid);
+  const peer = new JsonRpcPeer({ proc });
+  const failure = new Error("consumer callback failed");
+  let endCalls = 0;
+  peer.onStreamEnd(() => {
+    endCalls++;
+    throw failure;
+  });
+  peer.start();
+  const schedule = t.mock.method(globalThis, "setTimeout");
+  const cancel = t.mock.method(globalThis, "clearTimeout");
+  const pending = ["first", "second"].map((method) =>
+    peer.request(method, undefined, 60_000).catch((error: unknown) => error),
+  );
+  const timers = schedule.mock.calls.map((call) => call.result);
+  t.after(() => timers.forEach((timer) => clearTimeout(timer)));
+  await Promise.all([
+    assert.rejects(peer.close(), (error) => error === failure),
+    assert.rejects(peer.close(), (error) => error === failure),
+  ]);
+  assert.equal(proc.pid, undefined);
+  assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+  for (const request of pending) {
+    const result = await Promise.race([request, Promise.resolve("pending")]);
+    assert.ok(result instanceof Error);
+    assert.match(result.message, /已关闭/);
+  }
+  for (const timer of timers) {
+    assert.ok(cancel.mock.calls.some((call) => call.arguments[0] === timer));
+  }
+  await assert.rejects(peer.close(), (error) => error === failure);
+  assert.equal(endCalls, 1);
+  await assert.rejects(peer.request("after-close"), /已关闭/);
+});
+
+test("JsonRpcPeer：自然 EOF 回调先抛错时 close 仍暴露原错且完成清理", async (t) => {
+  const proc = new JsonlProcess({
+    command: process.execPath,
+    args: ["-e", ""],
+  });
+  t.after(() => proc.close());
+  await proc.start();
+  const peer = new JsonRpcPeer({ proc });
+  const failure = new Error("early stream end callback failed");
+  let endCalls = 0;
+  let notifyEnd!: () => void;
+  const ended = new Promise<void>((resolve) => {
+    notifyEnd = resolve;
+  });
+  peer.onStreamEnd(() => {
+    endCalls++;
+    notifyEnd();
+    throw failure;
+  });
+  peer.start();
+  await ended;
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(endCalls, 1);
+  await assert.rejects(peer.close(), (error) => error === failure);
+  assert.equal(proc.pid, undefined);
 });
