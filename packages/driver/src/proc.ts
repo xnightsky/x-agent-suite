@@ -4,7 +4,7 @@
  * stderr 捕获到环形缓冲（失败诊断）、close 先优雅退出（SIGTERM 或 stdin 关闭）超时后强杀。
  * 不变量：所有错误显式抛带上下文的 Error；close 幂等；
  * win32 无信号语义，优雅路径改为关闭 stdin 请求对端退出，超时后 kill；
- * 分帧只认 \n（U+2028 / U+2029 不断行），由 jsonl-framing 保证。
+ * 分帧只认 \n（U+2028 / U+2029 不断行），由 jsonl-framing 保证；data/EOF 分帧错误均交给异步队列。
  */
 import { spawn, type ChildProcess } from "node:child_process";
 import type { Readable } from "node:stream";
@@ -250,8 +250,14 @@ export class JsonlProcess {
       }
     });
     stdout.on("end", () => {
-      framer.end();
-      this.queue.end();
+      try {
+        framer.end();
+        this.queue.end();
+      } catch (error) {
+        this.queue.fail(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      }
     });
   }
 

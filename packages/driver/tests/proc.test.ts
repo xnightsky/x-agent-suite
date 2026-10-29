@@ -1,9 +1,10 @@
 /**
  * @module @x-agent-suite/driver/tests/proc
- * JsonlProcess 分帧回归：真实子进程输出含 U+2028 / U+2029 的 JSON 行不得被误切分。
- * 不变量：node:readline 会在 U+2028 断行（已知缺陷），修复后必须整行解析成功。
+ * JsonlProcess 分帧回归：Unicode 分隔符、stdout 错误传播和 stderr 有界诊断。
+ * 不变量：只启动通用测试子进程，零 token；分帧错误必须能由调用方捕获，不得逃逸事件回调。
  */
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 import { JsonlProcess } from "../src/proc.ts";
 
@@ -58,6 +59,52 @@ test("JsonlProcess：\\r\\n 行尾容忍", async () => {
     await proc.close();
   }
 });
+
+for (const [name, output] of [
+  ["未换行超长输出", "'x'.repeat(1024 * 1024 + 1)"],
+  [
+    "仅 EOF 解码冲刷后超长的输出",
+    "Buffer.concat([Buffer.alloc(1024 * 1024 - 1, 'x'), Buffer.from([0xe2])])",
+  ],
+] as const) {
+  test(`JsonlProcess：${name}可捕获且调用者正常退出`, () => {
+    const source = `
+      import assert from 'node:assert/strict';
+      import { JsonlProcess } from ${JSON.stringify(new URL("../src/proc.ts", import.meta.url).href)};
+      const proc = new JsonlProcess({
+        command: process.execPath,
+        args: ['-e', ${JSON.stringify(`process.stdout.write(${output})`)}],
+      });
+      await proc.start();
+      try {
+        await assert.rejects(async () => {
+          for await (const line of proc.lines()) {
+            assert.fail('超长行不得产出 JSON');
+          }
+        }, /LfFramer: 单行超长/);
+        process.stdout.write('caught\\n');
+      } finally {
+        await proc.close();
+      }
+    `;
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--import",
+        import.meta.resolve("tsx/esm"),
+        "--input-type=module",
+        "-e",
+        source,
+      ],
+      { encoding: "utf8", timeout: 10_000 },
+    );
+    assert.ifError(result.error);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.signal, null);
+    assert.equal(result.stderr, "");
+    assert.equal(result.stdout, "caught\n");
+  });
+}
 
 test("JsonlProcess: stderr 环形缓冲按行丢弃旧内容（不依赖 data chunk 边界）", async () => {
   const proc = new JsonlProcess({
