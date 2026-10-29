@@ -156,6 +156,7 @@ effects:
 - `effects.use` 只查当前显式 registry 的 `effectsProfiles`，未注册即失败；与任何 inline 字段互斥，不继承、不深合并。
 - `tools` 默认 `none`，可选 `read-only/allowlist`；TargetTags 分别要求相应 CLI 能力，注册 profile 必须实际兑现。
 - `commands.allow/deny` 默认 `[]`，只支持**完整命令字符串精确匹配**；deny 优先，未命中 allow 即拒绝，未引入 glob 语义。
+- 消费者 Profile 必须真正兑现命令白名单，不能仅裁剪工具名称；具体脚本路径与结果判据仍由消费者注册，核心包不识别脚本语义。
 - `maxSteps=1`、`timeoutMs=30000` 默认且必须为正整数；`workspace` 当前仅 `isolated`，`cleanup` 当前仅 `required`。
 - 权限只来自这个受信任执行 Plan；case YAML 不能声明 tools、commands 或其他提权字段。
 
@@ -227,6 +228,9 @@ Windows 仅保留文件只读语义，不保证 POSIX 的精确权限位。
 Pi 的项目规则发现由显式消费者 registry 通过 `contextFiles: "project"` 开启，不在核心包枚举宿主语义。
 Skill 的安装由操作者按各场景仓自己的 README 准备；Recall 只消费已声明的安装态资源，不执行安装。
 `cedar/skills-def/change-summary/.recall.yaml` 覆盖自然任务触发、无关任务和未安装对照，真实调用通过显式只读权限引用执行。
+消费者判据 `skill-loaded` 使用 `{name, loaded}`：按名字匹配原生读取的 `SKILL.md`，不绑定源目录或安装目录；当前假设名字唯一，路径原样保留作诊断。
+`cedar/skills-def/change-report/.recall.yaml` 覆盖带脚本的生成、无关任务、仅解释方法与非法输入；显式命令许可通过 `use:skill-script` 选择。
+Skill 与 scripts 作为只读安装态快照，输入只读，输出目录不预置。消费者 Profile 在清理前采集输出文件到观测 metadata，注册判据分别检查原生命令事件和实际 JSON，不把模型回复当作产物证据。
 入口、带规则/无规则对照和真实 token 命令见 [`integrations/README.md`](../../integrations/README.md)。
 
 ### 执行结果

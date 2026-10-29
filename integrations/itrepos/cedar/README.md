@@ -50,7 +50,8 @@ x-agent-suite recall skills-def/change-summary/.recall.yaml \
 不提供渠道或缺少需审批目标的 `--approve-live` 时，执行前拒绝。
 
 考卷验证自然任务触发、无关任务不触发，以及未安装时不出现 Skill 专属行为。
-触发必须同时满足原生 `read` 事件读取安装位置与正文行为标记，不采信模型自述。
+`skill-loaded` 只配置 Skill 名称（如 `name: change-summary`）：原生 `read` 成功读取同名目录下的 `SKILL.md` 即算加载，源目录与安装目录都接受；当前按名字唯一处理，原始路径保留在工具事件中供诊断。
+发布说明场景还要求正文行为标记，不采信模型自述。
 任务不会显式点名 Skill，也不会直接要求读取文件。
 
 本仓保留软链安装；Recall 通过这个安装入口解析正文，将内容复制进每次独立的隔离工作区。
@@ -62,3 +63,30 @@ x-agent-suite recall skills-def/change-summary/.recall.yaml \
 ```bash
 x-agent-suite recall .recall.yaml --carrier pi --registry ../../pi.registry.ts --approve-live
 ```
+
+## 带脚本 Skill：改动统计报告
+
+安装 `change-report` 仍由当前 AI 在本目录完成：
+
+```bash
+npx --yes skills add ./skills-def/change-report --agent pi --yes
+ln -s ../../.agents/skills/change-report .pi/skills/change-report
+test -f .pi/skills/change-report/scripts/build-report.mjs
+```
+
+重复安装沿用上面的链接核对规则；不会由 Recall 自动安装。
+安装产物的 SKILL.md 与 scripts/ 进入隔离现场，考卷不进入；输入素材只读，输出目录初始不存在。
+
+```bash
+x-agent-suite recall skills-def/change-report/.recall.yaml \
+  --carrier pi --registry ../../pi.registry.ts \
+  --plan use:skill-script --approve-live
+```
+
+源码仓仍可替换 CLI 前缀，或从根目录运行 `pnpm ittest:token:cedar-script --carrier pi --approve-live`。
+该权限只放行指定 Node 脚本命令，六步、六十秒；不开放其他写工具或任意 shell 组合。
+脚本只读取隔离输入，生成 `out/change-report.json`。模型回答不是文件证据：Profile 在返回观测前直接读取产物，
+判据核对原生命令事件、成功/失败状态以及实际 JSON，随后清理沙箱。
+
+考卷覆盖实际生成、无关任务、只询问方法不执行，以及非法输入明确失败且不生成产物。
+命令白名单只约束入口，不等同于 OS 级沙箱；本场景脚本不访问网络。

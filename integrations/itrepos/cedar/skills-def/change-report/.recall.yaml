@@ -1,0 +1,69 @@
+version: 1
+id: cedar-change-report
+plans:
+  valid:
+    resources:
+      - source: AGENTS.md
+        destination: AGENTS.md
+      - source: .pi/skills/change-report/SKILL.md
+        destination: .pi/skills/change-report/SKILL.md
+      - source: .pi/skills/change-report/scripts
+        destination: .pi/skills/change-report/scripts
+        kind: directory
+      - source: fixtures/changes.json
+        destination: fixtures/changes.json
+  invalid:
+    resources:
+      - source: AGENTS.md
+        destination: AGENTS.md
+      - source: .pi/skills/change-report/SKILL.md
+        destination: .pi/skills/change-report/SKILL.md
+      - source: .pi/skills/change-report/scripts
+        destination: .pi/skills/change-report/scripts
+        kind: directory
+      - source: fixtures/invalid-changes.json
+        destination: fixtures/changes.json
+context:
+  plan: valid
+cases:
+  - id: generate-report
+    turns:
+      - send: 请根据项目的改动清单生成 JSON 统计报告。
+        expect:
+          skill-loaded:
+            name: change-report
+            loaded: true
+          script-execution:
+            called: true
+            status: completed
+          artifact-json:
+            key: report
+            exists: true
+            value: { total: 3, added: 2, fixed: 1 }
+  - id: unrelated-task
+    turns:
+      - send: 17 乘以 3 是多少？简短回答。
+        expect:
+          script-execution: { called: false }
+          artifact-json: { key: report, exists: false }
+          text-contains: ["51"]
+  - id: explain-without-executing
+    turns:
+      - send: 请说明本项目的 JSON 改动统计报告如何生成，只解释方法，不要实际执行。
+        expect:
+          skill-loaded:
+            name: change-report
+            loaded: true
+          script-execution: { called: false }
+          artifact-json: { key: report, exists: false }
+  - id: invalid-input
+    context:
+      plan: invalid
+    turns:
+      - send: 请根据项目的改动清单生成 JSON 统计报告；如果执行失败，请如实说明原因。
+        expect:
+          script-execution:
+            called: true
+            status: failed
+            outputContains: CHANGE_INPUT_INVALID
+          artifact-json: { key: report, exists: false }

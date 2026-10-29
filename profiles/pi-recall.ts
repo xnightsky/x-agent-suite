@@ -5,8 +5,7 @@
  * 不变量：
  * - 只服务 live borrowed 执行：不读 auth.json、不写真实 HOME，凭据只经 writePiLiveConfig 投影进隔离目录；
  * - 默认关闭所有发现面；受信任 Profile 可显式开启隔离工作区的上下文与 Skill，工具策略由 effects 兑现；
- * - --tools 只是工具集裁剪（read-only 与 allowlist 都只放行固定四个原生只读工具）；文件系统边界与步数预算
- *   由守卫扩展兑现，守卫只覆盖当前 tools/path/maxSteps；
+ * - 默认工具集为四个原生只读工具；显式命令白名单才增加 bash，守卫执行精确命令与路径检查；
  * - 证据只认原生事件：agent_end 判完成，tool_execution_end 判工具成败，message_end 的 stopReason/usage
  *   判错误、截断与用量；退出码与模型自述都不作为证据；
  * - 只支持单轮：spec.turns 超过一轮在工厂阶段就拒绝，绝不靠拼接历史伪造上下文；
@@ -34,9 +33,11 @@ import {
 } from "@x-agent-suite/recall";
 import { writePiLiveConfig } from "./pi-config.ts";
 import {
+  assertPiRecallCommands,
   createPiRecallGuardSource,
-  PI_RECALL_READ_TOOLS,
+  piRecallTools,
 } from "./pi-recall-guard.ts";
+import { collectPiRecallEvidence } from "./pi-recall-evidence.ts";
 
 /** 隔离配置目录语义键：与 writePiLiveConfig 读取的 sandbox.configDirs.piHome 一致。 */
 const PI_HOME_DIR = "piHome";
@@ -79,6 +80,8 @@ export interface PiRecallDriverOptions {
   readonly contextFiles?: "off" | "project";
   /** 默认 off；project 允许宿主原生发现隔离工作区中的 Skill。 */
   readonly skills?: "off" | "project";
+  /** 显式采集的工作区相对路径；在 sendPrompt 返回前快照，每个文件最多 64 KiB。 */
+  readonly evidence?: Readonly<Record<string, string>>;
 }
 
 /** 原生 usage 累计值。 */
@@ -133,11 +136,7 @@ function assertSupported(
         unsupported.join(","),
     );
   }
-  if (effects.commands.allow.length > 0) {
-    throw new Error(
-      "Pi Recall Driver 不提供命令执行工具，无法兑现 effects.commands.allow",
-    );
-  }
+  assertPiRecallCommands(effects);
 }
 
 /** 累计原生 usage；缺字段按 0 计，不臆造数值。 */
@@ -268,7 +267,7 @@ function createProfile(
       ),
       ...(context.effects.tools === "none"
         ? ["--no-tools"]
-        : ["--tools", PI_RECALL_READ_TOOLS.join(",")]),
+        : ["--tools", piRecallTools(context.effects).join(",")]),
       ...(options.appendSystemPrompt === undefined
         ? []
         : ["--append-system-prompt", options.appendSystemPrompt]),
@@ -299,8 +298,12 @@ function createProfile(
   };
 }
 
-/** 只补齐 Harness 尚未从原生事件归一的完成状态、usage 与预算证据。 */
-function wrapHarness(harness: HarnessDriver, state: NativeState): AgentDriver {
+/** 补齐原生完成、usage 与预算证据，并在清理前采集显式声明的文件。 */
+function wrapHarness(
+  harness: HarnessDriver,
+  state: NativeState,
+  evidence?: Readonly<Record<string, string>>,
+): AgentDriver {
   let sent = false;
   return {
     redactor: harness.redactor,
@@ -317,6 +320,9 @@ function wrapHarness(harness: HarnessDriver, state: NativeState): AgentDriver {
       if (!state.completed)
         throw new Error("Pi 原生完成信号缺失：未收到 agent_end");
       const usage = state.usage;
+      const fileEvidence = evidence
+        ? await collectPiRecallEvidence(harness.sandbox.cwd, evidence)
+        : undefined;
       return {
         ...observation,
         ...(usage.totalTokens > 0
@@ -334,6 +340,7 @@ function wrapHarness(harness: HarnessDriver, state: NativeState): AgentDriver {
           nativeCompleted: true,
           workspaceCwd: harness.sandbox.cwd,
           nativeUsage: { ...usage },
+          ...(fileEvidence ? { fileEvidence } : {}),
         },
       };
     },
@@ -343,9 +350,9 @@ function wrapHarness(harness: HarnessDriver, state: NativeState): AgentDriver {
 /**
  * 创建单轮 Pi Recall Driver；目标与权限来自已批准上下文，不自动注册任何 profile。
  * @param context Recall 的场景、backend、目标、effects 与 executionParams。
- * @param options 受信任的上下文发现、追加系统提示词与测试命令注入。
+ * @param options 受信任的上下文发现、文件证据、追加系统提示词与测试命令注入。
  * @returns start 创建隔离资源、close 幂等清理的一次性驱动。
- * @throws 多轮、命令执行或不支持的 executionParams 在执行前显式拒绝。
+ * @throws 多轮、不合法的命令策略或不支持的 executionParams 在执行前显式拒绝。
  */
 export function createPiRecallDriver(
   context: RecallProfileDriverContext,
@@ -375,5 +382,5 @@ export function createPiRecallDriver(
       },
     },
   );
-  return wrapHarness(harness, state);
+  return wrapHarness(harness, state, options.evidence);
 }

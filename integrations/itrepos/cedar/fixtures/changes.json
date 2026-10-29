@@ -1,0 +1,7 @@
+{
+  "changes": [
+    { "type": "added", "text": "CSV 导出" },
+    { "type": "added", "text": "批量重命名" },
+    { "type": "fixed", "text": "空列表闪退" }
+  ]
+}

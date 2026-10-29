@@ -54,6 +54,9 @@ PTY、headless、sandbox 是机制，smoke 是抽样范围，contract 是验证�
 安装由操作者按该仓 README 在测试前完成，默认回归不执行安装或真实模型调用。
 源仓的安装入口是软链，隔离现场按现有资源契约读取其内容并生成实体快照；该验证不证明宿主在原仓中的软链遍历行为。
 
+`pnpm ittest:token:cedar-script --carrier pi --approve-live` 运行带脚本的 Skill 考卷；原生命令事件证明调用，清理前采集的真实文件内容证明效果。
+默认工具策略仍关闭写入；只有本次显式 `use:skill-script` 配置才放行受限 Node 命令，不进入默认回归。
+
 ## token 级安全门
 
 token 测试必须同时满足：

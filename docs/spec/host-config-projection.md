@@ -70,10 +70,11 @@ const profiles = {
 - 只支持单轮，创建时拒绝多轮；`executionParams` 只支持 `thinkingLevel`，默认继承原生配置。
 - `contextFiles` 与 `skills` 是受信任 Profile 选项，均默认 `off`；显式 `project` 后分别启用隔离工作区的 AGENTS/CLAUDE 与 Skill 原生发现，不把正文拼进追加系统提示词。场景资源仍只来自 `spec.provision`，不复制真实 HOME 的规则或 Skill；扩展发现、MCP 与提示模板保持关闭。Skill 正文由模型通过显式只读工具权限读取。
 - `appendSystemPrompt` 只接受受信任调用方显式提供的字符串，不自动读取消费者提示词；`commandOverride` 仅为零 token 测试注入。
-- `tools: none` 禁用工具；`read-only` / `allowlist` 使用固定的 `read,grep,find,ls`，不开放 shell。非空命令许可与不支持的能力在启动前拒绝。
-- guard 按 realpath 检查工具路径，保留完成、错误、usage 和预算证据；只向子进程投影环境白名单，不复制真实 HOME 或认证状态。
+- `tools: none` 禁用工具；`read-only` 使用固定的 `read,grep,find,ls`。只有 `tools: allowlist` 且显式配置 `commands.allow` 时才增加 `bash`，命令限定为工作区内 `.mjs` 的 Node 调用；拒绝 shell 组合、变量展开和其他解释器。命令按完整字符串精确匹配，deny 优先，路径表示变化不会自动放行。
+- guard 按 realpath 检查已有路径与新输出的最近实体祖先，保留完成、错误、usage 和预算证据；只向子进程投影环境白名单，不复制真实 HOME 或认证状态。此限制约束工具入口，不限制受信任脚本内部的一切系统调用。
+- `evidence` 是受信任 Profile 的具名工作区相对路径表；在 `sendPrompt` 返回前读取文件并保存到 `Observation.metadata.fileEvidence`，随后由 Runner 评分和清理。缺失记为 `exists:false`，其他读取错误显式失败；拒绝路径逃逸、任一段符号链接及超过 64 KiB 的文件。该机制不是通用 Runner 的自动文件收集器。
 - 渠道兼容快照的 Kimi 条目已按本机 Pi 1.4.0 原生目录更新为 OpenAI Completions，保留 `/coding/v1` 路径；旧 Anthropic 快照投影到新宿主会丢失版本路径并返回 404。该快照仍是已标记的边界债务，不保证其他版本或 provider 全部一致。
-- 这不是 OS 级沙箱。默认测试只覆盖 fake CLI 和实际加载的 guard handler；真实模型发起工具调用的完整宿主链与跨版本行为尚未验收，不宣称完成安全隔离认证。
+- 这不是 OS 级沙箱。默认回归覆盖 fake CLI 和实际加载的 guard handler；Cedar 的显式 token 场景验证真实模型读取 Skill、执行许可脚本及文件产物。跨版本行为尚未验收，不宣称完成安全隔离认证。
 
 ## 安全与验证边界
 

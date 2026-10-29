@@ -189,7 +189,7 @@ type ProvisionHook = (context: {
 
 以上是消费者侧 provision/采集约定，当前 Recall/Runner 不内建该 hook 的自动文件收集器。
 消费者须在 cleanup 前快照文件内容，再经 Observation metadata 等自由区提供判据；框架不解释证据键名。
-产物内容、游标文件在 workspace 销毁后不可复得，采集时机因此是硬约束。
+现有消费者 Profile 的具名文件采集见[宿主配置保真](./host-config-projection.md)。产物内容、游标文件在 workspace 销毁后不可复得，采集时机因此是硬约束。
 
 ## Scenario 与 Criterion
 

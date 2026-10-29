@@ -6,39 +6,33 @@
 import { textContains, textNotContains } from "@x-agent-suite/criteria";
 import type { TurnCriterion } from "@x-agent-suite/contracts";
 import type { RecallRegistry } from "@x-agent-suite/recall";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { posix } from "node:path";
 import { createPiRecallDriver } from "../profiles/pi-recall.ts";
+import { artifactJson, scriptExecution } from "./script.criteria.ts";
 
-/** 依据原生工具事件判断安装位置是否被读取，不采信模型自述。 */
+/** 按唯一 Skill 名称核对原生读取事件，兼容源目录与安装目录。 */
 const skillLoaded: TurnCriterion = {
   name: "skill-loaded",
   scope: "turn",
   evaluate(turn, { expect }) {
-    const wanted = expect as { path?: unknown; loaded?: unknown } | null;
-    const root = turn.metadata.workspaceCwd;
+    const wanted = expect as { name?: unknown; loaded?: unknown } | null;
     if (
       !wanted ||
-      typeof wanted.path !== "string" ||
-      !wanted.path ||
-      typeof wanted.loaded !== "boolean" ||
-      typeof root !== "string"
+      typeof wanted.name !== "string" ||
+      !wanted.name.trim() ||
+      /[/\\]/.test(wanted.name) ||
+      wanted.name === "." ||
+      wanted.name === ".." ||
+      typeof wanted.loaded !== "boolean"
     )
-      throw new Error("skill-loaded 需要 path、loaded 与工作区证据");
-    const target = resolve(root, wanted.path);
-    const nested = relative(root, target);
-    if (
-      isAbsolute(wanted.path) ||
-      nested === ".." ||
-      nested.startsWith(".." + sep)
-    ) {
-      throw new Error("skill-loaded path 必须在隔离工作区内");
-    }
+      throw new Error("skill-loaded 需要 Skill name（非路径）与 loaded");
     const reads = turn.toolCalls.filter((call) => {
       const input = call.input as { path?: unknown } | null;
+      if (call.name !== "read" || typeof input?.path !== "string") return false;
+      const path = input.path.replaceAll("\\", "/");
       return (
-        call.name === "read" &&
-        typeof input?.path === "string" &&
-        resolve(root, input.path) === target
+        posix.basename(path) === "SKILL.md" &&
+        posix.basename(posix.dirname(path)) === wanted.name
       );
     });
     const pass = wanted.loaded
@@ -48,15 +42,21 @@ const skillLoaded: TurnCriterion = {
       pass,
       score: pass ? 1 : 0,
       reason: wanted.loaded
-        ? "核对安装位置的成功读取事件"
-        : "核对安装位置未被读取",
+        ? `核对同名 Skill ${wanted.name} 的成功读取事件`
+        : `核对同名 Skill ${wanted.name} 未被读取`,
     };
   },
 };
 
 /** 显式注册场景仓使用的宿主和判据，渠道仍由命令选择。 */
 const registry: RecallRegistry = {
-  criteria: [textContains, textNotContains, skillLoaded],
+  criteria: [
+    textContains,
+    textNotContains,
+    skillLoaded,
+    scriptExecution,
+    artifactJson,
+  ],
   profiles: {
     pi: {
       carrier: "pi",
@@ -64,11 +64,24 @@ const registry: RecallRegistry = {
         createPiRecallDriver(context, {
           contextFiles: "project",
           skills: context.effects.tools === "none" ? "off" : "project",
+          ...(context.effects.commands.allow.length > 0
+            ? { evidence: { report: "out/change-report.json" } }
+            : {}),
         }),
     },
   },
   effectsProfiles: {
     "skill-readonly": { tools: "allowlist", maxSteps: 4, timeoutMs: 60000 },
+    "skill-script": {
+      tools: "allowlist",
+      commands: {
+        allow: [
+          "node .pi/skills/change-report/scripts/build-report.mjs --input fixtures/changes.json --output out/change-report.json",
+        ],
+      },
+      maxSteps: 6,
+      timeoutMs: 60000,
+    },
   },
 };
 
