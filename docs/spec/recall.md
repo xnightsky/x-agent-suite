@@ -225,6 +225,8 @@ Windows 仅保留文件只读语义，不保证 POSIX 的精确权限位。
 当前 `cedar/` 内维护 `.recall.yaml`、`AGENTS.md` 和任务素材，直接由 Recall 驱动并判定，无额外测试脚本包装。
 资源的 source 相对调用 cwd（或显式 `--root-dir`），由 Profile 物化到一次性隔离工作区；不直接在模板仓执行模型工具。
 Pi 的项目规则发现由显式消费者 registry 通过 `contextFiles: "project"` 开启，不在核心包枚举宿主语义。
+Skill 的安装由操作者按各场景仓自己的 README 准备；Recall 只消费已声明的安装态资源，不执行安装。
+`cedar/skills-def/change-summary/.recall.yaml` 覆盖自然任务触发、无关任务和未安装对照，真实调用通过显式只读权限引用执行。
 入口、带规则/无规则对照和真实 token 命令见 [`integrations/README.md`](../../integrations/README.md)。
 
 ### 执行结果

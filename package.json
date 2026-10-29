@@ -43,6 +43,7 @@
     "ittest:token:pi-pty": "tsx scripts/run-pi-token-ittest.ts",
     "ittest:token:judge": "tsx --test \"packages/judge/tests/client-live.token.ittest.ts\"",
     "ittest:token:cedar": "tsx packaging/cli.ts recall integrations/itrepos/cedar/.recall.yaml --root-dir integrations/itrepos/cedar --registry integrations/pi.registry.ts",
+    "ittest:token:cedar-skill": "tsx packaging/cli.ts recall integrations/itrepos/cedar/skills-def/change-summary/.recall.yaml --root-dir integrations/itrepos/cedar --registry integrations/pi.registry.ts --plan use:skill-readonly",
     "tutorial:check": "tsx --test scripts/tests/tutorial.test.ts",
     "test": "tsx --test \"packages/*/tests/*.test.ts\" \"scripts/tests/*.test.ts\"",
     "test:watch": "tsx --test --watch \"packages/*/tests/*.test.ts\"",

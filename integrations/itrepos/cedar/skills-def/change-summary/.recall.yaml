@@ -1,0 +1,43 @@
+version: 1
+id: cedar-change-summary
+plans:
+  installed:
+    resources:
+      - source: AGENTS.md
+        destination: AGENTS.md
+      - source: .pi/skills/change-summary/SKILL.md
+        destination: .pi/skills/change-summary/SKILL.md
+  base:
+    resources:
+      - source: AGENTS.md
+        destination: AGENTS.md
+context:
+  plan: installed
+cases:
+  - id: matching-task
+    turns:
+      - send: 请把这些改动整理成发布说明：新增 CSV 导出，修复空列表闪退。
+        expect:
+          skill-loaded:
+            path: .pi/skills/change-summary/SKILL.md
+            loaded: true
+          text-contains: [CHANGE_SUMMARY_OK, CSV, 空列表]
+  - id: unrelated-task
+    turns:
+      - send: 17 乘以 3 是多少？简短回答。
+        expect:
+          skill-loaded:
+            path: .pi/skills/change-summary/SKILL.md
+            loaded: false
+          text-contains: ["51"]
+          text-not-contains: [CHANGE_SUMMARY_OK]
+  - id: not-installed
+    context:
+      plan: base
+    turns:
+      - send: 请把这些改动整理成发布说明：新增 CSV 导出，修复空列表闪退。
+        expect:
+          skill-loaded:
+            path: .pi/skills/change-summary/SKILL.md
+            loaded: false
+          text-not-contains: [CHANGE_SUMMARY_OK]
