@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 0.8.0 - 2026-10-28
+
 ### Changed
 
 - 对外主分发包统一改为 `@xnightsky/x-agent-suite`，同步公开子路径导入、安装后公共资源定位、全局安装提示和补发身份校验；CLI 命令、私有源码根包、内部 workspace 名及 Release 附件名不变。scoped 包必须使用新构建版本，补发入口拒绝旧无 scope tarball，不修改历史标签或附件。
