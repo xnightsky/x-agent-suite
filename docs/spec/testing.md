@@ -57,6 +57,8 @@ PTY、headless、sandbox 是机制，smoke 是抽样范围，contract 是验证�
 
 `packages/llm-fixture/tests/target-tags-home.test.ts` 使用临时 home 覆盖公共实例、home 私有全局实例与 live overlay 的合并顺序，并验证后续 `live.allowed` 不会放松此前的 `review-required`；生产默认 home 与测试注入 home 分离。
 
+`scripts/tests/target-tags-artifact.test.ts` 同样为源码态和模拟安装态的每次加载注入临时空 home，验证公共资源定位、显式路径优先级、缺失资源错误及 Judge 准入。自定义词典不应受开发者 home 私有实例影响，也不应为通过测试而跳过生产加载器的私有实例校验。
+
 真实 Recall live 调用会消耗 token，只能在显式选择渠道、已有 live 配置和 `--approve-live`（策略为 review-required 时）下执行。`pnpm ittest:token:cedar --carrier pi --approve-live` 精确运行场景仓的 `.recall.yaml`，复用 CLI 而非包装另一层驱动；脚本未提供渠道时失败，不发出请求。计费分类在 borrowed 测试阶段暂不设为条件，live 策略检查继续执行。不得以 fake transport 或 MockDriver 的成功推断真实 direct/borrowed/ephemeral-client 已获 live 验证。
 
 `pnpm ittest:token:cedar-skill --carrier pi --approve-live` 精确运行 Skill 自带考卷，显式引用 `use:skill-readonly` 权限。
