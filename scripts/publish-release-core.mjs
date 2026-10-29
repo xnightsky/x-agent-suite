@@ -37,7 +37,7 @@ async function main() {
       encoding: "utf8",
     }),
   );
-  if (pkg.name !== "x-agent-suite")
+  if (pkg.name !== "@xnightsky/x-agent-suite")
     throw new Error("tarball 内包名不是核心主包");
   if (pkg.version !== version || pkg.private === true)
     throw new Error("tarball 内版本或公开发布属性非法");

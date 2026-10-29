@@ -21,7 +21,7 @@ Harness 层：把真实宿主 CLI 包进 `AgentDriver` 里。
 
 ## 公开入口
 
-入口为 [`src/index.ts`](./src/index.ts)（workspace 全量导出）。**核心子路径 `x-agent-suite/harness` 只含零原生子集**，以 [`packaging/entries/harness.ts`](../../packaging/entries/harness.ts) 为准：`createHarnessDriver`、宿主能力借用（`resolveHarnessChannel`、`resolveHarnessCredential`、`createHarnessLiveConfigHooks`、`resolveHarnessCommand`、`resolveLocalBinCommand`、`HarnessUnavailableError`）、共享构建件（`buildMcpServerSpec`、`writeJsonFile`、`tomlString`、`ensureJsonEntry`、`installKimiPlugins`）。
+入口为 [`src/index.ts`](./src/index.ts)（workspace 全量导出）。**核心子路径 `@xnightsky/x-agent-suite/harness` 只含零原生子集**，以 [`packaging/entries/harness.ts`](../../packaging/entries/harness.ts) 为准：`createHarnessDriver`、宿主能力借用（`resolveHarnessChannel`、`resolveHarnessCredential`、`createHarnessLiveConfigHooks`、`resolveHarnessCommand`、`resolveLocalBinCommand`、`HarnessUnavailableError`）、共享构建件（`buildMcpServerSpec`、`writeJsonFile`、`tomlString`、`ensureJsonEntry`、`installKimiPlugins`）。
 
 PTY 相关符号（`createPtyAgentDriver`、`createPtyScreenWatcher`、镜像工具、`cleanupPtyDriverResources`）**不在**核心子路径，需安装独立制品 `@x-agent-suite/pty-driver`。
 
@@ -58,7 +58,7 @@ try {
 
 对外有**两个**制品（均由 `pnpm artifacts:pack` 产出，见 [`docs/spec/packaging.md`](../../docs/spec/packaging.md)）：
 
-- 核心聚合包 `x-agent-suite`：零原生，按 `packaging/entries/*.ts` 暴露子路径（如 `x-agent-suite/harness`）。
+- 核心聚合包 `@xnightsky/x-agent-suite`：零原生，按 `packaging/entries/*.ts` 暴露子路径（如 `@xnightsky/x-agent-suite/harness`）。
 - 独立 PTY 制品 `@x-agent-suite/pty-driver`：承载原生终端能力（依赖 `node-pty` / `@xterm/headless`），需要交互式 TUI 时显式安装。
 
 workspace 私有包（`@x-agent-suite/*`，`private: true` + `workspace:*` 互引）**不单独发布 npm**；且其 `src/index.ts` 全量导出**不等于**核心子路径的全量导出，两者差异以 `packaging/entries/*.ts` 为准。

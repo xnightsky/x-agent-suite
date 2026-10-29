@@ -30,7 +30,7 @@ packages/llm-fixture/src/
 
 ### 源码与制品中的资源定位
 
-核心聚合包按文件白名单携带上述两份公共 YAML，PTY 包不重复携带。无参数 `loadTargetTagCatalog()` 从模块位置向上定位名为 `x-agent-suite` 的包根，源码态读取仓库资源，安装态读取自身包内资源；不读取消费者 cwd 下的同名目录，也不要求消费者取得源码仓。
+核心聚合包按文件白名单携带上述两份公共 YAML，PTY 包不重复携带。无参数 `loadTargetTagCatalog()` 从模块位置向上定位源码根包 `x-agent-suite` 或聚合包 `@xnightsky/x-agent-suite`，源码态读取仓库资源，scoped 安装态读取自身包内资源；不读取消费者 cwd 下的同名目录，也不要求消费者取得源码仓。
 
 显式 `dictionaryPath/instancesPath` 优先；未显式指定的文件从 `repoRoot` 加相对路径读取，未给 `repoRoot` 时才使用所属包根。文件缺失、不可读、YAML 非法或包元数据解析失败均显式报错，不换用消费者目录或其他文件。home 私有实例与调用方传入的 `liveConfig.path` 覆盖仍按既有规则合并，私有文件不随包交付。
 

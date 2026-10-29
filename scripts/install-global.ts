@@ -137,7 +137,7 @@ export async function installGlobal(
   const core = await verifyCoreArtifact(resolve(args[0]));
   install(core.path);
   console.log(
-    `[install:global] 已全局安装 x-agent-suite@${core.version}；请确认 pnpm 全局 bin 已加入 PATH`,
+    `[install:global] 已全局安装 @xnightsky/x-agent-suite@${core.version}；请确认 pnpm 全局 bin 已加入 PATH`,
   );
 }
 

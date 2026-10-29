@@ -55,7 +55,7 @@ try {
 
 ## 分发形态
 
-本包是 workspace 私有实现模块（`private: true`），不单独发布 npm。消费者使用核心聚合子路径 `x-agent-suite/llm-fixture`；分发白名单与独立 PTY 制品的区别见 [打包与分发](../../docs/spec/packaging.md)。
+本包是 workspace 私有实现模块（`private: true`），不单独发布 npm。消费者使用核心聚合子路径 `@xnightsky/x-agent-suite/llm-fixture`；分发白名单与独立 PTY 制品的区别见 [打包与分发](../../docs/spec/packaging.md)。
 
 ## 命令（在仓库根执行）
 

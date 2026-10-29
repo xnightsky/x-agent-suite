@@ -65,7 +65,7 @@ x-agent-suite recall \
 `--registry` 是显式模块路径；无路径时使用空注册表，不读取任何默认 TS 文件。考卷引用 metric、使用 borrowed/ephemeral-client 或 `effects.use` 时，必须在 registry 注册对应实现。
 
 ```ts
-import type { RecallRegistry } from "x-agent-suite/recall";
+import type { RecallRegistry } from "@xnightsky/x-agent-suite/recall";
 
 const registry: RecallRegistry = {
   criteria: consumerCriteria,

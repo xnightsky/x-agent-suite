@@ -2,7 +2,7 @@
 
 类型契约层：框架与消费者之间的全部接缝。
 
-> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `x-agent-suite/contracts`，装配方式见 [packaging 规范](../../docs/spec/packaging.md)。
+> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `@xnightsky/x-agent-suite/contracts`，装配方式见 [packaging 规范](../../docs/spec/packaging.md)。
 
 ## 设计纪律
 
@@ -25,7 +25,7 @@
 
 ## 公开入口
 
-`src/index.ts` 是唯一入口（子路径 `x-agent-suite/contracts` 同形导出）。它只做类型再导出，无运行时逻辑、无运行时依赖；上表各模块的实现分别在 `packages/*/src/`。
+`src/index.ts` 是唯一入口（子路径 `@xnightsky/x-agent-suite/contracts` 同形导出）。它只做类型再导出，无运行时逻辑、无运行时依赖；上表各模块的实现分别在 `packages/*/src/`。
 
 ## 最小示例
 
@@ -34,7 +34,7 @@ import type {
   Observation,
   ScenarioSpec,
   Criterion,
-} from "x-agent-suite/contracts";
+} from "@xnightsky/x-agent-suite/contracts";
 
 export const scenario: ScenarioSpec = {
   id: "hello",

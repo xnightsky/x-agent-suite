@@ -113,8 +113,16 @@ async function buildCandidate(
   ]);
   await assertCorePackageIntegrity(coreStage);
   await assertPtyPackageIntegrity(ptyStage);
-  await packPackage(coreStage, candidateDir);
-  await packPackage(ptyStage, candidateDir);
+  await packPackage(
+    coreStage,
+    candidateDir,
+    `x-agent-suite-${options.plan.version}.tgz`,
+  );
+  await packPackage(
+    ptyStage,
+    candidateDir,
+    `x-agent-suite-pty-driver-${options.plan.version}.tgz`,
+  );
   const artifacts = await collectTarballHashes(candidateDir);
   await writeMetadata(candidateDir, options.plan, artifacts, options.root);
   await smokeInstall(candidateDir, options.root, artifacts, run);
@@ -309,8 +317,14 @@ async function rewriteDeclarationTree(
   }
 }
 
-async function packPackage(stage: string, destination: string): Promise<void> {
-  run("pnpm", ["pack", "--pack-destination", destination], stage);
+/** 显式指定附件文件名，避免 npm scope 改变既有 Release 制品命名。 */
+export async function packPackage(
+  stage: string,
+  destination: string,
+  file: string,
+): Promise<void> {
+  await mkdir(destination, { recursive: true });
+  run("pnpm", ["pack", "--out", join(destination, file)], stage);
 }
 
 async function collectTarballHashes(

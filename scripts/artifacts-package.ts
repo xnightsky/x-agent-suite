@@ -90,7 +90,7 @@ export function createCorePackageManifest(version: string): PackageManifest {
     import: "./dist/profiles/pi-recall.js",
   };
   return {
-    name: "x-agent-suite",
+    name: "@xnightsky/x-agent-suite",
     version,
     description: "通用 Agent 测试套件框架的聚合分发包。",
     type: "module",

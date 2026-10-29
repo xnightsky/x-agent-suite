@@ -21,7 +21,9 @@
 
 ### 内部实现模块与外部分发模块分离
 
-现有 workspace 包继续作为内部实现模块，保持职责、测试和变更的局部性。对兄弟仓库优先提供聚合分发模块 `x-agent-suite`，通过子路径导出各模块能力，隐藏 workspace 内部依赖解析和安装顺序。
+现有 workspace 包继续作为内部实现模块，保持职责、测试和变更的局部性。对兄弟仓库优先提供聚合分发模块 `@xnightsky/x-agent-suite`，通过子路径导出各模块能力，隐藏 workspace 内部依赖解析和安装顺序。
+
+个人 scope `@xnightsky` 不需要创建 npm 组织。CLI 命令仍为 `x-agent-suite`，私有源码根包与内部 `@x-agent-suite/*` 名称不变；聚合包导入统一使用 `@xnightsky/x-agent-suite/<子路径>`。打包显式固定附件名为 `x-agent-suite-<version>.tgz`，避免 pnpm 的 scoped 默认文件名影响 Release、安装器和补发校验。
 
 聚合模块只承担分发接口，不复制领域逻辑。将来确有消费者只需单包安装时，再把对应内部模块提升为独立分发模块，不提前扩大发布面。按需安装形态（pip extras 等价物、触发条件与切片纪律）的完整评估见 [`research/on-demand-install-artifact-matrix.md`](../research/on-demand-install-artifact-matrix.md)。
 
@@ -97,7 +99,7 @@ x-agent-suite/*               → 聚合分发子路径，覆盖全部零原生�
 - 只用 headless JSONL 的 consumer 不装 `node-pty`。
 - 需要 PTY 的 consumer 显式依赖 `@x-agent-suite/pty-driver`。
 - `@x-agent-suite/harness` 通过依赖注入或 peer 机制选择具体 driver 形态，而不是把两种形态都绑进来。
-- 兄弟仓库默认只安装 `x-agent-suite`，不处理内部包的安装顺序。
+- 兄弟仓库默认只安装 `@xnightsky/x-agent-suite`，不处理内部包的安装顺序。
 
 ## 统一制品模型
 
@@ -128,7 +130,7 @@ tarball 只包含运行所需的 `dist/`、类型声明、README、LICENSE、精
 
 ### 当前状态
 
-仓库已经提供根级统一入口 `artifacts:pack`。它从 Git history 自动推导版本，在隔离临时目录构建核心聚合包和 PTY 包，生成 manifest 与 SHA-256，并在仓库外临时 consumer 中完成运行时导入和 TypeScript 类型冒烟。当前实现把十一个内部 workspace 模块汇入两个外部分发包：核心包将 `yaml` 声明为外部纯 JS 运行时依赖，不再把其实现或 sourcemap 源码内联进 bundle；Judge 通过 `x-agent-suite/judge` 子路径进入核心包，并以 fake client 完成无 token 行为冒烟，不新增独立 tarball。PTY 包单独承载原生依赖，构建期校验其 bundle 不得内联 `LiveBackend` 类实现（跨制品 live 判定只走契约品牌字段 `LlmBackend.liveChannel`），PTY 冒烟 consumer 刻意混装核心制品，按行为断言消费者侧 `LiveBackend` 实例经 PTY 制品驱动路径时 live 分支真实生效。严格离线安装仍须预热包含 `yaml` 的 pnpm store，或使用可达的内部 registry。稳定制品全部成功后，命令为当前 HEAD 自动补 annotated SemVer tag。
+仓库已经提供根级统一入口 `artifacts:pack`。它从 Git history 自动推导版本，在隔离临时目录构建核心聚合包和 PTY 包，生成 manifest 与 SHA-256，并在仓库外临时 consumer 中完成运行时导入和 TypeScript 类型冒烟。当前实现把十一个内部 workspace 模块汇入两个外部分发包：核心包将 `yaml` 声明为外部纯 JS 运行时依赖，不再把其实现或 sourcemap 源码内联进 bundle；Judge 通过 `@xnightsky/x-agent-suite/judge` 子路径进入核心包，并以 fake client 完成无 token 行为冒烟，不新增独立 tarball。PTY 包单独承载原生依赖，构建期校验其 bundle 不得内联 `LiveBackend` 类实现（跨制品 live 判定只走契约品牌字段 `LlmBackend.liveChannel`），PTY 冒烟 consumer 刻意混装核心制品，按行为断言消费者侧 `LiveBackend` 实例经 PTY 制品驱动路径时 live 分支真实生效。严格离线安装仍须预热包含 `yaml` 的 pnpm store，或使用可达的内部 registry。稳定制品全部成功后，命令为当前 HEAD 自动补 annotated SemVer tag。
 
 源码 workspace 的 `0.0.0` 继续作为私有仓库占位值；可安装版本仅写入 staged package manifest，不修改源码 package。直接对单个 workspace 执行 `pnpm pack` 仍然不是合法交付流程。
 
@@ -235,7 +237,7 @@ pnpm 从本地目录安装时会创建符号链接，等同于 `pnpm link`。对
 ```json
 {
   "devDependencies": {
-    "x-agent-suite": "file:../x-agent-suite/artifacts/0.1.0/x-agent-suite-0.1.0.tgz",
+    "@xnightsky/x-agent-suite": "file:../x-agent-suite/artifacts/0.1.0/x-agent-suite-0.1.0.tgz",
     "@x-agent-suite/pty-driver": "file:../x-agent-suite/artifacts/0.1.0/x-agent-suite-pty-driver-0.1.0.tgz"
   }
 }
@@ -250,7 +252,7 @@ pnpm 从本地目录安装时会创建符号链接，等同于 `pnpm link`。对
 ```json
 {
   "devDependencies": {
-    "x-agent-suite": "file:./vendor/x-agent-suite/0.1.0/x-agent-suite-0.1.0.tgz",
+    "@xnightsky/x-agent-suite": "file:./vendor/x-agent-suite/0.1.0/x-agent-suite-0.1.0.tgz",
     "@x-agent-suite/pty-driver": "file:./vendor/x-agent-suite/0.1.0/x-agent-suite-pty-driver-0.1.0.tgz"
   }
 }
@@ -274,7 +276,7 @@ pnpm add -D https://artifacts.example/x-agent-suite/0.1.0/x-agent-suite-0.1.0.tg
 ```json
 {
   "devDependencies": {
-    "x-agent-suite": "https://artifacts.example/x-agent-suite/0.1.0/x-agent-suite-0.1.0.tgz",
+    "@xnightsky/x-agent-suite": "https://artifacts.example/x-agent-suite/0.1.0/x-agent-suite-0.1.0.tgz",
     "@x-agent-suite/pty-driver": "https://artifacts.example/x-agent-suite/0.1.0/x-agent-suite-pty-driver-0.1.0.tgz"
   }
 }
@@ -317,12 +319,12 @@ pnpm artifacts:pack -- --snapshot
 
 ### 交付方式四：npm registry（核心聚合包）
 
-当前自动发布只覆盖主分发包 `x-agent-suite`，不逐个发布内部 workspace，不要求创建 npm 组织。PTY 制品仍随 GitHub Release 交付，本次不发布到 npm；需要 PTY 时使用同版本的完整 tarball 制品集，不把本节当作 PTY 的 registry 安装承诺。
+当前自动发布只覆盖主分发包 `@xnightsky/x-agent-suite`，不逐个发布内部 workspace，不要求创建 npm 组织。PTY 制品仍随 GitHub Release 交付，本次不发布到 npm；需要 PTY 时使用同版本的完整 tarball 制品集，不把本节当作 PTY 的 registry 安装承诺。
 
 #### 维护者配置与发布
 
 1. 在 npm 创建具有包发布写权限、允许 Bypass 2FA 的 granular access token；首次包尚不存在时，可临时使用短有效期的 All Packages Token，但须接受其对账号可访问包的写权限。
-2. 在当前 GitHub 仓库的 `Settings → Secrets and variables → Actions → Repository secrets` 保存 `NPM_TOKEN`。不要放到另一个仓库、提交到源码或输出到日志。首次发布后，新建仅授权 `x-agent-suite` 的 Token，更新同名 Secret 并撤销临时 Token。
+2. 在当前 GitHub 仓库的 `Settings → Secrets and variables → Actions → Repository secrets` 保存 `NPM_TOKEN`。不要放到另一个仓库、提交到源码或输出到日志。首次发布后，新建仅授权 `@xnightsky/x-agent-suite` 的 Token，更新同名 Secret 并撤销临时 Token。
 3. 按版本治理准备 changelog 与干净 release commit；经明确授权后推送稳定 annotated `v<version>` tag。既有 tag 不会自动获得这次工作流修改，不移动旧 tag 来补发。
 4. `.github/workflows/release.yml` 校验 tag 与默认分支来源，执行检查、构建和安装冒烟，生成完整制品集并上传 GitHub Release。
 5. 同一 job 直接执行 `npm publish artifacts/<V>/x-agent-suite-<V>.tgz --access public --provenance --registry https://registry.npmjs.org`，不从仓库根或 workspace 重新打包。`setup-node` 配置 npm registry，只有发布步骤接收 `NODE_AUTH_TOKEN`，`id-token: write` 用于来源证明。
@@ -331,10 +333,12 @@ pnpm artifacts:pack -- --snapshot
 
 缺少 Token、认证失败、包名冲突或版本已存在时，npm 步骤显式失败，不忽略错误。GitHub Release 先于 npm 创建，npm 失败不会撤销已有 Release；须分别检查两个渠道。npm 已发布版本不可覆盖，重跑前先核对该版本是否已成功发布；内容有改动必须生成新版本。
 
-若 GitHub Release 已成功、只有 npm 失败，更新凭据后不要直接重跑整个构建 job。经授权可从默认分支手动触发 `.github/workflows/npm-republish.yml`，输入不含 `v` 的稳定版本，例如 `0.7.1`。该入口只读既有 Release，校验 annotated tag 可达默认分支、清单版本与提交、manifest/core 双重 SHA-256，以及 tarball 内主包身份；全部通过后才发布同一文件，不重新构建、不移动标签、不覆盖附件、不执行包生命周期脚本。补发来源证明记录的是恢复工作流，原制品源码提交仍由 tag 与 manifest 核对。
+若 GitHub Release 已成功、只有 npm 失败，更新凭据后不要直接重跑整个构建 job。经授权可从默认分支手动触发 `.github/workflows/npm-republish.yml`，输入不含 `v` 的稳定版本，例如已成功上传的 scoped 版本。该入口只读既有 Release，校验 annotated tag 可达默认分支、清单版本与提交、manifest/core 双重 SHA-256，以及 tarball 内主包身份；全部通过后才发布同一文件，不重新构建、不移动标签、不覆盖附件、不执行包生命周期脚本。补发来源证明记录的是恢复工作流，原制品源码提交仍由 tag 与 manifest 核对。
+
+补发仅接受 tarball 内包名 `@xnightsky/x-agent-suite`，拒绝历史无 scope 主包，避免重新创建已弃用的旧包。改名须在新版本重新构建，不修改既有 tarball、tag 或附件。
 
 ```bash
-gh workflow run npm-republish.yml --ref main -f version=0.7.1
+gh workflow run npm-republish.yml --ref main -f version=0.7.2 # 示例，替换为已有的 scoped Release 版本
 ```
 
 #### 消费者安装
@@ -342,7 +346,7 @@ gh workflow run npm-republish.yml --ref main -f version=0.7.1
 以下 `0.1.0` 仅为版本格式示例，替换为 npm 上已成功发布的实际版本：
 
 ```bash
-pnpm add -D --save-exact x-agent-suite@0.1.0
+pnpm add -D --save-exact @xnightsky/x-agent-suite@0.1.0
 ```
 
 对应的 `package.json` 必须钉住明确版本，不使用 `latest`：
@@ -350,7 +354,7 @@ pnpm add -D --save-exact x-agent-suite@0.1.0
 ```json
 {
   "devDependencies": {
-    "x-agent-suite": "0.1.0"
+    "@xnightsky/x-agent-suite": "0.1.0"
   }
 }
 ```
@@ -360,9 +364,9 @@ pnpm add -D --save-exact x-agent-suite@0.1.0
 ## 兄弟仓库的依赖约定
 
 - 包应放在 `devDependencies`，因为它服务于测试与验收，不进入消费者生产运行依赖。
-- `x-agent-suite` 安装时会按 package manifest 解析纯 JS 依赖 `yaml`；消费者不单独声明它，也不把它当作第三个 x-agent-suite 制品维护。
+- `@xnightsky/x-agent-suite` 安装时会按 package manifest 解析纯 JS 依赖 `yaml`；消费者不单独声明它，也不把它当作第三个 x-agent-suite 制品维护。
 - 稳定交付只选一种来源：本地 `file:` tarball、HTTPS tarball、git 源码自构建（产物以本地 tarball 引用）或 registry version，不混合核心包与 PTY 包的来源。
-- `x-agent-suite` 与 `@x-agent-suite/pty-driver` 必须使用相同版本；不需要 PTY 时只声明核心包。
+- `@xnightsky/x-agent-suite` 与 `@x-agent-suite/pty-driver` 必须使用相同版本；不需要 PTY 时只声明核心包。
 - 提交 `package.json` 与 lockfile；CI 使用 `pnpm install --frozen-lockfile`，不得临时改写依赖版本。
 - 不声明 `@x-agent-suite/*` 内部 workspace 包，不配置它们的路径、安装顺序或 `overrides`。
 - `link:` 仅用于本地联调；不使用 `workspace:`、`link:`、git URL 直连、分支名或浮动的“最新制品”作为跨仓稳定依赖。
@@ -372,7 +376,7 @@ pnpm add -D --save-exact x-agent-suite@0.1.0
 
 ## CLI 安装约定
 
-`x-agent-suite` 聚合包已声明 `bin`，作为项目内开发依赖使用，不要求全局安装。
+`@xnightsky/x-agent-suite` 聚合包已声明 `bin`，作为项目内开发依赖使用，不要求全局安装。
 
 同一入口支持原 Runner 与原生 Recall：
 
@@ -381,11 +385,11 @@ pnpm exec x-agent-suite eval <config-module>
 pnpm exec x-agent-suite recall (--carrier <id> | --provider <id> | --model <id>) [--live-config <yaml>] [--registry <module.ts>] [--plan <yaml>] [--execution-params <json-object>] [YAML|目录]
 ```
 
-`x-agent-suite/recall` 同一子路径导出显式 target 装载/执行、独立 registry、effects-only Plan 和场景资源物化 API，并复用聚合包内现有 llm-fixture live resolver/TargetTags 与 harness hooks。统一 CLI 不再读取 `x-agent-suite.config.ts`；消费者 Criterion/profile/EffectsProfile 仍通过显式 `--registry` 提供。
+`@xnightsky/x-agent-suite/recall` 同一子路径导出显式 target 装载/执行、独立 registry、effects-only Plan 和场景资源物化 API，并复用聚合包内现有 llm-fixture live resolver/TargetTags 与 harness hooks。统一 CLI 不再读取 `x-agent-suite.config.ts`；消费者 Criterion/profile/EffectsProfile 仍通过显式 `--registry` 提供。
 
-`x-agent-suite/profiles/pi-config` 是独立消费者配置投影入口：源码在根 `profiles/`，不放入 `packages/*/src/`，不内建注册执行器，不给 Harness 契约添加 Pi 字段。核心制品显式打包该入口 JS/声明，并继续按白名单携带公共 `config/target-tags/{keys,instances}.yaml`；不打包任何私密 live/auth/宿主配置。仓库外安装冒烟覆盖入口导入/类型、隔离 settings 继承 high、单次覆盖 low、模型思考映射和宿主文件不变；只用合成配置，零 provider 请求，不新增 token 冒烟。
+`@xnightsky/x-agent-suite/profiles/pi-config` 是独立消费者配置投影入口：源码在根 `profiles/`，不放入 `packages/*/src/`，不内建注册执行器，不给 Harness 契约添加 Pi 字段。核心制品显式打包该入口 JS/声明，并继续按白名单携带公共 `config/target-tags/{keys,instances}.yaml`；不打包任何私密 live/auth/宿主配置。仓库外安装冒烟覆盖入口导入/类型、隔离 settings 继承 high、单次覆盖 low、模型思考映射和宿主文件不变；只用合成配置，零 provider 请求，不新增 token 冒烟。
 
-`x-agent-suite/assertions` 在核心聚合包内分发，不新增第三个 tarball；原有 `criteria` 和 observation 检查入口仍可使用。`x-agent-suite/profiles/pi-recall` 同样显式打包 JS/声明，消费者自行注册 `createPiRecallDriver`，不会因 carrier 名自动启用。仓库外安装冒烟使用 fake Judge 与 fake CLI 验证适配、配置继承和清理，不接真实 provider。
+`@xnightsky/x-agent-suite/assertions` 在核心聚合包内分发，不新增第三个 tarball；原有 `criteria` 和 observation 检查入口仍可使用。`@xnightsky/x-agent-suite/profiles/pi-recall` 同样显式打包 JS/声明，消费者自行注册 `createPiRecallDriver`，不会因 carrier 名自动启用。仓库外安装冒烟使用 fake Judge 与 fake CLI 验证适配、配置继承和清理，不接真实 provider。
 
 需要任意目录可调用的全局 CLI 时，使用 `pnpm run install:global -- <制品目录>`：校验正式 manifest 与校验和后只安装核心包，不隐式构建、不发布、不初始化用户配置。全局 bin/PATH 须由执行者准备；详细前置、跨仓路径规则和验收边界见[全局 CLI 安装](./global-cli-install.md)。
 

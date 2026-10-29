@@ -68,19 +68,19 @@ async function writeCoreSmokeProject(
   coreTarball: string,
 ): Promise<void> {
   const dependencies = {
-    "x-agent-suite": `file:${coreTarball}`,
+    "@xnightsky/x-agent-suite": `file:${coreTarball}`,
     "@types/node": "^25.6.0",
   };
   const runtimeImports = CORE_EXPORT_NAMES.map(
-    (name) => `import("x-agent-suite/${name}")`,
+    (name) => `import("@xnightsky/x-agent-suite/${name}")`,
   );
   const typeImports = CORE_EXPORT_NAMES.map(
     (name, index) =>
-      `type Core${index} = typeof import("x-agent-suite/${name}");`,
+      `type Core${index} = typeof import("@xnightsky/x-agent-suite/${name}");`,
   );
   typeImports.push(
-    'type PiConfigSmoke = typeof import("x-agent-suite/profiles/pi-config");',
-    'type PiRecallSmoke = typeof import("x-agent-suite/profiles/pi-recall");',
+    'type PiConfigSmoke = typeof import("@xnightsky/x-agent-suite/profiles/pi-config");',
+    'type PiRecallSmoke = typeof import("@xnightsky/x-agent-suite/profiles/pi-recall");',
   );
   const tuple = CORE_EXPORT_NAMES.map((_, index) => `Core${index}`).join(", ");
   await writeSmokeFiles(
@@ -102,7 +102,7 @@ async function writePtySmokeProject(
     "x-agent-suite-pty-artifact-smoke",
     {
       "@x-agent-suite/pty-driver": `file:${ptyTarball}`,
-      "x-agent-suite": `file:${coreTarball}`,
+      "@xnightsky/x-agent-suite": `file:${coreTarball}`,
       "@types/node": "^25.6.0",
     },
     `${createPtyRuntimeSmoke()}\n`,
@@ -149,7 +149,7 @@ function createSmokeTsconfig(): object {
 
 /** 真实安装后加载包内公共标签，隔离 home，避免源码路径或用户配置掩盖漏包。 */
 function createTargetTagsRuntimeSmoke(): string {
-  return `const { loadTargetTagCatalog } = await import("x-agent-suite/llm-fixture");
+  return `const { loadTargetTagCatalog } = await import("@xnightsky/x-agent-suite/llm-fixture");
 const tagHome = await mkdtemp(join((await import("node:os")).tmpdir(), "xas-tag-home-"));
 try {
   const catalog = await loadTargetTagCatalog({ homeDir: tagHome });
@@ -163,7 +163,7 @@ try {
 
 /** 只运行 Recall 前置装载：验证独立聚合入口的公共标签定位，不创建 Driver。 */
 function createRecallLoadSmoke(): string {
-  return `const { loadRecall } = await import("x-agent-suite/recall");
+  return `const { loadRecall } = await import("@xnightsky/x-agent-suite/recall");
   await writeFile(join(tagHome, "live.yaml"), JSON.stringify({
     carriers: { artifact: {
       kind: "ephemeral-client", clientRef: "artifact-client",
@@ -202,7 +202,7 @@ function createRecallCliGateSmoke(): string {
   await writeFile(liveFile, JSON.stringify(denied));
   const guardFile = join(tagHome, "deny-network.cjs");
   await writeFile(guardFile, 'globalThis.fetch = () => { throw new Error("NETWORK_FORBIDDEN"); };');
-  const cliEntry = fileURLToPath(new URL("./cli.js", import.meta.resolve("x-agent-suite/recall")));
+  const cliEntry = fileURLToPath(new URL("./cli.js", import.meta.resolve("@xnightsky/x-agent-suite/recall")));
   const cli = spawnSync(process.execPath, [
     "--require", guardFile, cliEntry, "recall", "--carrier", "artifact",
     "--execution-params", '{"thinkingLevel":"high"}',
@@ -224,7 +224,7 @@ import { fileURLToPath } from "node:url";
 await Promise.all([${runtimeImports.join(",")}]);
 ${createTargetTagsRuntimeSmoke()}
 ${createProfileRuntimeSmoke()}
-const { judge } = await import("x-agent-suite/judge");
+const { judge } = await import("@xnightsky/x-agent-suite/judge");
 const judgeOutcome = await judge(
   { output: "smoke", rubrics: [{ name: "fact", rubric: "Is the answer factual?" }] },
   { client: { complete: async () => ({ text: '{\"fact\":true}' }) }, maxRetries: 0 },
@@ -235,7 +235,7 @@ assert.deepEqual(judgeOutcome, {
   absent: [],
   attempts: 1,
 });
-const { createJudgeAssertion, textContains } = await import("x-agent-suite/assertions");
+const { createJudgeAssertion, textContains } = await import("@xnightsky/x-agent-suite/assertions");
 assert.equal(textContains.evaluate({ text: "smoke" }, { expect: "smoke" }).pass, true);
 const aiAssertion = createJudgeAssertion({
   name: "artifact-fact", maxRetries: 0,
@@ -244,7 +244,7 @@ const aiAssertion = createJudgeAssertion({
 assert.equal((await aiAssertion.evaluate({ text: "smoke" }, {
   expect: [{ name: "fact", rubric: "Is the answer factual?" }],
 })).pass, true);
-const harnessUrl = import.meta.resolve("x-agent-suite/harness");
+const harnessUrl = import.meta.resolve("@xnightsky/x-agent-suite/harness");
 const require = createRequire(harnessUrl);
 const { buildMcpServerSpec } = await import(harnessUrl);
 const serverEntry = fileURLToPath(new URL("./server.ts", import.meta.url));
@@ -284,7 +284,7 @@ function createPtyRuntimeSmoke(): string {
   return `import assert from "node:assert/strict";
 
 const pty = await import("@x-agent-suite/pty-driver");
-const { LiveBackend } = await import("x-agent-suite/llm-fixture");
+const { LiveBackend } = await import("@xnightsky/x-agent-suite/llm-fixture");
 
 // 跨制品身份场景：LiveBackend 实例来自核心制品，live 判定发生在 PTY 制品的 bundle 内。
 const channel = {

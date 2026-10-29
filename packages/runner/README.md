@@ -2,7 +2,7 @@
 
 场景运行器：Registry 运行时 + `ScenarioSpec` 执行 + 一条命令出报告的 CLI。
 
-> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `x-agent-suite/runner`，装配方式见 [packaging 规范](../../docs/spec/packaging.md)。
+> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `@xnightsky/x-agent-suite/runner`，装配方式见 [packaging 规范](../../docs/spec/packaging.md)。
 
 ## 用途与不负责
 
@@ -21,7 +21,7 @@
 
 ## 公开入口
 
-`src/index.ts` 是唯一入口（子路径 `x-agent-suite/runner` 同形导出）：
+`src/index.ts` 是唯一入口（子路径 `@xnightsky/x-agent-suite/runner` 同形导出）：
 
 - `createRegistry` / `RuntimeRegistry`：契约写侧 + runner 需要的读侧。
 - `runScenarioSpec` / `RunScenarioSpecDeps` / `RunnerArtifact`：单场景执行与产物（判定明细 + 可选聚合）。
@@ -33,8 +33,8 @@
 config 模块 `run.config.ts`（示例 driver 是本地 fake，不发网络请求）：
 
 ```ts
-import { textContains } from "x-agent-suite/assertions";
-import type { RunConfig } from "x-agent-suite/runner";
+import { textContains } from "@xnightsky/x-agent-suite/assertions";
+import type { RunConfig } from "@xnightsky/x-agent-suite/runner";
 
 export default {
   scenarios: [
@@ -69,7 +69,7 @@ pnpm exec x-agent-suite eval ./run.config.ts
 程序化调用同一语义：
 
 ```ts
-import { runScenarioSpec } from "x-agent-suite/runner";
+import { runScenarioSpec } from "@xnightsky/x-agent-suite/runner";
 
 const result = await runScenarioSpec(scenario, { createDriver, criteria });
 ```

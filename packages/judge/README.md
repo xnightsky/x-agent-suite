@@ -57,10 +57,10 @@ const outcome = await judge(
 
 ## 包形态与分发
 
-| 场景       | 导入路径               | 形态                                            |
-| ---------- | ---------------------- | ----------------------------------------------- |
-| 本仓内     | `@x-agent-suite/judge` | workspace 私有包（`private: true`），不单独发布 |
-| 仓外消费者 | `x-agent-suite/judge`  | 聚合分发包 `x-agent-suite` 的子路径             |
+| 场景       | 导入路径                         | 形态                                            |
+| ---------- | -------------------------------- | ----------------------------------------------- |
+| 本仓内     | `@x-agent-suite/judge`           | workspace 私有包（`private: true`），不单独发布 |
+| 仓外消费者 | `@xnightsky/x-agent-suite/judge` | 聚合分发包 `@xnightsky/x-agent-suite` 的子路径  |
 
 ## 命令（仓库根执行）
 

@@ -100,7 +100,7 @@ pnpm init
 pnpm add -D https://github.com/xnightsky/x-agent-suite/releases/download/v0.1.3/x-agent-suite-0.1.3.tgz
 
 # 测试导入
-node -e "import('x-agent-suite/matrix').then(() => console.log('✅ OK'))"
+node -e "import('@xnightsky/x-agent-suite/matrix').then(() => console.log('✅ OK'))"
 ```
 
 ---
@@ -167,30 +167,13 @@ ls artifacts/0.1.3/
 
 ---
 
-## 🔐 发布到 npm（可选）
+## 🔐 npm 主包发布
 
-当前只发布到 GitHub Release。如需发布到 npm registry：
+Release 工作流已在同一构建中将主制品发布为 `@xnightsky/x-agent-suite`，不逐个发布内部 workspace；PTY 仍仅随 GitHub Release 交付。CLI 命令和 tarball 附件名保持不变。
 
-### 1. 获取 npm token
+在本仓 Repository secrets 配置具有发布权限、允许 Bypass 2FA 的 `NPM_TOKEN`；不用创建 npm 组织，也不要把 Token 写入源码或日志。首次成功发布后缩小 Token 权限并撤销临时广权限 Token。
 
-1. 访问 https://www.npmjs.com/settings/YOUR_USERNAME/tokens
-2. 创建 "Automation" token
-3. 添加到 GitHub Secrets：`NPM_TOKEN`
-
-### 2. 修改 Release workflow
-
-编辑 `.github/workflows/release.yml`，在最后添加：
-
-```yaml
-- name: 发布到 npm
-  if: "!contains(github.ref, '-')" # 只发布正式版本
-  run: |
-    echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-    npm publish artifacts/${{ steps.version.outputs.version }}/x-agent-suite-${{ steps.version.outputs.version }}.tgz --access public
-    npm publish artifacts/${{ steps.version.outputs.version }}/x-agent-suite-pty-driver-${{ steps.version.outputs.version }}.tgz --access public
-```
-
-之后推送 tag 会**同时发布到 GitHub Release 和 npm**。
+完整配置、安装和失败后的只读补发步骤见[打包与分发规范](./spec/packaging.md#交付方式四npm-registry核心聚合包)。scoped 包改名必须构建新版本；不能修改历史 tarball、移动旧 tag 或覆盖既有 Release 附件。
 
 ---
 

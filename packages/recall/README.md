@@ -2,7 +2,7 @@
 
 原生 `.recall` 声明式考卷：发现并校验 YAML → 编译为 `ScenarioSpec[]` → 复用同一个 Runner 的判据调度、repeat 与报告。
 
-> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `x-agent-suite/recall`，装配方式见 [packaging 规范](../../docs/spec/packaging.md)。
+> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `@xnightsky/x-agent-suite/recall`，装配方式见 [packaging 规范](../../docs/spec/packaging.md)。
 
 ## 用途与不负责
 
@@ -12,7 +12,7 @@
 
 ## 公开入口
 
-`src/index.ts` 是唯一入口（子路径 `x-agent-suite/recall` 同形导出）：
+`src/index.ts` 是唯一入口（子路径 `@xnightsky/x-agent-suite/recall` 同形导出）：
 
 - `loadRecall` / `LoadedRecall` / `LoadRecallOptions` / `RecallExecutionPlan`：全部前置校验与装载，错误都发生在创建 Driver 之前。
 - `runRecall` / `RecallRunResult` / `RecallCaseRun` / `RecallInfraFailure` / `main`：逐 target/case/repeat 执行、写出 Markdown + JSON 报告，并提供 `x-agent-suite recall` 子命令。
@@ -37,8 +37,8 @@ cases:
 注册表 `recall.registry.ts`（示例 Adapter 是本地 fake，不发网络请求）：
 
 ```ts
-import { textContains } from "x-agent-suite/assertions";
-import type { RecallRegistry } from "x-agent-suite/recall";
+import { textContains } from "@xnightsky/x-agent-suite/assertions";
+import type { RecallRegistry } from "@xnightsky/x-agent-suite/recall";
 
 const reply = (text: string) => ({
   text,
@@ -76,7 +76,7 @@ pnpm exec x-agent-suite recall --carrier consumer-carrier \
 
 ## 判据、执行参数与路由
 
-- **判据**：由消费者在 registry 注册，Recall 只透传 `expect`。AI 断言可用 [`@x-agent-suite/assertions`](../assertions)（消费者形态 `x-agent-suite/assertions`）的 `createJudgeAssertion` 薄适配后注册进 `criteria`，不新增 YAML 专用字段。
+- **判据**：由消费者在 registry 注册，Recall 只透传 `expect`。AI 断言可用 [`@x-agent-suite/assertions`](../assertions)（消费者形态 `@xnightsky/x-agent-suite/assertions`）的 `createJudgeAssertion` 薄适配后注册进 `criteria`，不新增 YAML 专用字段。
 - **执行参数与路由**：`--execution-params <JSON对象>` 只交给已选 Profile/Adapter，每个 case/repeat 独立副本，不得改变 target、凭据、权限 Plan 或 live 审批；未注册、carrier 不匹配、候选不唯一或 live 未审批一律 fail-closed，不创建 Driver。
 
 ## 依赖与边界

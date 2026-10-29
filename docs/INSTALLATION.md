@@ -28,6 +28,8 @@ pnpm check  # 运行所有测试
 
 ### 方式一：从 GitHub Release 安装（推荐）
 
+主分发包统一使用 `@xnightsky/x-agent-suite`；CLI 命令仍为 `x-agent-suite`。下文版本号仅作格式示例，安装前须确认对应 scoped 包或 Release 已成功发布；改名前的 tarball 保留旧包身份，不能直接当作 scoped 包使用。
+
 适用于：已发布正式版本，想要稳定的 tarball
 
 #### 使用 pnpm
@@ -53,15 +55,12 @@ yarn add -D https://github.com/xnightsky/x-agent-suite/releases/download/v0.1.0/
 
 **如果需要 PTY 交互能力**，额外安装对应的包（同样支持三种包管理器）。
 
-### 方式二：从 npm 安装（未来）
+### 方式二：从 npm 安装（核心聚合包）
 
-当项目发布到 npm registry 后：
+确认 `@xnightsky/x-agent-suite` 的目标版本已发布后：
 
 ```bash
-pnpm add -D x-agent-suite@0.1.0
-
-# 如果需要 PTY 能力
-pnpm add -D @x-agent-suite/pty-driver@0.1.0
+pnpm add -D @xnightsky/x-agent-suite@0.1.0
 ```
 
 **对应的 package.json**：
@@ -69,11 +68,12 @@ pnpm add -D @x-agent-suite/pty-driver@0.1.0
 ```json
 {
   "devDependencies": {
-    "x-agent-suite": "0.1.0",
-    "@x-agent-suite/pty-driver": "0.1.0"
+    "@xnightsky/x-agent-suite": "0.1.0"
   }
 }
 ```
+
+PTY 不发布到 npm；需要时额外安装同一版本 GitHub Release 的 `x-agent-suite-pty-driver-<version>.tgz`。
 
 ### 方式三：本地开发联调（临时）
 
@@ -98,8 +98,8 @@ pnpm add -D link:../x-agent-suite
 安装后，在你的项目中：
 
 ```typescript
-import { runMatrix } from "x-agent-suite/matrix";
-import { createSandbox } from "x-agent-suite/sandbox";
+import { runMatrix } from "@xnightsky/x-agent-suite/matrix";
+import { createSandbox } from "@xnightsky/x-agent-suite/sandbox";
 
 // 使用框架...
 ```
@@ -123,7 +123,7 @@ A: 源码中的版本号是 `0.0.0` 占位符。真实版本由 Git tag 决定�
 ```json
 {
   "devDependencies": {
-    "x-agent-suite": "https://github.com/.../v0.2.0/x-agent-suite-0.2.0.tgz"
+    "@xnightsky/x-agent-suite": "https://github.com/.../v0.2.0/x-agent-suite-0.2.0.tgz"
   }
 }
 ```
@@ -133,7 +133,7 @@ A: 源码中的版本号是 `0.0.0` 占位符。真实版本由 Git tag 决定�
 ```json
 {
   "devDependencies": {
-    "x-agent-suite": "0.2.0"
+    "@xnightsky/x-agent-suite": "0.2.0"
   }
 }
 ```

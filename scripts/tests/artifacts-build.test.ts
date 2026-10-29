@@ -156,13 +156,15 @@ test("core consumer 独立安装，PTY consumer 刻意混装核心制品以验�
   assert.ok(ptyManifest);
   assert.deepEqual(Object.keys(coreManifest.devDependencies).sort(), [
     "@types/node",
-    "x-agent-suite",
+    "@xnightsky/x-agent-suite",
   ]);
   assert.deepEqual(Object.keys(ptyManifest.devDependencies).sort(), [
     "@types/node",
     "@x-agent-suite/pty-driver",
-    "x-agent-suite",
+    "@xnightsky/x-agent-suite",
   ]);
+  assert.match(coreSmoke, /"@xnightsky\/x-agent-suite\/recall"/);
+  assert.doesNotMatch(coreSmoke + ptySmoke, /["\']x-agent-suite\//);
   assert.match(coreSmoke, /buildMcpServerSpec/);
   assert.match(coreSmoke, /resolve\("tsx\/esm"\)/);
   assert.match(coreSmoke, /fileURLToPath/);

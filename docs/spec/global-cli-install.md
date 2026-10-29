@@ -2,6 +2,8 @@
 
 `install:global` 从显式指定、可信来源交付的制品目录安装核心 CLI，使任意目录都能通过 PATH 调用 `x-agent-suite`。它不打包、不发布 registry、不创建 tag，也不初始化模型配置、凭据、registry 或宿主 CLI。
 
+核心分发包名为 `@xnightsky/x-agent-suite`，安装成功提示与全局依赖列表使用该 scoped 名称；PATH 命令仍为 `x-agent-suite`，下述制品附件名不变。
+
 ## 前置条件
 
 - Node.js >=24，pnpm >=10；源码工具环境已安装开发依赖（脚本由 tsx 执行）。

@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Changed
+
+- 对外主分发包统一改为 `@xnightsky/x-agent-suite`，同步公开子路径导入、安装后公共资源定位、全局安装提示和补发身份校验；CLI 命令、私有源码根包、内部 workspace 名及 Release 附件名不变。scoped 包必须使用新构建版本，补发入口拒绝旧无 scope tarball，不修改历史标签或附件。
+
 ### Fixed
 
 - 增加 npm 失败后的只读补发入口，下载既有 Release 主制品并复用双重哈希校验，核对稳定版本、来源提交及包身份后发布；不重建同版本、不覆盖 Release 附件，缺少凭据或校验失败时拒绝调用 npm。

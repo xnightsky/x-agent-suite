@@ -18,7 +18,7 @@ Agent 驱动基座：子进程与 PTY 的通用封装，供上层 harness 或消
 
 ## 公开入口
 
-入口为 [`src/index.ts`](./src/index.ts)（workspace 全量导出）。核心子路径 `x-agent-suite/driver` 按 [`packaging/entries/driver.ts`](../../packaging/entries/driver.ts) 只暴露零原生符号：`JsonlProcess`、`LfFramer`、`AsyncQueue`、`MockDriver`，以及 `@x-agent-suite/contracts` 的驱动类型（`AgentDriver` / `LongLivedAgentDriver` / `Observation` 等）。
+入口为 [`src/index.ts`](./src/index.ts)（workspace 全量导出）。核心子路径 `@xnightsky/x-agent-suite/driver` 按 [`packaging/entries/driver.ts`](../../packaging/entries/driver.ts) 只暴露零原生符号：`JsonlProcess`、`LfFramer`、`AsyncQueue`、`MockDriver`，以及 `@x-agent-suite/contracts` 的驱动类型（`AgentDriver` / `LongLivedAgentDriver` / `Observation` 等）。
 
 - `PtyProcess` / `createPtyScreen`：需安装独立制品 `@x-agent-suite/pty-driver`（依赖 `node-pty` / `@xterm/headless`）。
 - `JsonRpcPeer` / `LongLivedJsonRpcDriver`：目前仅 workspace 源码可用，未纳入核心子路径导出。
@@ -63,7 +63,7 @@ try {
 
 对外有**两个**制品（均由 `pnpm artifacts:pack` 产出，见 [`docs/spec/packaging.md`](../../docs/spec/packaging.md)）：
 
-- 核心聚合包 `x-agent-suite`：零原生，按 `packaging/entries/*.ts` 暴露子路径（如 `x-agent-suite/driver`）。
+- 核心聚合包 `@xnightsky/x-agent-suite`：零原生，按 `packaging/entries/*.ts` 暴露子路径（如 `@xnightsky/x-agent-suite/driver`）。
 - 独立 PTY 制品 `@x-agent-suite/pty-driver`：承载原生终端能力（依赖 `node-pty` / `@xterm/headless`），需要交互式 TUI 时显式安装。
 
 workspace 私有包（`@x-agent-suite/*`，`private: true` + `workspace:*` 互引）**不单独发布 npm**；且其 `src/index.ts` 全量导出**不等于**核心子路径的全量导出，两者差异以 `packaging/entries/*.ts` 为准。

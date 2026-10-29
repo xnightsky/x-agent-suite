@@ -11,7 +11,7 @@
 
 ## Pi 消费者投影
 
-公开安装入口为 `x-agent-suite/profiles/pi-config`，源码为根目录 `profiles/pi-config.ts`。这是独立消费者适配，不属于 `packages/*/src/`，不内建注册 Pi Driver，不复制消费者仓库脚本。
+公开安装入口为 `@xnightsky/x-agent-suite/profiles/pi-config`，源码为根目录 `profiles/pi-config.ts`。这是独立消费者适配，不属于 `packages/*/src/`，不内建注册 Pi Driver，不复制消费者仓库脚本。
 
 `writePiLiveConfig(sandbox, context, { agentDir?, executionParams? })`：
 
@@ -27,8 +27,8 @@
 下面的函数仅包装消费者已有的 `HarnessProfile`；不会重写 CLI 参数、权限或路由。
 
 ```ts
-import type { HarnessProfile } from "x-agent-suite/contracts";
-import { writePiLiveConfig } from "x-agent-suite/profiles/pi-config";
+import type { HarnessProfile } from "@xnightsky/x-agent-suite/contracts";
+import { writePiLiveConfig } from "@xnightsky/x-agent-suite/profiles/pi-config";
 
 /** 把本次 Recall 参数交给隔离配置投影。 */
 function withRunParameters(
@@ -60,7 +60,7 @@ x-agent-suite recall --carrier pi --live-config private-live.yaml \
 不需要自持 Driver 时，可显式注册根 `profiles/pi-recall.ts` 的工厂；它仍复用 Harness 与 `writePiLiveConfig`，不在核心包识别宿主，不改变 TargetTags 或 live 审批。
 
 ```ts
-import { createPiRecallDriver } from "x-agent-suite/profiles/pi-recall";
+import { createPiRecallDriver } from "@xnightsky/x-agent-suite/profiles/pi-recall";
 
 const profiles = {
   pi: { carrier: "pi", createDriver: createPiRecallDriver },

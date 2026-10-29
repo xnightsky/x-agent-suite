@@ -2,11 +2,11 @@
 
 Matrix 层：scenario × carrier × prompt 变体对照运行与报告。
 
-> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `x-agent-suite/matrix`，装配方式见 [packaging 规范](../../docs/spec/packaging.md)。
+> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `@xnightsky/x-agent-suite/matrix`，装配方式见 [packaging 规范](../../docs/spec/packaging.md)。
 
 ## 公开入口
 
-`src/index.ts` 是唯一入口（子路径 `x-agent-suite/matrix` 同形导出）。下方示例中的 `@x-agent-suite/matrix` 是仓库内私有包名，消费者请改用子路径 `x-agent-suite/matrix`：
+`src/index.ts` 是唯一入口（子路径 `@xnightsky/x-agent-suite/matrix` 同形导出）。下方示例中的 `@x-agent-suite/matrix` 是仓库内私有包名，消费者请改用子路径 `@xnightsky/x-agent-suite/matrix`：
 
 - `runMatrix` / `createMatrixRunner` / `MatrixOptions` / `RunMatrixOptions` / `MatrixResult` / `MatrixRow`：对照编排。
 - `toScenarioReportRows`：把 matrix 行转成报告行。

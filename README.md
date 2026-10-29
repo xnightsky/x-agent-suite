@@ -63,7 +63,7 @@ pnpm tutorial:pty:pi  # 真实 Pi + fake provider；默认 skip，零 token
 
 兄弟仓库的本地 tarball、git 源码自构建、远程 GET、npm 核心包安装配置，以及固定版本重打方式，见 [`docs/spec/packaging.md`](docs/spec/packaging.md)。`artifacts/` 是本地交付输出并已加入 `.gitignore`。
 
-Release 工作流在同一构建中把主制品 `x-agent-suite-<version>.tgz` 上传 GitHub Release 并发布到 npm，包名为 `x-agent-suite`；不逐个发布内部 workspace。维护者在本仓 Actions Repository secrets 配置 `NPM_TOKEN`，经授权推送稳定 tag 后触发；首次成功发布后才可通过 npm 安装，详见[发布配置与安装](docs/spec/packaging.md#交付方式四npm-registry核心聚合包)。
+Release 工作流在同一构建中把主制品 `x-agent-suite-<version>.tgz` 上传 GitHub Release 并发布到 npm，包名为 `@xnightsky/x-agent-suite`，CLI 命令仍为 `x-agent-suite`；不逐个发布内部 workspace。维护者在本仓 Actions Repository secrets 配置 `NPM_TOKEN`，经授权推送稳定 tag 后触发；首次成功发布后才可通过 npm 安装，详见[发布配置与安装](docs/spec/packaging.md#交付方式四npm-registry核心聚合包)。
 
 需要任意目录可调用的全局 CLI 时，从本源码仓安装已交付的核心制品（不自动构建、不发布）：
 

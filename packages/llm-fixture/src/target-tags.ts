@@ -5,10 +5,10 @@
  */
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { TargetTagDefinitionError } from "./target-tag-error.ts";
+import { defaultTagRoot } from "./target-tag-root.ts";
 import type {
   LoadTargetTagCatalogOptions,
   ModelTags,
@@ -442,27 +442,6 @@ async function readPrivateOverlay(
     asRecord(document.targetTags, "live.targetTags"),
     dictionary,
   );
-}
-
-async function defaultTagRoot(): Promise<string> {
-  let directory = dirname(fileURLToPath(import.meta.url));
-  while (true) {
-    try {
-      const manifest = JSON.parse(
-        await readFile(join(directory, "package.json"), "utf8"),
-      ) as { readonly name?: unknown };
-      if (manifest.name === "x-agent-suite") return directory;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-        throw new TargetTagDefinitionError("无法定位 TargetTags 所属包", {
-          cause: error,
-        });
-      }
-    }
-    const parent = dirname(directory);
-    if (parent === directory) fail("无法定位 TargetTags 所属包");
-    directory = parent;
-  }
 }
 
 /**

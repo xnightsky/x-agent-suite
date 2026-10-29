@@ -5,8 +5,8 @@
 
 /** 生成安装后 Pi 投影断言，验证公开入口、默认继承与单次覆盖。 */
 export function createProfileRuntimeSmoke(): string {
-  return `const { writePiLiveConfig } = await import("x-agent-suite/profiles/pi-config");
-const { createSandbox, cleanupSandbox } = await import("x-agent-suite/sandbox");
+  return `const { writePiLiveConfig } = await import("@xnightsky/x-agent-suite/profiles/pi-config");
+const { createSandbox, cleanupSandbox } = await import("@xnightsky/x-agent-suite/sandbox");
 const profileSandbox = await createSandbox({ configDirs: ["piHome", "host"] });
 try {
   const host = profileSandbox.configDirs.host;
@@ -38,8 +38,8 @@ try {
 
 /** 生成安装后一次性驱动冒烟，用假子进程验证 live 分支、原生完成信号及隔离配置。 */
 function createPiRecallRuntimeSmoke(): string {
-  return `const { createPiRecallDriver } = await import("x-agent-suite/profiles/pi-recall");
-  const { LiveBackend } = await import("x-agent-suite/llm-fixture");
+  return `const { createPiRecallDriver } = await import("@xnightsky/x-agent-suite/profiles/pi-recall");
+  const { LiveBackend } = await import("@xnightsky/x-agent-suite/llm-fixture");
   const hostScript = join(profileSandbox.cwd, "fake-host.mjs");
   await writeFile(hostScript, [
     'import { readFileSync } from "node:fs";',

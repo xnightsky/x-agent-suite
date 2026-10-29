@@ -34,7 +34,7 @@ function fixture(root: string, options: Record<string, unknown>) {
   writeFileSync(
     join(source, "package", "package.json"),
     JSON.stringify({
-      name: options.packageName ?? "x-agent-suite",
+      name: options.packageName ?? "@xnightsky/x-agent-suite",
       version: "0.7.1",
     }),
   );
@@ -118,6 +118,7 @@ for (const [title, options, error] of [
   ["snapshot", { mode: "snapshot" }, /stable/],
   ["制品被篡改", { corrupt: true }, /校验和/],
   ["tarball 内包名错误", { packageName: "another-package" }, /包名/],
+  ["已废弃的无 scope 包名", { packageName: "x-agent-suite" }, /包名/],
 ] as const) {
   test(`补发拒绝${title}且不调用 npm`, unixOnly, () => {
     const result = run(options);

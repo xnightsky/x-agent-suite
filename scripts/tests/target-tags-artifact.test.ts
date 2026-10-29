@@ -5,6 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { cp, mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { after, before, test } from "node:test";
@@ -19,14 +20,16 @@ let customRoot: string;
 let loadInstalled: typeof loadTargetTagCatalog;
 
 before(async () => {
-  await mkdir(join(ROOT, ".tmp"), { recursive: true });
-  stage = await mkdtemp(join(ROOT, ".tmp", "xas-target-tags-artifact-"));
-  packageRoot = join(stage, "consumer/node_modules/x-agent-suite");
+  stage = await mkdtemp(join(tmpdir(), "xas-target-tags-artifact-"));
+  packageRoot = join(stage, "consumer/node_modules/@xnightsky/x-agent-suite");
   customRoot = join(stage, "custom");
   await mkdir(packageRoot, { recursive: true });
   await writeFile(
     join(packageRoot, "package.json"),
-    JSON.stringify(createCorePackageManifest("0.7.0")),
+    JSON.stringify({
+      ...createCorePackageManifest("0.7.0"),
+      name: "@xnightsky/x-agent-suite",
+    }),
   );
   await cp(
     join(ROOT, "config/target-tags"),

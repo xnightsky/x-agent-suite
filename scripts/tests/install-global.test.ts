@@ -52,15 +52,22 @@ test("package.json 提供显式制品集的 install:global 脚本", async () => 
   assert.equal(pkg.scripts["install:global"], "tsx scripts/install-global.ts");
 });
 
-test("校验清单与核心校验和后只安装 core，路径可含空格且无须 PTY", async () => {
+test("校验清单与核心校验和后只安装 core，路径可含空格且无须 PTY", async (t) => {
   const { installGlobal } = await import("../install-global.ts");
   const { directory } = await fixture();
   const calls: string[] = [];
+  const logs: string[] = [];
+  t.mock.method(console, "log", (message: string) => logs.push(message));
   try {
     await installGlobal(["--", directory], (file) => {
       calls.push(file);
     });
     assert.deepEqual(calls, [await realpath(join(directory, CORE))]);
+    assert.ok(
+      logs.some((message) =>
+        message.includes(`@xnightsky/x-agent-suite@${VERSION}`),
+      ),
+    );
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

@@ -330,7 +330,7 @@ export interface HarnessProfile {
 
 `HarnessArgsContext.mode` 为 `"fixture" | "live"`。fixture 专用模型覆盖只能在 fixture 模式加入参数；live 模式应使用真实配置或省略覆盖。具体 profile 由消费者注册，不从 `@x-agent-suite/harness` 内建导出。
 
-`from: harness` 仅解析渠道与凭据，不代表完整的宿主执行偏好。真实 CLI 的 `writeConfig` 仍负责只读投影原生配置到隔离 HOME，默认继承思考档位及模型配套映射，不得把 fixture 的禁用思考设置用于 live。通用 Harness 契约不增加宿主专用字段；Pi 消费者投影通过独立 `x-agent-suite/profiles/pi-config` 提供，不从 harness 核心内建导出。字段职责与限制见 [宿主配置保真](./host-config-projection.md)。
+`from: harness` 仅解析渠道与凭据，不代表完整的宿主执行偏好。真实 CLI 的 `writeConfig` 仍负责只读投影原生配置到隔离 HOME，默认继承思考档位及模型配套映射，不得把 fixture 的禁用思考设置用于 live。通用 Harness 契约不增加宿主专用字段；Pi 消费者投影通过独立 `@xnightsky/x-agent-suite/profiles/pi-config` 提供，不从 harness 核心内建导出。字段职责与限制见 [宿主配置保真](./host-config-projection.md)。
 
 Live 响应解析同时接受 LF/CRLF SSE 事件分隔；非流式 Chat Completions 的多个无 `index` 工具调用按数组位置保留。错误原因脱敏除渠道字面量外，还必须包含从 `apiKeyEnv` 或借用钩子解析出的实际凭证。`writeScenarioReports` 接受可选 `redact`，递归清洗 Markdown 与 JSON 的全部字符串，且脱敏后的 `stamp` 必须重新通过安全路径段校验。
 

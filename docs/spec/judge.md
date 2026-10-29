@@ -15,7 +15,7 @@
 ## judge() 公共接口
 
 ```ts
-import { judge } from "x-agent-suite/judge";
+import { judge } from "@xnightsky/x-agent-suite/judge";
 
 const outcome = await judge(
   {
@@ -119,12 +119,12 @@ import {
   loadTargetTagCatalog,
   resolveLiveTargets,
   type LiveTargetSelection,
-} from "x-agent-suite/llm-fixture";
+} from "@xnightsky/x-agent-suite/llm-fixture";
 import {
   createHarnessDriver,
   createHarnessLiveConfigHooks,
-} from "x-agent-suite/harness";
-import { createJudgeClient, judge } from "x-agent-suite/judge";
+} from "@xnightsky/x-agent-suite/harness";
+import { createJudgeClient, judge } from "@xnightsky/x-agent-suite/judge";
 
 const selection: LiveTargetSelection = consumerSelection;
 const config = {
