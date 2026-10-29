@@ -1,10 +1,14 @@
 /**
  * @module @x-agent-suite/recall/schema
  * Recall YAML v1：cases、文件内 plans 与全局/case context 的严格 Schema。
- * 不变量：context.plan 只引用当前文档 plans；plan/files 互斥，case context 整块覆盖。
+ * 不变量：context.plan 只引用当前文档 plans；plan/files 互斥，case context 整块覆盖；
+ * install=false 禁止 destination，启用项必须有相对隔离工作区的目标。
  */
-import { posix } from "node:path";
 import { parse } from "yaml";
+import {
+  normalizeResourceDestination,
+  shouldInstallRecallResource,
+} from "./resource-options.ts";
 import {
   assertKnownFields,
   isNonEmptyString,
@@ -16,13 +20,28 @@ import {
 /** 场景资源类别。 */
 export type RecallResourceKind = "file" | "directory";
 
-/** Recall YAML 内一条资源声明。 */
-export interface RecallResourceDefinition {
+interface RecallResourceFields {
   readonly source: string;
-  readonly destination: string;
   readonly kind: RecallResourceKind;
   readonly readOnly: true;
 }
+
+/** Recall 资源声明：默认安装；显式跳过时不得指定目标。 */
+export type RecallResourceDefinition = RecallResourceFields &
+  (
+    | {
+        /** 省略或 true 时复制资源。 */
+        readonly install?: true;
+        /** 相对隔离工作区的安装位置。 */
+        readonly destination: string;
+      }
+    | {
+        /** 跳过该资源，不读取来源。 */
+        readonly install: false;
+        /** 禁用资源不具有安装位置。 */
+        readonly destination?: never;
+      }
+  );
 
 /** 文件内命名 ProvisionPlan。 */
 export interface RecallProvisionPlanDefinition {
@@ -81,20 +100,11 @@ function normalizeDestination(
   filePath: string,
   at: string,
 ): string {
-  const raw = requiredString(value, at);
-  if (raw.includes("\0") || /^[a-zA-Z]:/.test(raw)) {
-    throw schemaError(filePath, at + " 含非法 destination");
+  try {
+    return normalizeResourceDestination(value);
+  } catch (cause) {
+    throw schemaError(filePath, at + "：" + String(cause));
   }
-  const normalized = posix.normalize(raw.split("\\").join("/"));
-  if (
-    normalized === "." ||
-    normalized === ".." ||
-    normalized.startsWith("../") ||
-    normalized.startsWith("/")
-  ) {
-    throw schemaError(filePath, at + " destination 逃逸工作区：" + raw);
-  }
-  return normalized;
 }
 
 function parseResource(
@@ -105,7 +115,7 @@ function parseResource(
   if (!isRecord(value)) throw schemaError(filePath, at + " 必须是对象");
   assertFields(
     value,
-    ["source", "destination", "kind", "readOnly"],
+    ["source", "destination", "kind", "readOnly", "install"],
     filePath,
     at,
   );
@@ -116,15 +126,26 @@ function parseResource(
   if (value.readOnly !== undefined && value.readOnly !== true) {
     throw schemaError(filePath, at + ".readOnly 当前仅支持 true");
   }
-  return {
+  const fields: RecallResourceFields = {
     source: requiredString(value.source, at + ".source"),
+    kind,
+    readOnly: true as const,
+  };
+  let install: boolean;
+  try {
+    install = shouldInstallRecallResource(value);
+  } catch (cause) {
+    throw schemaError(filePath, at + "：" + String(cause));
+  }
+  if (!install) return { ...fields, install: false };
+  return {
+    ...fields,
+    ...(value.install === true ? { install: true as const } : {}),
     destination: normalizeDestination(
       value.destination,
       filePath,
       at + ".destination",
     ),
-    kind,
-    readOnly: true,
   };
 }
 
@@ -133,10 +154,13 @@ function assertNoDestinationConflicts(
   filePath: string,
   plan: string,
 ): void {
-  for (let left = 0; left < resources.length; left += 1) {
-    for (let right = left + 1; right < resources.length; right += 1) {
-      const a = resources[left]!.destination;
-      const b = resources[right]!.destination;
+  const destinations = resources.flatMap((resource) =>
+    resource.install === false ? [] : [resource.destination],
+  );
+  for (let left = 0; left < destinations.length; left += 1) {
+    for (let right = left + 1; right < destinations.length; right += 1) {
+      const a = destinations[left]!;
+      const b = destinations[right]!;
       if (a === b || a.startsWith(b + "/") || b.startsWith(a + "/")) {
         throw schemaError(
           filePath,

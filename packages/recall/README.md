@@ -20,6 +20,8 @@
 - `loadRecallEffectsPlan` / `RecallEffects` / `RecallEffectsProfile` / `isRecallCommandAllowed`：effects-only Plan DSL 与命令门禁。
 - `materializeRecallProvision` / `readRecallResources` / `RecallCompiledResource`：provision 资源校验与隔离 cwd 物化。
 
+资源声明的 `install` 默认 true；显式 false 时跳过来源读取且禁止 destination，true 或省略时 destination 必填并相对隔离 cwd。目录沿用 `kind: directory`，不运行原生安装器；完整规则见 [resources 字段与路径](../../docs/spec/recall.md#resources-字段与路径)。
+
 ## 最小示例
 
 考卷 `.recall/queue.yaml`：
