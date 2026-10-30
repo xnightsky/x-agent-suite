@@ -93,15 +93,18 @@ test("安装布局默认使用包内公共资源，不读取消费者同名目�
 });
 
 test("安装布局保留 repoRoot 与单文件路径的显式覆盖优先级", async () => {
-  const custom = await loadInstalled({ repoRoot: customRoot });
+  // homeDir 隔离到 stage：本机 home 的全局实例不干扰空词典解析。
+  const custom = await loadInstalled({ repoRoot: customRoot, homeDir: stage });
   assert.deepEqual(custom.dictionary.keys, []);
   const explicit = await loadInstalled({
     repoRoot: ROOT,
+    homeDir: stage,
     dictionaryPath: join(customRoot, "config/target-tags/keys.yaml"),
     instancesPath: join(customRoot, "config/target-tags/instances.yaml"),
   });
   assert.deepEqual(explicit, custom);
   const mixed = await loadInstalled({
+    homeDir: stage,
     instancesPath: join(customRoot, "config/target-tags/instances.yaml"),
   });
   assert.ok(mixed.dictionary.keys.length > 0);
