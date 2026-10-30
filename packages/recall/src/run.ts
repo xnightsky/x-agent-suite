@@ -1,17 +1,25 @@
 /**
  * @module @x-agent-suite/recall/run
  * 单 Runner 逐 target/case/repeat 执行；多 default 只在外层顺序编排，不广播或 fallback。
+ * 不变量：动态判据装配（每 target 一次）完成于任何主 Driver 创建之前；
+ * 装配失败中止本次运行，不记入 RecallRunResult.failures（该列表只承载单 case 基础设施失败）。
  */
 import { join } from "node:path";
-import type { ReportPaths, ScenarioSpec } from "@x-agent-suite/contracts";
+import type {
+  Criterion,
+  ReportPaths,
+  ScenarioSpec,
+} from "@x-agent-suite/contracts";
 import { writeScenarioReports } from "@x-agent-suite/observation";
 import { runScenarioRepeat } from "@x-agent-suite/runner";
+import { assembleRecallCriteria } from "./criterion-assembly.ts";
 import { createRecallDriver } from "./driver.ts";
 import type { RecallResolvedExecution } from "./execution.ts";
 import {
-  loadRecall,
+  loadRecallCore,
   type LoadedRecall,
   type LoadRecallOptions,
+  type RecallLoadCore,
 } from "./load.ts";
 
 /** 单个 case 的成功执行与报告位置。 */
@@ -63,9 +71,16 @@ function targetOutDir(
   );
 }
 
+/** 一个 target 的装配结果：执行实现与其复用的判据数组。 */
+interface AssembledExecution {
+  readonly execution: RecallResolvedExecution;
+  readonly criteria: readonly Criterion[];
+}
+
 async function runCase(
   spec: ScenarioSpec,
   execution: RecallResolvedExecution,
+  criteria: readonly Criterion[],
   loaded: LoadedRecall,
 ): Promise<RecallCaseRun> {
   const executed = await runScenarioRepeat(spec, {
@@ -77,7 +92,7 @@ async function runCase(
         config: loaded.config,
         executionParams: loaded.executionParams,
       }),
-    criteria: loaded.registry.criteria,
+    criteria,
     repeat: loaded.repeat,
   });
   const last = executed.results[executed.results.length - 1]!;
@@ -114,17 +129,40 @@ function asError(cause: unknown): Error {
   return cause instanceof Error ? cause : new Error(String(cause));
 }
 
-/** 全量校验后逐 target/case/repeat 执行并写出现有 Markdown + JSON 报告。 */
+/** 装配每个 target 实际引用的动态判据；全部完成于任何主 Driver 创建之前。 */
+async function assembleExecutions(
+  loaded: LoadedRecall,
+  core: Pick<RecallLoadCore, "catalog" | "liveReviewApproved">,
+): Promise<readonly AssembledExecution[]> {
+  const assembled: AssembledExecution[] = [];
+  for (const execution of loaded.executions) {
+    const criteria = await assembleRecallCriteria({
+      registry: loaded.registry,
+      scenarios: loaded.scenarios,
+      execution,
+      config: loaded.config,
+      catalog: core.catalog,
+      liveReviewApproved: core.liveReviewApproved,
+      effects: loaded.plan.effects,
+    });
+    assembled.push({ execution, criteria });
+  }
+  return assembled;
+}
+
+/** 全量校验与判据装配后逐 target/case/repeat 执行并写出现有 Markdown + JSON 报告。 */
 export async function runRecall(
   options: LoadRecallOptions,
 ): Promise<RecallRunResult> {
-  const loaded = await loadRecall(options);
+  const core = await loadRecallCore(options);
+  const { loaded } = core;
+  const executions = await assembleExecutions(loaded, core);
   const runs: RecallCaseRun[] = [];
   const failures: RecallInfraFailure[] = [];
-  for (const execution of loaded.executions) {
+  for (const { execution, criteria } of executions) {
     for (const spec of loaded.scenarios) {
       try {
-        runs.push(await runCase(spec, execution, loaded));
+        runs.push(await runCase(spec, execution, criteria, loaded));
       } catch (cause) {
         failures.push({
           scenarioId: spec.id,

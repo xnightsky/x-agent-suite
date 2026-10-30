@@ -18,10 +18,18 @@ export { main } from "./cli.ts";
 export {
   emptyRecallRegistry,
   loadRecallRegistry,
+  type RecallCriterionDescriptor,
+  type RecallCriterionFactory,
+  type RecallCriterionFactoryContext,
+  type RecallCriterionRegistration,
   type RecallExecutionProfile,
   type RecallProfileDriverContext,
   type RecallRegistry,
 } from "./registry.ts";
+export {
+  assembleRecallCriteria,
+  type AssembleRecallCriteriaOptions,
+} from "./criterion-assembly.ts";
 export {
   isRecallCommandAllowed,
   loadRecallEffectsPlan,

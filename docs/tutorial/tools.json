@@ -726,6 +726,13 @@
           "recipes": ["recall"]
         },
         {
+          "name": "assembleRecallCriteria",
+          "category": "live",
+          "purpose": "按已选 target 装配实际引用的动态判据；每 target 每工厂恰好一次，全部完成于主 Driver 创建之前。",
+          "risk": "high",
+          "recipes": ["recall"]
+        },
+        {
           "name": "main",
           "category": "primary",
           "purpose": "Recall 子命令入口；定义错误 2、基础设施失败 1、行为失败 0。",

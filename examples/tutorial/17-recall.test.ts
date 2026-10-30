@@ -226,14 +226,15 @@ test("tutorial/recall：公开 Judge + Pi borrowed + assertion 组合", async ()
       liveReviewApproved: approved,
       commandOverride,
     });
+    const criteria = [
+      createJudgeAssertion({
+        name: "answer-quality",
+        client,
+        maxRetries: 0,
+      }),
+    ];
     const registry: RecallRegistry = {
-      criteria: [
-        createJudgeAssertion({
-          name: "answer-quality",
-          client,
-          maxRetries: 0,
-        }),
-      ],
+      criteria,
       profiles: {},
       effectsProfiles: {},
     };
@@ -266,7 +267,7 @@ test("tutorial/recall：公开 Judge + Pi borrowed + assertion 组合", async ()
       let failure: unknown;
       try {
         outcome = await runScenarioSpec(spec, {
-          criteria: registry.criteria,
+          criteria,
           createDriver: (current) => {
             const backend = new LiveBackend({
               carrier: target.carrier,

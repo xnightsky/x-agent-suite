@@ -73,6 +73,7 @@ export function state(): RecallRegistryTestState {
 export function resetState(): void {
   state().transports = [];
   state().profiles = [];
+  state().factoryCalls = [];
 }
 
 /** 创建隔离 Recall 配置，按测试目标注册 CLI 或临时 Client。 */
