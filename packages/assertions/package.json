@@ -21,6 +21,7 @@
     "@x-agent-suite/judge": "workspace:*"
   },
   "devDependencies": {
+    "@x-agent-suite/llm-fixture": "workspace:*",
     "@types/node": "^25.6.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
