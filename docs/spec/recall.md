@@ -6,13 +6,13 @@
 
 五种输入职责固定：
 
-| 输入                  | 职责                                                                                                            |
-| --------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Recall YAML           | case 测试意图、文件内 `plans`、全局/case `context`，最终只编译为 `ScenarioSpec.provision`。                     |
-| 执行 Plan YAML        | 只声明 `version: 1` 与 `effects: none/use/inline`。不得包含 driver、mode、cliRef、criteria 或 provision。       |
-| 独立 registry TS 模块 | 注册 Criterion、CLI/临时 Client execution profiles、EffectsProfile 与可选 transport；不是 Recall config 闭包。  |
-| `.env.e2e.yaml`       | 复用 carrier/provider/model、Carrier kind/clientRef/channelsFrom、凭据与私密 TargetTags，不建立第二套模型配置。 |
-| 本次命令执行参数      | `--execution-params <JSON对象>`，仅交给已选 Profile/Adapter；不参与渠道、权限或执行路径选择。                   |
+| 输入                  | 职责                                                                                                                          |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Recall YAML           | case 测试意图、文件内 `plans`、全局/case `context`，最终只编译为 `ScenarioSpec.provision`。                                   |
+| 执行 Plan YAML        | 只声明 `version: 1` 与 `effects: none/use/inline`。不得包含 driver、mode、cliRef、criteria 或 provision。                     |
+| 独立 registry TS 模块 | 注册 Criterion 与通用判据工厂、CLI/临时 Client execution profiles、EffectsProfile 与可选 transport；不是 Recall config 闭包。 |
+| `.env.e2e.yaml`       | 复用 carrier/provider/model、Carrier kind/clientRef/channelsFrom、凭据与私密 TargetTags，不建立第二套模型配置。               |
+| 本次命令执行参数      | `--execution-params <JSON对象>`，仅交给已选 Profile/Adapter；不参与渠道、权限或执行路径选择。                                 |
 
 不读取、发现或兼容 `x-agent-suite.config.ts`。旧 `--config` 会返回定义错误。Recall 不预置 metric、具体宿主 profile 或领域 EffectsProfile；独立消费者配置投影入口见 [宿主配置保真](./host-config-projection.md)。
 
@@ -107,6 +107,80 @@ export default registry;
 ```
 
 重复判据、非法 profile、未知 registry 字段均在执行前拒绝。registry 只注册实现，不参与 model/default 或 Carrier kind 选择。
+
+### 通用判据工厂
+
+`criteria` 支持静态 Criterion 与通用工厂混合注册。工厂只声明 `name`、`scope` 与 `create`，加载期要求 `evaluate` 与 `create` 恰有一个；编译期只按 name/scope 描述符验证考卷引用，不为工厂伪造 `evaluate`。
+
+```ts
+import { createJudgeAssertion } from "@xnightsky/x-agent-suite/assertions";
+
+const registry: RecallRegistry = {
+  criteria: [
+    ...consumerCriteria,
+    {
+      name: "answer-quality",
+      scope: "turn",
+      create({ target, config, tags, liveReviewApproved, cliRef, effects }) {
+        return createJudgeAssertion({
+          name: "answer-quality",
+          clientOptions: {
+            target,
+            config,
+            tags,
+            liveReviewApproved,
+            ...(cliRef ? { cliRef } : {}),
+            mode: "borrowed",
+            toolPolicy: "none",
+            createDriver: (attempt) =>
+              consumerJudgeDriverAdapter({
+                ...attempt,
+                timeoutMs: effects.timeoutMs,
+              }),
+          },
+          maxRetries: 0,
+        });
+      },
+    },
+  ],
+  // ...profiles/effectsProfiles 同静态注册。
+};
+```
+
+装配语义：
+
+- 运行前按已选 target 装配实际引用的工厂（引用按 expect 键存在性判断，`false`/`0`/`null`/空串都算引用）；每 target 每工厂恰好调用一次，全部完成于任何主 Driver 创建之前，case 与 repeat 复用同一闭包。
+- 装配上下文（`RecallCriterionFactoryContext`）提供与主执行同源的 `target`、`config`、`tags`、`liveReviewApproved`（同一 `--approve-live` 归一化 boolean）、`cliRef`/`clientRef` 与 `effects`；工厂不得重读环境或再次选择模型。
+- 装配只准备闭包与无资源 client，不启动 Driver、不联网、不调用模型；工厂返回的 name/scope 必须与声明严格一致，否则装配期拒绝，错误只含 `scope:name` 与阶段，不回显 context/config。
+- 未引用工厂不调用；session scope 工厂声明合法，但当前考卷 DSL 只有 turn 级 `expect`，不会被引用装配。
+
+### 考卷侧驱动：expect 即判据输入
+
+判据在 registry（TS）注册一次后，考卷作者只用 YAML 驱动。`expect` 的键按名字引用已注册判据，值原样透传给判据的 `evaluate`——框架不解释其形状，每个判据自己定义 expect 的协议。对 `createJudgeAssertion` 产出的 AI 断言，expect 值就是当轮 rubric 清单：
+
+```yaml
+cases:
+  - id: answer-quality
+    turns:
+      - send: 介绍这个仓库
+        expect:
+          answer-quality:                  # 引用 registry 中同名判据；键出现即启用
+            - name: 准确性
+              rubric: 回答必须说出三个核心包
+            - name: 诚实性
+              rubric: 不确定的内容必须明说
+```
+
+开放层次的分工：
+
+| 谁             | 能决定什么                                                                     | 在哪写   |
+| -------------- | ------------------------------------------------------------------------------ | -------- |
+| 考卷作者       | 引用哪个判据、每轮的 rubric 内容与条数、哪一轮启用（`false`/`0`/`null` 也算启用） | 考卷 YAML |
+| 命令行调用方   | 用哪个 target（含裁判模型）与 live 批准                                       | CLI 参数 |
+| registry 作者  | 判据名注册、Judge 的 mode/toolPolicy/timeoutMs/maxRetries、独立 Driver 适配   | TS 模块  |
+
+框架刻意不把判据名注册或 Judge 执行参数放进 YAML：零内建判据是边界硬约束，DSL 不内置 `judge` 之类的判据概念。新增评分点若可复用同一判据语义，考卷作者直接加 rubric 即可，不需要新判据名；确需新判据语义时才改 registry。
+
 
 ## 单次运行参数
 

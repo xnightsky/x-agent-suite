@@ -47,6 +47,10 @@ PTY、headless、sandbox 是机制，smoke 是抽样范围，contract 是验证�
 
 `packages/recall/tests/effects.test.ts`、`compile.test.ts`、`discovery.test.ts` 与 `recall.test.ts` 都属于单元测试：临时 live YAML、合成 TargetTags、fake transport 和 MockDriver 不访问真实 provider，也不读取真实 home 配置。它们覆盖无参数拒绝、carrier 多 default、provider/model 过滤、默认无 effects、文件内 plans/context 继承覆盖、inline 权限、direct/borrowed、ephemeral-client Adapter、live 审批、资源清理和报告归因，进入 `pnpm test` 与 `pnpm check`。`packages/llm-fixture/tests/live-config-carriers.test.ts` 另行覆盖 kind 缺省 cli、clientRef、channelsFrom、非法引用与 target 归因。
 
+`packages/recall/tests/registry.test.ts`、`criterion-assembly.test.ts` 与 `recall-assembly.test.ts` 同属零 token 单元测试：registry 校验覆盖静态判据与通用工厂混合注册的加载期形状把关；装配测试用合成 registry/scenarios/execution 验证引用键存在性、每 target 一次、形状校验与安全错误包装；CLI 装配路径用合成 registry + fake profile driver 验证装配早于主 Driver、repeat/case 复用闭包与批准同源到达。
+
+`packages/recall/tests/execution-resolution.test.ts` 与 `execution-params.test.ts` 用合成 catalog/registry 覆盖执行实现唯一选择、live 审批语义与执行参数归一，不创建 Driver、零 provider 请求。
+
 `packages/recall/tests/resource-install-schema.test.ts` 与 `resource-install-materialize.test.ts` 使用临时文件和隔离工作区，验证 install 的默认兼容、显式启停、destination 条件必填与禁用互斥、禁用项不读取来源、目标路径约束及安装现场无残留。它们属于零 token 单元测试，不运行原生安装器、不启动真实宿主。
 
 `scripts/tests/itrepos-resources.test.ts` 读取场景仓实际考卷，在临时安装布局与沙箱中验证已安装、显式禁用、替代项目位置、考卷不泄漏和脚本 JSON 效果；执行通用 Node 脚本仍归单元测试，不证明真实宿主的发现与触发。
