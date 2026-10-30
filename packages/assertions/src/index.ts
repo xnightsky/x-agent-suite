@@ -25,5 +25,6 @@ export {
 } from "./deterministic.ts";
 export {
   createJudgeAssertion,
+  type JudgeAssertionBaseOptions,
   type JudgeAssertionOptions,
 } from "./judge-assertion.ts";

@@ -12,17 +12,19 @@
 
 - 不认识具体被测系统、宿主或领域判据名；通用判据由调用方显式选用，AI 判据名、rubric 与期望值由调用方给出。
 - 不自动注册判据、不调度、不聚合、不写报告（调度与聚合在 `@x-agent-suite/observation`）。
-- 不创建模型客户端，不做渠道、模式决策或审批；只有调用方执行 AI 判据时，才经 `judge()` 调用注入的 client。
+- 默认不创建模型客户端，不做渠道、模式决策或审批；只有调用方显式选择 `clientOptions` 时，才通过原生 Judge 工厂创建 client。
+- 不读取环境或 Recall 配置，不自行选择 target，不保存永久批准。
+- 不复制 Judge prompt、timeout、retry、verdict 解析、失败分类或资源清理。
 
 ## 公开入口
 
-| 分组       | 导出                                                             |
-| ---------- | ---------------------------------------------------------------- |
-| 工具匹配   | `toolNameMatches`、`toolActionMatches`                           |
-| 检查原语   | `dryChecks`、`hardChecks`、`fuzzyChecks`、`checkListResult`      |
-| 确定性判据 | `textContains`、`textNotContains`、`toolCall`、`ToolCallExpect`  |
-| AI 断言    | `createJudgeAssertion`、`JudgeAssertionOptions`                  |
-| 契约类型   | `EnumerateCheck`、`EnumerateResult`、`HardExpectation`（重导出） |
+| 分组       | 导出                                                                         |
+| ---------- | ---------------------------------------------------------------------------- |
+| 工具匹配   | `toolNameMatches`、`toolActionMatches`                                       |
+| 检查原语   | `dryChecks`、`hardChecks`、`fuzzyChecks`、`checkListResult`                  |
+| 确定性判据 | `textContains`、`textNotContains`、`toolCall`、`ToolCallExpect`              |
+| AI 断言    | `createJudgeAssertion`、`JudgeAssertionOptions`、`JudgeAssertionBaseOptions` |
+| 契约类型   | `EnumerateCheck`、`EnumerateResult`、`HardExpectation`（重导出）             |
 
 `dryChecks` / `hardChecks` / `fuzzyChecks` 返回失败原因列表，空数组即通过；`checkListResult` 返回 `hallucinated` / `missing`。`hardChecks` 的 `args` 是浅层 JSON 相等，`toolCall` 的 `args` 是递归子集约束——两者刻意不同。
 
@@ -72,6 +74,29 @@ await criterion.evaluate(turn, {
 ```
 
 rubric 清单来自该轮 `expect`，形状由 `judge()` 现有校验把关。执行失败抛 `[not-evaluated:<kind>]`，模型未返回某项 rubric 抛 `[absent]`，只有明确 `pass:false` 才产出 0 分。
+
+### AI 断言的两种 client 入口（互斥）
+
+`JudgeAssertionOptions` 是判别联合，`client` 与 `clientOptions` 必须恰有一个（TypeScript 类型排除歧义，运行时双填或缺失均抛 `TypeError`）：
+
+```ts
+// 分支一：注入现成客户端（fake / 自定义 / 零 token 测试）
+const injected = createJudgeAssertion({ name: "answer-quality", client });
+
+// 分支二：原生 Judge 工厂配置，创建判据时同步完成纯决策装配
+const fromOptions = createJudgeAssertion({
+  name: "answer-quality",
+  clientOptions: {
+    target,
+    tags,
+    liveReviewApproved,
+    mode: "direct",
+    transport,
+  },
+});
+```
+
+`clientOptions` 分支在 `createJudgeAssertion` 调用时同步调用一次原生 `createJudgeClient`；该工厂构造期只做参数校验与 TargetTags 决策，不启动 Driver、不联网、不调用模型，attempt 资源仍由每次 `complete()` 创建与清理。类型层从「必填 client 的 interface」改为判别联合属于破坏性变更（本包 `0.0.0` private，影响可接受）。
 
 ## 依赖与边界
 

@@ -78,6 +78,9 @@ importers:
       '@types/node':
         specifier: ^25.6.0
         version: 25.9.5
+      '@x-agent-suite/llm-fixture':
+        specifier: workspace:*
+        version: link:../llm-fixture
       tsx:
         specifier: ^4.21.0
         version: 4.23.12
