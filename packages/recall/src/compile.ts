@@ -4,12 +4,13 @@
  */
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import type { Criterion, ScenarioSpec } from "@x-agent-suite/contracts";
+import type { ScenarioSpec } from "@x-agent-suite/contracts";
 import {
   parseRecallYaml,
   type RecallContextDefinition,
   type RecallDefinition,
 } from "./schema.ts";
+import type { RecallCriterionDescriptor } from "./registry.ts";
 import { readContextFiles, type RecallContextFile } from "./context.ts";
 import {
   readRecallResources,
@@ -20,8 +21,8 @@ import {
 export interface CompileRecallOptions {
   /** context.files 与 plans.source 的物理根目录。 */
   readonly rootDir: string;
-  /** 独立 registry 提供的判据。 */
-  readonly criteria: readonly Criterion[];
+  /** 独立 registry 提供的判据描述（静态判据或工厂声明；编译期只需 name/scope）。 */
+  readonly criteria: readonly RecallCriterionDescriptor[];
 }
 
 interface CompiledProvision {
@@ -31,7 +32,7 @@ interface CompiledProvision {
 
 function assertRegisteredMetrics(
   definition: RecallDefinition,
-  criteria: readonly Criterion[],
+  criteria: readonly RecallCriterionDescriptor[],
   filePath: string,
 ): void {
   const registered = new Set(

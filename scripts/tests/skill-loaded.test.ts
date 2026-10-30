@@ -12,7 +12,9 @@ async function evaluate(toolCalls: ToolCall[], expect: unknown) {
   const criterion = registry.criteria?.find(
     (item) => item.name === "skill-loaded" && item.scope === "turn",
   );
-  assert.ok(criterion?.scope === "turn");
+  if (!criterion || criterion.scope !== "turn" || !("evaluate" in criterion)) {
+    throw new Error("skill-loaded 静态判据未注册");
+  }
   const turn: TurnObservation = {
     index: 0,
     sent: "",

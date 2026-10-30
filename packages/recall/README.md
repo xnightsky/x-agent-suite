@@ -78,7 +78,7 @@ pnpm exec x-agent-suite recall --carrier consumer-carrier \
 
 ## 判据、执行参数与路由
 
-- **判据**：由消费者在 registry 注册，Recall 只透传 `expect`。AI 断言可用 [`@x-agent-suite/assertions`](../assertions)（消费者形态 `@xnightsky/x-agent-suite/assertions`）的 `createJudgeAssertion` 薄适配后注册进 `criteria`，不新增 YAML 专用字段。
+- **判据**：由消费者在 registry 注册，Recall 只透传 `expect`。除静态 Criterion 外，`criteria` 支持通用判据工厂（声明 `name`/`scope`/`create`）；运行前按已选 target 装配实际引用的工厂，每 target 一次，全部完成于主 Driver 创建之前，上下文提供同源的 target/config/tags/批准/effects。AI 断言可用 [`@x-agent-suite/assertions`](../assertions)（消费者形态 `@xnightsky/x-agent-suite/assertions`）的 `createJudgeAssertion` 薄适配后注册进 `criteria`（可注入 client 或经 `clientOptions` 由原生 Judge 工厂创建），不新增 YAML 专用字段。
 - **执行参数与路由**：`--execution-params <JSON对象>` 只交给已选 Profile/Adapter，每个 case/repeat 独立副本，不得改变 target、凭据、权限 Plan 或 live 审批；未注册、carrier 不匹配、候选不唯一或 live 未审批一律 fail-closed，不创建 Driver。
 
 ## 依赖与边界

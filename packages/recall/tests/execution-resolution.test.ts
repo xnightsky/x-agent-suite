@@ -92,6 +92,8 @@ async function resolve(options: {
   readonly liveTag?: string;
   readonly profiles?: Readonly<Record<string, RecallExecutionProfile>>;
   readonly liveReviewApproved?: boolean;
+  /** 模拟被错误摊入决策入参的 executionParams 语义字段；不得影响决策。 */
+  readonly decisionExtra?: Readonly<Record<string, unknown>>;
 }) {
   const catalog: TargetTagCatalog = {
     dictionary: await dictionary,
@@ -125,6 +127,7 @@ async function resolve(options: {
     effectsProfiles: {},
   };
   return resolveRecallExecution({
+    ...(options.decisionExtra ?? {}),
     target: options.target,
     catalog,
     effects,
@@ -271,6 +274,32 @@ test("ephemeral-client live 未审批按 direct 能力决策拒绝，诊断不�
         ],
       );
       assert.ok(details.every((detail) => !("registered" in detail)));
+      return true;
+    },
+  );
+});
+
+test("executionParams 携带批准语义字段不改变 live 批准决策", async () => {
+  // 官方加载链只把归一化的 approveLive boolean 以 liveReviewApproved 显式传入，
+  // executionParams 从不进入本决策；即便消费者错误地把批准语义字段摊进入参也不生效。
+  const executionParamsLike = {
+    approveLive: true,
+    liveApproved: true,
+    "--approve-live": true,
+  };
+  await assert.rejects(
+    resolve({
+      liveTag: "provider.usage.live.review-required",
+      target: target("ephemeral-client", "client-a"),
+      profiles: { "client-a": profile() },
+      liveReviewApproved: false,
+      decisionExtra: executionParamsLike,
+    }),
+    (error: unknown) => {
+      const { prefix, payload } = diagnostic(error);
+      assert.equal(prefix, "Recall 执行实现未唯一确定：");
+      assert.equal(payload.live, "review-required");
+      assert.equal(payload.requiredMode, "direct");
       return true;
     },
   );
