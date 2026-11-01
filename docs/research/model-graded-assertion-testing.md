@@ -89,60 +89,20 @@ MT-Bench/Chatbot Arena 原论文报告 GPT-4 与人类偏好超过 80% 一致，
 - **估计 Agent 成功率时需要。** Agent 与 Judge 两层都在变化，应保存配对原始轨迹，区分“Agent 输出变化”与“同一输出裁判翻转”；必要时采用固定输出复评来分解方差。
 - **多裁判多数表决是质量协议选择，不是默认 CI 修补。** Inspect AI 的 panel 默认 majority，无多数 unscored；本仓目前无 panel/reducer，不应为本次测试方案新增契约。[Inspect AI scorer 源码](https://github.com/UKGovernmentBEIS/inspect_ai/blob/main/src/inspect_ai/scorer/_model.py)
 
-## 评分决策声明位置：判据内部与 case 组合层
+## 与本仓 DSL 调研的关系
 
-### 公开框架同时提供两种结构
+DSL 的作者接口、KV 结构、精确命中器、逐轮边界与后续控制方向由 [第一阶段断言 DSL 作者体验调研](./recall-assertion-dsl-design.md) 承接；本文不再重复设计论证，只保留与测试分层直接相关的决策证据：
 
-- **判据内部映射：** OpenAI Evals 的 model-graded 配置用 `choice_scores` 把裁定类别映射为指标分；promptfoo 也允许单个 assertion 声明 `weight` 与 `threshold`。这种结构适合语义集中在单个评分器的场景。[OpenAI Evals 模板](https://github.com/openai/evals/blob/main/docs/eval-templates.md)、[promptfoo Assertions](https://www.promptfoo.dev/docs/configuration/expected-outputs/)
-- **组合层归约：** promptfoo 的 `assert-set` 将多个 assertion 组成一组，并在组上声明 threshold/weight；子项可以属于不同类型。Inspect AI 允许 Task 声明多个独立 scorer，也允许一个 scorer 返回多个具名值以共享昂贵计算，`multi_scorer` 再用 reducer 形成单一结果。[promptfoo Assertions](https://www.promptfoo.dev/docs/configuration/expected-outputs/)、[Inspect Multiple Scorers](https://inspect.aisi.org.uk/multiple-scorers.html)
-
-这些一手资料证明嵌套与分离都有成熟实现。它们没有规定所有框架必须采用同一种声明位置。
-
-| 声明位置          | 主要收益                                                                | 适用场景                           |
-| ----------------- | ----------------------------------------------------------------------- | ---------------------------------- |
-| Judge/scorer 内部 | 配置与单个评分器保持局部，适合一批 rubric 或一组同源 verdict 的内部归约 | 单轮、单 Judge、结果只来自该 Judge |
-| case/任务组合层   | 混合确定性与 AI 判据，统一处理多来源结果、coverage 与报告               | 多判据、多轮、需要统一场景出口分   |
-
-Inspect 对“一个 scorer 返回多个具名值以共享昂贵计算”的支持，尤其适合批量 Judge：一次模型调用产生多个 `judge.<rubric>` 结果，再由组合层消费。这与本仓批量 rubric 的执行形态一致。
-
-### 本仓选择 case 级 decision 的依据
-
-本仓已有 `ScenarioSpec.aggregate`、`resolveAggregate` 与 `AggregateResult`，已经定义混合 metric、weight、knockout、absent、threshold、rawScore、coverage 和逐维明细。case 级 `expect.decision` 可以承接这套执行契约，但作者接口保留独立的 KV 维度与 `eq / one_of / verdict / metric` 命中来源，再由编译层降低为数组与结果引用。
-
-第一阶段只评 case 最后一轮输出，每个含 `judge` 的 case 批量裁定一次。逐轮评价、跨轮计分、条件分支与提前终止属于后续独立研究方向，不能从现有多轮聚合能力反推作者 DSL 已支持这些玩法。
-
-因此，case 级分离是本仓基于现有聚合与混合判据需求作出的本地设计，而非业界唯一模式。单 Judge 内部归约可作为后续独立语法糖设计，其语义应明确限定为单轮、单 Judge 的内部评分。
-
-## 决策模型的设计校准与取舍
-
-> 以下候选结论与公开框架和本仓现有契约交叉核对，校准后的有效部分直接纳入本仓设计。
-
-| 候选设计                                                 | 校准结果                                                                                | 对本仓的有效部分                                                                                                  |
-| -------------------------------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| AI 只产具名 boolean verdict，静态 decision 唯一算分      | 与 OpenAI 的裁定/choice_scores 分层、Inspect 的 scorer/reducer 分层及本仓聚合机一致     | **采纳。** Judge 输出 `judge.<rubric>`，case 级 decision 统一计算出口                                             |
-| `absent: zero/pass/fail` 与 `(evaluated/total)` coverage | 与本仓 `AbsentMapping`、`AggregateResult.coverage` 一致；Inspect 也区分 scored/unscored | **采纳。** 整体不可评测继续走基础设施失败；decision 内的单项缺 verdict 进入 absent 映射                           |
-| 未被 decision 显式引用的 rubric 仍默认参与               | 可通过归一化与 merge 测试验证，防止精调部分维度后忽略其余 rubric                        | **采纳并统一默认值。** 隐式维沿用本仓 `weight=1`、`knockout=false`、`absent=zero`                                 |
-| verdict OR、knockout、正负 weight                        | 与本仓现有 metric 数组、knockout 短路、rawScore 可为负的语义一致                        | **采纳。** 直接复用 `resolveAggregate`，避免第二套评分机                                                          |
-| 直接答案/answers-file 作为离线输入                       | 与固定候选输出的 Judge 校准方法一致                                                     | **采纳。** 质量评估使用固定 output，分离主 Agent 方差与 Judge 方差                                                |
-| Judge grader/timeout 配置                                | timeout 与 retry 已有本仓 `judge()` 原生支持；主 AI 同源是已确认的默认路径              | **采纳执行参数。** 使用 `timeoutMs/maxRetries/instructions`；默认 target 继续复用主流程，显式 Driver 选择另设设计 |
-| 每个 case 一次批量 Judge 调用                            | 与第一阶段“一个 case 评一个最终答案”的作者模型一致                                      | **采纳。** case 级 `expect.judge` 只评最后一轮输出；逐轮评价另设设计                                              |
-| `eq/one_of/from` 字面字段抽取                            | 字面精确命中与 AI 分类是正交输入，复用同一静态聚合机即可                                | **采纳。** 在 `expect.decision` 保留字面命中器与可选抽取器，不交给 Judge，也不强制注册为分类 Criterion            |
-| 无法识别的字符串 verdict 的兜底                          | 非法字符串不应被猜测为有效裁定，解析规则需要单一且稳定                                  | **保留本仓语义。** 继续使用现有 `judge()` 的 absent/parse 规则                                                    |
-
-### 校准后对当前设计的指导
-
-1. case 级 `expect` 是断言根；`judge` 使用 KV 简写或完整对象，完整对象提供 `timeoutMs`、`maxRetries`、`instructions` 与 KV `rubrics`。
-2. `expect.decision.dimensions` 使用 KV，每维恰选 `eq / one_of / verdict / metric`，编译后复用 `AggregationSpec`。
-3. 简单模式保持全部通过才 PASS、缺 verdict 为 `[absent]`；decision 模式将单项缺失交给对应维的 absent 映射。
-4. decision 存在时，显式维度按声明精调，未引用 rubric 自动形成默认维度，coverage 始终进入报告。
-5. Judge 整体调用或解析失败统一进入 `[not-evaluated:<kind>]`，环境失败在聚合前终止。
-6. 首版只把最后一轮文本送入一次批量 Judge；具名 verdict 与字面命中结果再由现有聚合机计算 rawScore、归一分、coverage 和逐维明细。
+- AI verdict 进入 case 级静态 `decision`，因此默认 CI 可以用固定 verdict 精确验证接线与聚合。
+- 简单 absent 与整体不可评测是基础设施失败；decision 内的单项缺席是聚合输入，测试必须分别断言退出码。
+- Judge 质量评估使用固定候选输出，才能分离主 Agent 方差与 Judge 方差。
+- 首版只评最后一轮回答；逐轮评价、跨轮计分和条件控制的验证策略随后续独立设计再定义。
 
 ## 本仓落地路径
 
 实施步骤、文件落点与验收命令统一见 [AI 断言完整测试场景 Implementation Plan](../plans/2026-10-31-ai-assertion-complete-scenarios.md)。
 
-1. **默认完整场景：** 新建 `recall-judge-assertion.test.ts` 与 `recall-judge-decision.test.ts`，以 case 级 `expect.judge`、`expect.decision`、固定最终答案和脚本化 Judge transport 覆盖九个场景：简单结果、多轮只评最终回答、精确字面命中、加权否决、absent 映射、混合判据与整体不可评测。
+1. **默认完整场景：** 新建 `recall-judge-assertion.test.ts` 与 `recall-judge-decision.test.ts`，以 case 级 `expect.judge`、`expect.decision`、固定最终答案和脚本化 Judge transport 覆盖十个场景：非法 DSL、简单结果、多轮只评最终回答、精确字面命中、加权否决、absent 映射、混合判据与整体不可评测。
 2. **真实 live 冒烟：** 通过显式 token 入口运行明显 PASS 与明显 FAIL，记录 target、Judge 版本、响应解析、清理和脱敏证据。
 3. **Judge 质量评估：** 使用固定输出、人工标注开发集与保留集，报告一致率、混淆矩阵、偏差切片、未评测计数和重复裁判翻转率。
 

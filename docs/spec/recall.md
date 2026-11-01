@@ -232,7 +232,7 @@ cases:
       - send: 改用文件资源
 ```
 
-- 顶层字段为 `version/id/context/plans/cases`；case 可另含 `context` 与 `decision`，与 `id/turns/timeoutMs/metadata` 并列。`decision` 的目标契约见 [Recall 内置 Judge 与 Decision DSL](./recall-judge-dsl.md)。
+- 顶层字段为 `version/id/context/plans/cases`；case 可另含 `context` 与 `expect`，与 `id/turns/timeoutMs/metadata` 并列。`expect.decision` 的目标契约见 [Recall 内置 Judge 与 Decision DSL](./recall-judge-dsl.md)。
 - `plans.<name>.resources` 只是**当前 Recall YAML 文档内部**的资源别名注册表；禁止覆盖内置 `none`，不支持 extends、继承、深合并或跨 YAML 引用。
 - 全局 `context.plan` 是所有 case 的默认；case 未声明 context 时继承，声明时整块覆盖。`context.plan: none` 清空全局资源；case 也可改用 `context.files`。
 - 同一 context 的 `files` 与 `plan` 互斥。未注册 plan 或跨文件引用在 Driver 前失败。

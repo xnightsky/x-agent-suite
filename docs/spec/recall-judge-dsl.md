@@ -162,7 +162,7 @@ expect:
 | `eq`      | 非空字符串            | 从最终回答抽取实际值，trim、大小写不敏感后与期望值精确相等   |
 | `one_of`  | 非空字符串数组        | 实际值等于任一候选即命中                                     |
 | `verdict` | `judge.<name>` 或数组 | 引用 Judge 的 boolean verdict；数组表示 OR，任一 pass 即命中 |
-| `metric`  | 字符串或字符串数组    | 引用其他 CriterionOutcome；数组沿用现有聚合机的 OR 归约语义  |
+| `outcome` | 字符串或字符串数组    | 引用其他 CriterionOutcome；数组沿用现有聚合机的 OR 归约语义  |
 
 例如：
 
@@ -182,10 +182,10 @@ decision:
       verdict: [judge.polite, judge.concise]
 
     deterministic_evidence:
-      metric: text-contains
+      outcome: text-contains
 ```
 
-`metric` 是本仓为混合确定性判据保留的连接口，不把字面命中器塞进 Judge，也不要求所有判断都先注册成分类。
+`outcome` 是本仓为混合确定性判据保留的连接口，明确引用 `CriterionOutcome` 而非数值指标；不把字面命中器塞进 Judge，也不要求所有判断都先注册成分类。编译后仍映射到内部 `DimensionSpec.metric`。
 
 ### `from`：字面维的可选抽取器
 
@@ -202,21 +202,22 @@ decision:
 
 规则：
 
-- `from` 是含一个捕获组的正则，只用于 `eq / one_of`。
-- 未声明时使用 `^<维度名>: <值>$` 的行约定，维度名因此也是默认字段名。
+- `from` 是含一个捕获组的正则，只用于 `eq / one_of`；正则按 `m` 多行模式逐行求值，`^` 与 `$` 锚定行边界。
+- 不允许显式 flags、`s / g / y / u / v` 语义或 lookahead/lookbehind，避免跨行吞并、状态残留和灾难性回溯；作者需要更复杂的抽取时，应通过自定义确定性 Criterion 提供 `outcome`。
+- 未声明时使用 `^<维度名>: <值>$` 的行约定，同一 `m` 语义，维度名因此也是默认字段名。
 - 正则无法匹配、匹配结果为空或输入不存在时，该维为 absent，不猜测实际值。
-- `verdict / metric` 维禁止声明 `from`。
+- `verdict / outcome` 维禁止声明 `from`。
 
 ### 计分字段
 
-| 字段        | 默认值  | 语义                                                      |
-| ----------- | ------- | --------------------------------------------------------- |
-| `weight`    | `1`     | 命中 `+weight`、未命中 `−weight`                          |
-| `knockout`  | `false` | 映射后未命中时直接否决整个 case                           |
-| `absent`    | `zero`  | 缺席映射：`zero / pass / fail`                            |
-| `threshold` | 省略    | 对归一分设置通过线；省略时要求全部计入维命中且无 knockout |
+| 字段        | 默认值  | 语义                                                                          |
+| ----------- | ------- | ----------------------------------------------------------------------------- |
+| `weight`    | `1`     | 命中 `+weight`、未命中 `−weight`                                              |
+| `knockout`  | `false` | 映射后未命中时直接否决整个 case                                               |
+| `absent`    | `zero`  | 缺席映射：`zero / pass / fail`                                                |
+| `threshold` | 省略    | 任意有限数；对可为负的归一分设置通过线。省略时要求全部计入维命中且无 knockout |
 
-`absent: zero` 贡献 0 且不计入 maxScore；`pass` 按命中计入；`fail` 按未命中计入。coverage 统计映射前非缺席维数，`absent: pass/fail` 不会倒推提高 coverage。
+`absent: zero` 贡献 0 且不计入 maxScore；`pass` 按命中计入；`fail` 按未命中计入。coverage 统计映射前非缺席维数，`absent: pass/fail` 不会倒推提高 coverage。Recall `expect.decision` 基于通用聚合结果的 coverage 执行零覆盖门禁：`coverage.evaluated=0` 时默认 `pass=false`，即使 threshold 较低也不能让空考通过；只有至少一个维度显式声明 `absent: pass`，才表示作者允许缺证据宽免，可继续按映射、knockout 与 threshold 判定。
 
 ### 默认参与与引用完整性
 
@@ -225,7 +226,7 @@ decision:
 1. 显式维度按声明精调。
 2. 未被任何 `verdict` 引用的 rubric 自动形成隐式维度：`weight=1`、`knockout=false`、`absent=zero`。
 3. `verdict: judge.<name>` 必须引用当前 case 已声明的 rubric，未知引用在编译期拒绝。
-4. `metric` 引用沿用现有聚合机的 outcome 与 absent 规则。
+4. `outcome` 引用沿用现有聚合机的 outcome 与 absent 规则。
 5. 所有维度保留作者声明的 KV key，报告中必须能区分“维度名”和“命中来源”。
 
 ## 编译与执行分层
@@ -240,13 +241,13 @@ case.expect.judge（KV）
 
 case.expect.decision.dimensions（KV）
   → eq / one_of 编译为字面抽取与精确匹配
-  → verdict / metric 保留为结果引用
+  → verdict / outcome 保留为结果引用
   → 统一降低为 CriterionOutcome[] + DimensionSpec[]
   → resolveAggregate
   → ScenarioResult + artifact.aggregate + JSON 报告
 ```
 
-精确命中发生在 Recall 编译/判据适配层，现有聚合机继续只做三态归约与算术，不引入第二套评分机。
+精确命中与零覆盖门禁发生在 Recall 编译/判据适配层，现有聚合机继续只做三态归约与算术，不引入第二套评分机，也不改变既有 `ScenarioSpec.aggregate` 的空考行为。
 
 只有 `ScenarioSpec.expandOutcomes` 显式列出的判据才能调用 `evaluateMany()`；既有 `createJudgeAssertion + aggregate` 未声明该字段时保持原单结果名称与行为。
 
@@ -255,9 +256,9 @@ case.expect.decision.dimensions（KV）
 - YAML 重复 key 必须在解析期拒绝，禁止后者覆盖前者。
 - rubric 名与维度名必须非空且不得包含 `.`，避免 `judge.<name>` 引用歧义。
 - 完整 `judge` 对象、rubric 项、decision 与维度项均使用封闭 schema，未知字段在编译期拒绝。
-- 每维必须恰好声明 `eq / one_of / verdict / metric` 之一。
+- 每维必须恰好声明 `eq / one_of / verdict / outcome` 之一。
 - `verdict` 必须使用 `judge.` 前缀并引用已声明 rubric。
-- 字面维与 `from` 的组合、正则捕获组、正权重及执行参数在编译期校验。
+- 字面维与 `from` 的组合、正则捕获组、多行行边界、受限 flags/语法、正权重、有限 threshold 及执行参数在编译期校验。
 
 | 场景                                     | 结果语义                                               |
 | ---------------------------------------- | ------------------------------------------------------ |
@@ -290,8 +291,10 @@ case.expect.decision.dimensions（KV）
 - `eq` 精确命中、`one_of`、默认行约定与自定义 `from`。
 - `verdict` 单项引用、OR、weight 与 knockout。
 - 未引用 rubric 的隐式维度、未知引用与重复 key 拒绝。
+- 非法 DSL 的定义错误场景返回 CLI=2，主 transport 与 Judge transport 均无调用。
 - decision absent 映射、coverage、rawScore 与归一分。
-- `metric` 与 Judge verdict 的混合聚合。
+- Recall `expect.decision` 的零覆盖门禁与既有通用 aggregate 空考行为保持分离。
+- `outcome` 与 Judge verdict 的混合聚合。
 - 完整 judge 执行参数与 direct/borrowed 独立会话清理。
 
 ## 后续发展方向（不属于第一阶段）

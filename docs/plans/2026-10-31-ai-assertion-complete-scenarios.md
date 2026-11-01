@@ -48,7 +48,7 @@ cases:
             absent: fail
 ```
 
-简写 `judge` 直接是 KV 裁定池；完整对象把裁定池放入 `rubrics`。`eq / one_of` 从最终回答抽取字面值，`verdict` 引用 Judge，`metric` 引用其他判据结果。每维必须恰选一种来源。
+简写 `judge` 直接是 KV 裁定池；完整对象把裁定池放入 `rubrics`。`eq / one_of` 从最终回答抽取字面值，`verdict` 引用 Judge，`outcome` 引用其他判据结果。每维必须恰选一种来源。
 
 ## 固定执行数据
 
@@ -74,7 +74,8 @@ chosen_skill: recall-author
 - 第一阶段只实现 case 级 `expect.judge / expect.decision`，只评最后一轮输出。
 - 不实现逐轮 Judge、AI 条件分支、动态后续提示词或提前终止。
 - 作者接口使用 KV；执行层继续使用数组，不为对齐内部实现把列表暴露给考卷作者。
-- 每维恰选 `eq / one_of / verdict / metric`；`from` 仅用于字面维。
+- 每维恰选 `eq / one_of / verdict / outcome`；`from` 仅用于字面维，作者 `outcome` 编译到内部 `DimensionSpec.metric`。
+- threshold 接受任意有限数；Recall `expect.decision` 的零 coverage 默认 FAIL，只有显式 `absent: pass` 才允许缺证据宽免。
 - 简单 `CriterionResult.score` 保持 0/1；decision 的 rawScore 与归一分只由 `resolveAggregate` 出口。
 - 未引用 rubric 自动形成 `weight=1`、`knockout=false`、`absent=zero` 的隐式维度。
 - 默认测试使用临时工作区、合成配置和 fake transport，保持零网络、零 token。
@@ -88,6 +89,7 @@ chosen_skill: recall-author
 - `eq / one_of` 缺抽取值不得猜测为 false，必须进入 absent；Task 2 与 Task 4 覆盖。
 - 作者维度名与命中来源不得互相覆盖；Task 2 固定报告中的 `name` 与 `metric`。
 - `ScenarioSpec.expandOutcomes` 只能展开显式列名判据，既有 `createJudgeAssertion + aggregate` 保持单结果兼容；Task 2 覆盖。
+- Recall `expect.decision` 的零 coverage 不得因缺省规则或负 threshold 免费变绿；Task 2 与 Task 4 覆盖适配层默认 FAIL 和显式宽免，既有通用 aggregate 空考行为保持兼容。
 - 异步 borrowed 创建、取消与迟到 Driver 不得泄漏；Task 3 覆盖。
 
 ---
@@ -154,14 +156,15 @@ chosen_skill: recall-author
 - `TurnCriterionOutcome.state?: "evaluated" | "absent"`，缺省 evaluated，缺失 verdict 必须产生显式 absent outcome。
 - `ScenarioSpec.expandOutcomes` 与 `RunCriteriaOptions.expandOutcomes` 使用判据名数组，仅显式列出的 group 展开。
 - `DimensionSpec.name?` 与 `DimensionOutcome.name?` 保留作者维度 KV key；`metric` 继续保存命中来源。
-- 字面维编译为确定性判据结果，`verdict / metric` 编译为结果引用，统一进入 `resolveAggregate`。
+- 字面维编译为确定性判据结果，`verdict / outcome` 编译为结果引用，统一进入 `resolveAggregate`；作者 `outcome` 映射到内部 `DimensionSpec.metric`。
 
 - [ ] **Step 1: 编写精确命中与多值结果失败测试**
 
   - `eq` trim、大小写不敏感；`one_of` 任一候选命中。
-  - 默认行约定使用维度 key，自定义 `from` 必须含一个捕获组。
+  - 默认行约定使用维度 key，自定义 `from` 必须含一个捕获组，并按 `m` 多行行边界匹配；显式 flags 与 lookahead/lookbehind 被拒绝。
   - 抽取缺失产生 absent，不得当成明确 false。
   - `verdict` 字符串与数组 OR、隐式维、coverage、weight 与 knockout 正确。
+  - threshold 接受负值等任意有限数并拒绝 NaN/Infinity；Recall decision 适配层对零覆盖默认 FAIL，显式 `absent: pass` 才可继续按映射判定；既有 `ScenarioSpec.aggregate` 空考行为保持不变。
   - 报告同时保留作者 `name` 与来源 `metric`。
   - 显式 expandOutcomes 时产生实际与 absent outcomes；未声明时既有 Judge + aggregate 保持原单结果名称。
   - `TurnCriterionGroup` 与新增维度字段经 `@x-agent-suite/contracts` 公开入口可用。
@@ -217,24 +220,25 @@ chosen_skill: recall-author
 - fake transport 按主执行 prompt 与 `policy: judge-v1` 分流响应。
 - 测试状态记录主执行文本、Judge prompt 并在每次工作区创建时重置。
 
-- [ ] **Step 1: 编写简单四场景**
+- [ ] **Step 1: 编写定义错误与简单五场景**
 
-  | 场景                | 预期证据                                                     |
-  | ------------------- | ------------------------------------------------------------ |
-  | PASS + 多轮最终回答 | CLI=0；准备轮不进入 Judge；最终回答和完整 rubric 进入 prompt |
-  | 明确 FAIL           | CLI=0；报告保留失败 rubric 与 reason                         |
-  | absent              | CLI=1；failure 含 `[absent]` 与缺项名                        |
-  | not-evaluated       | CLI=1；failure 含 `[not-evaluated:`，诊断隐藏合成 secret     |
+  | 场景                | 预期证据                                                          |
+  | ------------------- | ----------------------------------------------------------------- |
+  | 非法 DSL            | CLI=2；诊断指向定义错误；主 transport 与 Judge transport 均无调用 |
+  | PASS + 多轮最终回答 | CLI=0；准备轮不进入 Judge；最终回答和完整 rubric 进入 prompt      |
+  | 明确 FAIL           | CLI=0；报告保留失败 rubric 与 reason                              |
+  | absent              | CLI=1；failure 含 `[absent]` 与缺项名                             |
+  | not-evaluated       | CLI=1；failure 含 `[not-evaluated:`，诊断隐藏合成 secret          |
 
 - [ ] **Step 2: 编写 decision 五场景**
 
-  | 场景                         | 预期证据                                              |
-  | ---------------------------- | ----------------------------------------------------- |
-  | `eq` + 默认行约定 + knockout | 精确选中字段；命中/未命中与否决原因正确               |
-  | `one_of` + 自定义 `from`     | 任一候选命中；无捕获时进入 absent                     |
-  | verdict 权重 + OR + 隐式维   | 显式权重精确生效，未引用 rubric 仍参与，coverage 正确 |
-  | decision absent 映射         | 缺 verdict 或缺字面值进入对应映射，内容结果 CLI=0     |
-  | metric 混合判据              | 确定性 metric 与 `judge.<rubric>` 进入同一静态出口    |
+  | 场景                         | 预期证据                                                                                |
+  | ---------------------------- | --------------------------------------------------------------------------------------- |
+  | `eq` + 默认行约定 + knockout | 精确选中字段；命中/未命中与否决原因正确                                                 |
+  | `one_of` + 自定义 `from`     | 任一候选命中；多行行边界正确；无匹配时进入 absent                                       |
+  | verdict 权重 + OR + 隐式维   | 显式权重精确生效，未引用 rubric 仍参与，coverage 与负 threshold 正确                    |
+  | decision absent 映射         | 缺 verdict 或缺字面值进入对应映射；Recall 零覆盖默认 FAIL，显式宽免生效，内容结果 CLI=0 |
+  | outcome 混合判据             | 确定性 outcome 与 `judge.<rubric>` 进入同一静态出口                                     |
 
 - [ ] **Step 3: 运行两个目标测试并记录实现缺口**
 
@@ -242,7 +246,7 @@ chosen_skill: recall-author
   pnpm exec tsx --test packages/recall/tests/recall-judge-assertion.test.ts packages/recall/tests/recall-judge-decision.test.ts
   ```
 
-- [ ] **Step 4: 完成 fixture 并重跑，确认九个场景全部通过**
+- [ ] **Step 4: 完成 fixture 并重跑，确认十个场景全部通过**
 
 ### Task 5: 同步文档并执行回归
 
@@ -261,6 +265,7 @@ chosen_skill: recall-author
 - Modify: `docs/spec/boundary-discipline.md`
 - Modify: `docs/tutorial/recipes/recall.md`
 - Modify: `docs/research/model-graded-assertion-testing.md`
+- Modify: `docs/research/recall-assertion-dsl-design.md`
 - Modify: `docs/research/README.md`
 - Modify: `docs/README.md`
 - Modify: `docs/spec/README.md`

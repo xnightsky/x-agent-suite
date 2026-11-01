@@ -14,3 +14,4 @@
 | [skill-mixed-execution.md](./skill-mixed-execution.md)                         | 混合执行场景承载力：skill+脚本+CLI / 依赖嵌套 / 安装布局的业界做法 |
 | [pi-models-auth-resolution.md](./pi-models-auth-resolution.md)                 | Pi models/auth 同键关联、凭据优先级与 MCP 显式 auth.provider       |
 | [model-graded-assertion-testing.md](./model-graded-assertion-testing.md)       | AI 断言的确定性接线、真实模型分层与 Judge 质量校准                 |
+| [recall-assertion-dsl-design.md](./recall-assertion-dsl-design.md)             | Recall 断言 DSL 的 KV、精确命中、命名与逐轮控制设计调研            |
