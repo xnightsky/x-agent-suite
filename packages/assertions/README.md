@@ -75,6 +75,8 @@ await criterion.evaluate(turn, {
 
 rubric 清单来自该轮 `expect`，形状由 `judge()` 现有校验把关。执行失败抛 `[not-evaluated:<kind>]`，模型未返回某项 rubric 抛 `[absent]`，只有明确 `pass:false` 才产出 0 分。
 
+Recall 的内置 case 级 `expect.judge`、完整执行配置和 `expect.decision` 目标契约见 [`docs/spec/recall-judge-dsl.md`](../../docs/spec/recall-judge-dsl.md)。该路径复用本包的 Judge 断言与多值 verdict 适配能力；作者侧 KV 在编译层转换为现有数组接口。
+
 ### AI 断言的两种 client 入口（互斥）
 
 `JudgeAssertionOptions` 是判别联合，`client` 与 `clientOptions` 必须恰有一个（TypeScript 类型排除歧义，运行时双填或缺失均抛 `TypeError`）：

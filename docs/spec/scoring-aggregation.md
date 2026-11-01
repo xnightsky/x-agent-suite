@@ -55,7 +55,7 @@ AggregateResult               （出口：pass + 归一分 + 原始分 + coverag
 
 ```mermaid
 flowchart TD
-    A["CriterionOutcome[]<br/>判据已产出的具名 pass/fail"] --> B["逐维求三态<br/>同名全过=hit · 有结果未过=miss · 无结果=absent<br/>（OR 数组：任一命中即 hit）"]
+    A["CriterionOutcome[]<br/>判据已产出的具名 pass/fail"] --> B["逐维求三态<br/>任一同名结果 absent=absent · 否则同名全过=hit · 有结果未过=miss<br/>无结果=absent（OR 数组：任一命中即 hit）"]
     B --> C{"state = absent?"}
     C -->|是| D["absent 映射<br/>zero=中立不进分母<br/>pass=视为命中 · fail=视为未中"]
     C -->|否| E["hit → +weight<br/>miss → −weight"]
@@ -145,15 +145,15 @@ export declare function resolveAggregate(
 
 语义细节（实现级口径，代码以此为准）：
 
-- **维度状态（映射前）**：该 `metric` 名下有判定结果且**全部** `pass=true` → hit；有结果但至少一个 `pass=false` → miss；名下无任何结果 → absent。同名多结果（turn 判据每轮一条）取严格口径「全过才算命中」，与 hard 门禁哲学一致。
-- **metric 数组（OR）**：任一引用 metric 为 hit → 本维 hit；引用都有结果但无一 hit → miss；引用全部无结果 → absent。
+- **维度状态（映射前）**：该 `metric` 名下任一结果显式 `state: "absent"`，或名下无任何结果 → absent；否则全部 `pass=true` → hit，至少一个 `pass=false` → miss。`state` 缺省为 evaluated。同名多结果（turn 判据每轮一条）取完整覆盖口径：任一轮 absent 即整个 metric absent，全部轮次有结果且全过才算命中。
+- **metric 数组（OR）**：先按上条求各引用 metric 的状态；任一引用为 hit → 本维 hit；无 hit 但至少一个引用为 miss → 本维 miss；引用全部为 absent → 本维 absent。
 - **absent 映射**：`zero` → 贡献 0、**不计入** maxScore（中立，靠 coverage 披露）；`pass` → 视为 hit、计入 maxScore；`fail` → 视为 miss、计入 maxScore。
 - **maxScore**：计入维（hit / miss / absent→pass / absent→fail）的 weight 总和；全部维度 absent→zero 或无维度时 `maxScore = 0`，`score` 记 0。
 - **负分是刻意的**：未命中 `−weight` 惩罚臆答/乱答（「不答」经 `absent: zero` 反而中立），防止「蒙一个总比不答划算」。这是与 promptfoo（miss 计 0）的有意分歧。归一分 `score = rawScore / maxScore` 不截断到 `[0,1]`，负分原样进报告——「比零分还差」是有信息量的。报告 reason 必须体现每维贡献。
 - **判定顺序**：knockout 短路 → 累加 → threshold / 缺省 pass 判定。任一 `knockout` 维**映射后**非 hit（含 absent→zero / absent→fail）→ `pass=false`，压过累加与 threshold。环境失败应在上游判据层被拦（不产出结果、走 `FailureCategory`），到达聚合机的 absent 只是数据。
 - **pass 判定**：knockout 未触发，且 `threshold` 存在时 `score >= threshold`；省略时计入维全部 hit。
 - **空考警示**：`coverage.evaluated = 0`（无任何在场维）时 reason 必须显式声明「无在场维度」——机制上不替场景做 zero/fail 选择，但绝不允许「免费绿」被静默误读。
-- **coverage**：`evaluated` = 映射前非缺席维数，`total` = 声明维数。
+- **coverage**：`evaluated` = OR 归约后、映射前非缺席维数，`total` = 声明维数。多轮部分 absent 的 metric 不计入 `evaluated`；若它属于 OR 维度，则以整个维度的归约状态为准。`absent: pass/fail` 只影响计分，不倒推提高 coverage。
 - **引用完整性**：`metric` 引用了任何判据都未产出的名字时，按 absent 处理（不报错），但 `resolveAggregate` 在 reason 中逐个点名，供场景作者发现拼写错误（呼应 [scenario-dsl.md](./scenario-dsl.md) 的引用完整性校验原则）。
 
 ## 接线位置
@@ -169,11 +169,11 @@ provision（铺安装态，消费者写）
 
 - **类型**：`@x-agent-suite/contracts`（与本包「只导出类型」一致，上述接口均为类型声明）。
 - **实现**：`@x-agent-suite/observation` 新增 `resolveAggregate` 纯函数——该包已是「判据结果 → 报告」的汇聚点。
-- **spec 载体**：当前框架无通用 runner（P3 未交付），聚合声明由消费者放在自己的场景文件 / `metadata` 自由区，调用 `resolveAggregate` 后把 `AggregateResult` 塞进 `ScenarioResult.evidence` 进报告。runner 落地时再定官方载体，本设计不预设。
+- **spec 载体**：`ScenarioSpec.aggregate` 是运行时聚合入口；Recall 的 case 级 `expect.decision` 目标契约编译到该字段。作者侧的 `eq / one_of / verdict / metric` 先降低为具名结果与维度引用，再同时支持 `judge.<rubric>` 与确定性 metric，详见 [Recall 内置 Judge 与 Decision DSL](./recall-judge-dsl.md)。
 
 ## judge 接入面（通用执行器，不内建领域判据）
 
-- `@x-agent-suite/judge` 提供通用批量裁定执行器，输出 `JudgeVerdict`，不是 `CriterionOutcome`。消费者自行把具名布尔裁定适配为判据结果，再进入聚合机；框架仍不内建任何领域判据，分数恒由静态机出口。完整契约见 [judge.md](./judge.md)。
+- `@x-agent-suite/judge` 提供通用批量裁定执行器，输出 `JudgeVerdict`，不是 `CriterionOutcome`。Recall 第一阶段目标适配层在简单模式产生单个 `judge` 结果，在 case `expect.decision` 下展开 `judge.<rubric>` 多值结果，再进入聚合机；分数恒由静态机出口。完整契约见 [judge.md](./judge.md) 与 [Recall 内置 Judge 与 Decision DSL](./recall-judge-dsl.md)。
 - Judge 复用 live 配置与 `LiveBackend`，通过通用 TargetTags 决策 direct/borrowed；唯一候选可自动选择，多候选必须显式 mode/cliRef，借用凭据不等于 direct 授权，失败不跨 mode fallback。真实裁判调用属于 token 消耗，只能在显式 token 测试层运行。
 - **失败分层**：单项缺失或无法识别是 `completed + absent`，由消费者决定 absent 映射；整体未配置、调用失败或不可解析是 `not-evaluated`，不得直接压成内容零分。
 

@@ -102,6 +102,8 @@ x-agent-suite recall   --carrier consumer-carrier   --live-config private-live.y
 
 Runner 只消费场景 provision，不做执行 provision 合并。资源 source/destination 经过 realpath 与逃逸校验；profile 负责物化和 finally cleanup。挂载不等于模型实际读取，行为仍由 Observation/Criterion 验证。
 
+> 本 recipe 展示消费者手动组合 Judge client 与 Assertions 的方式。Recall 内置 case 级 `expect.judge`、`expect.decision`、KV 精确评分维和默认同源装配的目标契约见 [`docs/spec/recall-judge-dsl.md`](../../spec/recall-judge-dsl.md)。
+
 ## Judge + Pi borrowed + Assertions
 
 现有公开能力可以直接组合，不需要消费者另写裁判启动、发送、清理或普通 verdict 转换。运行同一教程即可覆盖这条链：

@@ -259,8 +259,8 @@ Judge 与 Assertions 来自独立公开 bundle 时，`JudgeModelError` 仍保留
 
 ## 与 Criterion、decision、Recall 的关系
 
-Judge 的结果不是 `CriterionResult`。可用 `@x-agent-suite/assertions` 的 `createJudgeAssertion` 适配为 `TurnCriterion`，或由消费者自行映射；该薄适配按每轮 `expect: JudgeRubric[]` 取规则，缺证据与不可评测显式抛错。若需聚合，再把结果交给静态聚合机。weight、threshold、knockout、decision 和 absent 计分映射均不在 Judge 内。
+Judge 的结果不是 `CriterionResult`。可用 `@x-agent-suite/assertions` 的 `createJudgeAssertion` 适配为 `TurnCriterion`，或由消费者自行映射；该薄适配按每轮 `expect: JudgeRubric[]` 取规则，缺证据与不可评测显式抛错。Recall 第一阶段目标设计则在 case 级 `expect.judge` 使用 KV 裁定池，只评最后一轮回答，并在 `expect.decision` 下把实际 verdict 展开为 `judge.<rubric>` 多值结果，再交给静态聚合机；详见 [Recall 内置 Judge 与 Decision DSL](./recall-judge-dsl.md)。weight、threshold、knockout、decision 和 absent 计分映射均不在 Judge 内。
 
 公开入口已支持 `createJudgeClient({mode:"borrowed"}) + profiles/pi-recall.createPiRecallDriver + createJudgeAssertion` 的直接组合。消费者的 `createDriver` 只需把 `backend/target/cliRef` 显式适配到 Pi 工厂，并提供独立的单轮 spec 与 `effects:none`；不得复制裁判生命周期、复用主运行 spec/provision/workspace，或把原考卷、评分实现和秘密环境交给裁判。最小可执行接法及合成宿主验证见 [Judge + Pi borrowed + Assertions](../tutorial/recipes/recall.md#judge--pi-borrowed--assertions)。该组合不改变不可评测/absent 语义，也不提供 judge()/assertion 级外部 signal。
 
-原生 Recall v1 的 YAML、config、compile、run 与 CLI 不因本包改变；`expected.judge/decision` 仍不是原生 Recall 字段。默认测试使用 fake client/transport/driver，真实 provider 或具体宿主验证必须走显式 token 集成入口。
+Recall 的内置 `expect.judge` 目标契约见 [Recall 内置 Judge DSL](./recall-judge-dsl.md)：标准 AI 断言默认复用主 AI 同源配置，每次裁定创建独立会话。默认测试使用 fake client/transport/driver，真实 provider 或具体宿主验证走显式 token 集成入口。

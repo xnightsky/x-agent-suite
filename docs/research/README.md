@@ -13,3 +13,4 @@
 | [on-demand-install-artifact-matrix.md](./on-demand-install-artifact-matrix.md) | 按需安装形态评估：为什么不现在扩展制品矩阵                         |
 | [skill-mixed-execution.md](./skill-mixed-execution.md)                         | 混合执行场景承载力：skill+脚本+CLI / 依赖嵌套 / 安装布局的业界做法 |
 | [pi-models-auth-resolution.md](./pi-models-auth-resolution.md)                 | Pi models/auth 同键关联、凭据优先级与 MCP 显式 auth.provider       |
+| [model-graded-assertion-testing.md](./model-graded-assertion-testing.md)       | AI 断言的确定性接线、真实模型分层与 Judge 质量校准                 |

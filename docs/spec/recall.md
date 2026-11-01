@@ -62,7 +62,7 @@ x-agent-suite recall \
 
 ## 独立 registry
 
-`--registry` 是显式模块路径；无路径时使用空注册表，不读取任何默认 TS 文件。考卷引用 metric、使用 borrowed/ephemeral-client 或 `effects.use` 时，必须在 registry 注册对应实现。
+`--registry` 是显式模块路径；无路径时使用空注册表，不读取任何默认 TS 文件。考卷引用自定义 metric、使用 borrowed/ephemeral-client 或 `effects.use` 时，必须在 registry 注册对应实现；内置 `expect.judge` 由框架提供。
 
 ```ts
 import type { RecallRegistry } from "@xnightsky/x-agent-suite/recall";
@@ -110,77 +110,42 @@ export default registry;
 
 ### 通用判据工厂
 
-`criteria` 支持静态 Criterion 与通用工厂混合注册。工厂只声明 `name`、`scope` 与 `create`，加载期要求 `evaluate` 与 `create` 恰有一个；编译期只按 name/scope 描述符验证考卷引用，不为工厂伪造 `evaluate`。
+`criteria` 支持静态 Criterion 与通用工厂混合注册，用于扩展自定义判据。工厂只声明 `name`、`scope` 与 `create`，加载期要求 `evaluate` 与 `create` 恰有一个；编译期按 name/scope 描述符验证自定义判据引用。
 
-```ts
-import { createJudgeAssertion } from "@xnightsky/x-agent-suite/assertions";
+运行前按已选 target 装配实际引用的自定义工厂，每 target 每工厂恰好调用一次，全部完成于任何主 Driver 创建之前，case 与 repeat 复用同一闭包。装配上下文提供同源的 target/config/tags/live 批准、cliRef/clientRef 与 effects，具体契约见 [Recall 运行时组合](./recall-runtime-composition.md)。
 
-const registry: RecallRegistry = {
-  criteria: [
-    ...consumerCriteria,
-    {
-      name: "answer-quality",
-      scope: "turn",
-      create({ target, config, tags, liveReviewApproved, cliRef, effects }) {
-        return createJudgeAssertion({
-          name: "answer-quality",
-          clientOptions: {
-            target,
-            config,
-            tags,
-            liveReviewApproved,
-            ...(cliRef ? { cliRef } : {}),
-            mode: "borrowed",
-            toolPolicy: "none",
-            createDriver: (attempt) =>
-              consumerJudgeDriverAdapter({
-                ...attempt,
-                timeoutMs: effects.timeoutMs,
-              }),
-          },
-          maxRetries: 0,
-        });
-      },
-    },
-  ],
-  // ...profiles/effectsProfiles 同静态注册。
-};
-```
-
-装配语义：
-
-- 运行前按已选 target 装配实际引用的工厂（引用按 expect 键存在性判断，`false`/`0`/`null`/空串都算引用）；每 target 每工厂恰好调用一次，全部完成于任何主 Driver 创建之前，case 与 repeat 复用同一闭包。
-- 装配上下文（`RecallCriterionFactoryContext`）提供与主执行同源的 `target`、`config`、`tags`、`liveReviewApproved`（同一 `--approve-live` 归一化 boolean）、`cliRef`/`clientRef` 与 `effects`；工厂不得重读环境或再次选择模型。
-- 装配只准备闭包与无资源 client，不启动 Driver、不联网、不调用模型；工厂返回的 name/scope 必须与声明严格一致，否则装配期拒绝，错误只含 `scope:name` 与阶段，不回显 context/config。
-- 未引用工厂不调用；session scope 工厂声明合法，但当前考卷 DSL 只有 turn 级 `expect`，不会被引用装配。
+`turn:judge` 与 `turn:judge.*` 是框架的标准保留命名空间，registry 为其他自定义判据提供实现。
 
 ### 考卷侧驱动：expect 即判据输入
 
-判据在 registry（TS）注册一次后，考卷作者只用 YAML 驱动。`expect` 的键按名字引用已注册判据，值原样透传给判据的 `evaluate`——框架不解释其形状，每个判据自己定义 expect 的协议。对 `createJudgeAssertion` 产出的 AI 断言，expect 值就是当轮 rubric 清单：
+> 以下内置 `judge` / `decision` 为第一阶段已确认的目标契约，尚未实现；实施计划将在书面规格确认后重排。
+>
+> case 的执行过程与断言配置分离，`expect` 是断言根：
 
 ```yaml
 cases:
   - id: answer-quality
     turns:
+      - send: 先阅读规则
       - send: 介绍这个仓库
-        expect:
-          answer-quality:                  # 引用 registry 中同名判据；键出现即启用
-            - name: 准确性
-              rubric: 回答必须说出三个核心包
-            - name: 诚实性
-              rubric: 不确定的内容必须明说
+    expect:
+      judge:
+        准确性:
+          rubric: 回答必须说出三个核心包
+        诚实性:
+          rubric: 不确定的内容必须明说
 ```
 
-开放层次的分工：
+首版只评最后一轮回答。标准 Judge 默认使用主流程的 AI 配置，每次裁定创建独立会话。完整 KV 裁定池、精确命中器、装配与结果语义见 [Recall 内置 Judge 与 Decision DSL](./recall-judge-dsl.md)。
 
-| 谁             | 能决定什么                                                                     | 在哪写   |
-| -------------- | ------------------------------------------------------------------------------ | -------- |
-| 考卷作者       | 引用哪个判据、每轮的 rubric 内容与条数、哪一轮启用（`false`/`0`/`null` 也算启用） | 考卷 YAML |
-| 命令行调用方   | 用哪个 target（含裁判模型）与 live 批准                                       | CLI 参数 |
-| registry 作者  | 判据名注册、Judge 的 mode/toolPolicy/timeoutMs/maxRetries、独立 Driver 适配   | TS 模块  |
+其他 expect 键继续按名称引用 registry 自定义判据，值原样透传给对应 `evaluate`。标准 Judge 与自定义判据可以在同一 case 级 `expect` 组合。
 
-框架刻意不把判据名注册或 Judge 执行参数放进 YAML：零内建判据是边界硬约束，DSL 不内置 `judge` 之类的判据概念。新增评分点若可复用同一判据语义，考卷作者直接加 rubric 即可，不需要新判据名；确需新判据语义时才改 registry。
-
+| 谁            | 能决定什么                                                            | 在哪写         |
+| ------------- | --------------------------------------------------------------------- | -------------- |
+| 考卷作者      | 最终回答的 rubric、精确评分维、是否启用标准 Judge、引用哪些自定义判据 | 考卷 YAML      |
+| 命令行调用方  | 主执行与默认 Judge 同源使用的 target 与 live 批准                     | CLI 参数       |
+| registry 作者 | 自定义判据、执行 profile、transport 与其他扩展实现                    | TS 模块        |
+| 框架          | 标准 Judge 装配、独立裁定会话与结果映射                               | Recall / Judge |
 
 ## 单次运行参数
 
@@ -267,7 +232,7 @@ cases:
       - send: 改用文件资源
 ```
 
-- 顶层字段为 `version/id/context/plans/cases`；case 可另含 `context`，与 `id/turns/timeoutMs/metadata` 并列。
+- 顶层字段为 `version/id/context/plans/cases`；case 可另含 `context` 与 `decision`，与 `id/turns/timeoutMs/metadata` 并列。`decision` 的目标契约见 [Recall 内置 Judge 与 Decision DSL](./recall-judge-dsl.md)。
 - `plans.<name>.resources` 只是**当前 Recall YAML 文档内部**的资源别名注册表；禁止覆盖内置 `none`，不支持 extends、继承、深合并或跨 YAML 引用。
 - 全局 `context.plan` 是所有 case 的默认；case 未声明 context 时继承，声明时整块覆盖。`context.plan: none` 清空全局资源；case 也可改用 `context.files`。
 - 同一 context 的 `files` 与 `plan` 互斥。未注册 plan 或跨文件引用在 Driver 前失败。

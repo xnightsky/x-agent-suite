@@ -49,6 +49,8 @@ PTY、headless、sandbox 是机制，smoke 是抽样范围，contract 是验证�
 
 `packages/recall/tests/registry.test.ts`、`criterion-assembly.test.ts` 与 `recall-assembly.test.ts` 同属零 token 单元测试：registry 校验覆盖静态判据与通用工厂混合注册的加载期形状把关；装配测试用合成 registry/scenarios/execution 验证引用键存在性、每 target 一次、形状校验与安全错误包装；CLI 装配路径用合成 registry + fake profile driver 验证装配早于主 Driver、repeat/case 复用闭包与批准同源到达。
 
+AI 断言完整场景的目标验收以 [`docs/spec/recall-judge-dsl.md`](./recall-judge-dsl.md) 为准：使用 case 级 `expect.judge` 与 `expect.decision`、固定最终输出和脚本化 Judge transport，覆盖简单 PASS/FAIL/absent/not-evaluated、精确字面命中、加权否决、absent 映射、混合判据与多轮只评最后回答。现有实施计划将在书面规格确认后重排，测试文件与场景数量不沿用旧计划推断。
+
 `packages/recall/tests/execution-resolution.test.ts` 与 `execution-params.test.ts` 用合成 catalog/registry 覆盖执行实现唯一选择、live 审批语义与执行参数归一，不创建 Driver、零 provider 请求。
 
 `packages/recall/tests/resource-install-schema.test.ts` 与 `resource-install-materialize.test.ts` 使用临时文件和隔离工作区，验证 install 的默认兼容、显式启停、destination 条件必填与禁用互斥、禁用项不读取来源、目标路径约束及安装现场无残留。它们属于零 token 单元测试，不运行原生安装器、不启动真实宿主。

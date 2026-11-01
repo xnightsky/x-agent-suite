@@ -78,12 +78,12 @@ pnpm exec x-agent-suite recall --carrier consumer-carrier \
 
 ## 判据、执行参数与路由
 
-- **判据**：由消费者在 registry 注册，Recall 只透传 `expect`。除静态 Criterion 外，`criteria` 支持通用判据工厂（声明 `name`/`scope`/`create`）；运行前按已选 target 装配实际引用的工厂，每 target 一次，全部完成于主 Driver 创建之前，上下文提供同源的 target/config/tags/批准/effects。AI 断言可用 [`@x-agent-suite/assertions`](../assertions)（消费者形态 `@xnightsky/x-agent-suite/assertions`）的 `createJudgeAssertion` 薄适配后注册进 `criteria`（可注入 client 或经 `clientOptions` 由原生 Judge 工厂创建），不新增 YAML 专用字段。
+- **判据**：内置 case 级 `expect.judge` 提供标准 AI 断言，`expect.decision` 以 KV 评分维和精确命中器复用现有聚合机；首版只评最后一轮回答。完整目标契约见 [`docs/spec/recall-judge-dsl.md`](../../docs/spec/recall-judge-dsl.md)。其他判据由消费者在 registry 注册，Recall 透传对应 `expect`。除静态 Criterion 外，`criteria` 支持通用判据工厂（声明 `name`/`scope`/`create`）；运行前按已选 target 装配实际引用的工厂，每 target 一次，全部完成于主 Driver 创建之前，上下文提供同源的 target/config/tags/批准/effects。
 - **执行参数与路由**：`--execution-params <JSON对象>` 只交给已选 Profile/Adapter，每个 case/repeat 独立副本，不得改变 target、凭据、权限 Plan 或 live 审批；未注册、carrier 不匹配、候选不唯一或 live 未审批一律 fail-closed，不创建 Driver。
 
 ## 依赖与边界
 
-依赖 `contracts`（类型）、`llm-fixture`（live target 与 TargetTags 决策）、`harness`（宿主 hooks）、`observation`（判据与报告）、`runner`（复用 Runner）、`yaml`；`criteria` / `driver` / `sandbox` 只作测试期 devDependency。本包不读写消费者仓库，也不感知其目录结构。
+依赖 `contracts`（类型）、`llm-fixture`（live target 与 TargetTags 决策）、`harness`（宿主 hooks）、`observation`（判据与报告）、`runner`（复用 Runner）、`yaml`；实施目标另新增 `assertions`（标准 Judge 判据适配）运行时依赖；`criteria` / `driver` / `sandbox` 只作测试期 devDependency。本包不读写消费者仓库，也不感知其目录结构。
 
 ## 测试与类型检查
 
