@@ -1,8 +1,8 @@
 # Recall 内置 Judge 与断言计分 DSL
 
-> 状态：第一阶段设计已确认，尚未实现；本文已按断言直接计分的范围收缩。
+> 状态：第一阶段已实现，并通过默认 fake 回归与真实 Pi headless + loopback fake provider 集成验证；本文按断言直接计分的一期范围收口。
 >
-> 一期不提供 `decision` DSL。机械断言与 AI 断言各自产生判断和得分，框架统一汇总；所有已声明断言通过，测试才通过。实施计划需按本次修订重排。
+> 一期不提供 `decision` DSL。机械断言与 AI 断言各自产生判断和独立贡献，所有已声明断言通过，测试才通过；真实 token、Judge 质量校准与消费者迁移不在默认验证范围内。
 
 ## 目标与一期范围
 
@@ -40,7 +40,7 @@ cases:
           rubric: 是否简洁
 ```
 
-`output-shape` 是消费者注册的机械判据，不是框架内建名称；示例的 `required` 与 `score` 由该判据的输入协议解释。既有自定义判据输入继续原样透传，不强制包装历史输入，也不由 Recall 抢占插件已有字段。消费者判据应显式支持并校验自己的分值声明，不支持时须明确拒绝；未声明分值时遵循默认 1／-1 规则。
+`output-shape` 是消费者注册的机械判据，不是框架内建名称；示例的 `required` 与 `score` 由该判据的输入协议解释。既有自定义判据输入继续原样透传，不强制包装历史输入，也不由 Recall 抢占插件已有字段。机械可配分值须在注册项上显式声明 `assertionScore?: (expect) => { hit?, miss? }` resolver；未声明时 Recall 不读取插件 `input.score`，仅按 pass 使用默认贡献。
 
 执行顺序：
 
@@ -168,6 +168,14 @@ casePass = 所有已声明断言细项的 pass 均为 true
 
 报告至少保留断言名、机械／AI 来源、pass、reason、本项分值贡献、总分与失败项。总分不能替代逐项结果，也不能把一次 Judge 批量调用压成一个总布尔后再计细项分。
 
+### 通用断言职责与机械 resolver
+
+- `@x-agent-suite/assertions` 负责把 `JudgeOutcome` 展开为逐 rubric 的原始 name/pass/reason/0..1 结果，并提供 score 封闭校验、独立默认值与 `pass ? hit : miss` 贡献计算。既有 `createJudgeAssertion` 复用同一适配，公开行为不变。
+- `@x-agent-suite/observation` 的 `runCriteria` 在结果源校验机械与 AI 判据的 boolean pass、字符串 reason 和 0..1 有限 score；缺结果或畸形结果是评测错误。
+- Recall 只负责作者 YAML、最后文本选择、registry 装配、resolver 预检缓存和报告投影。静态 Criterion 与工厂都可在注册项声明 `assertionScore`；只对实际引用在装配期同步解析一次，按 execution、scenario 与判据出现位置缓存，运行/重试/报告阶段不再调用。
+- resolver 返回值必须是同步普通对象，只允许 hit/miss；Promise、null、数组、额外字段、非有限数和 resolver 抛错均为定义错误 CLI=2，在主 Driver 前拒绝。resolver 不进入 ScenarioSpec 或报告，不得启动 Driver 或联网。
+- 报告 `result.artifact.outcomes` 原样保留既有 0..1 标准分；`result.artifact.assertions` 另存 name/source/pass/reason/score 贡献，`result.artifact.rawScore` 为贡献之和。贡献不会回写 CriterionOutcome。
+
 ## 校验与错误语义
 
 - YAML 重复 key 在解析期拒绝。
@@ -185,7 +193,7 @@ casePass = 所有已声明断言细项的 pass 均为 true
 | 必需裁定／判据结果缺失，或调用、超时、解析失败 | 评测错误，CLI=1，报告诊断，不给出正常评分结论。  |
 | DSL、registry 或执行参数定义非法               | CLI=2，不创建主 Driver 或 Judge。                |
 
-通用 Judge、Assertions 和已有聚合机的公开行为不由本文改写。本次仅收缩 Recall 目标 DSL；实现细节不进入作者配置。
+通用 Judge、独立 Assertions 与既有聚合机的合法公开调用保持兼容；通用裁定/分值原语归 Assertions，CriterionResult 形状校验归 Observation，Recall 不再维护第二套断言引擎。
 
 ## 第一阶段验收
 
@@ -202,7 +210,7 @@ casePass = 所有已声明断言细项的 pass 均为 true
 - 旧 decision DSL 与非法 score 在预检拒绝，不启动主执行或 Judge。
 - 同源批准、独立会话、取消与清理保持既有安全要求。
 
-本文为尚未实现的目标设计；不得把上述验收要求当作已运行事实。
+上述一期行为已由默认 fake transport、合成 registry/Driver 与官方 CLI 子进程回归验证。另经 `E2E_PI_RECALL=1 E2E_PI_PTY=1 pnpm ittest` 验证真实宿主：既有 Pi PTY 两项与新 Recall headless 一项均通过，覆盖两次主单轮请求、一次独立 Judge、rawScore=3、case FAIL/CLI=0、权限隔离和现场清理，零 token。共享 PTY 对话历史、真实 provider/token、Judge 质量校准和消费者迁移仍未验证。
 
 ## 后续设计
 
