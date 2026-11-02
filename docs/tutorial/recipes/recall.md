@@ -143,7 +143,7 @@ resolver 仅对实际引用在装配预检同步调用并按 case 缓存；非�
 
 > 本 recipe 的 `pnpm tutorial:recall` 仍展示消费者手动组合 Judge client 与 Assertions；一期内置 DSL 的默认验证位于 `packages/recall/tests`，使用 fake transport 和官方 CLI 子进程，零 token。
 >
-> 真实宿主补充验证：`E2E_PI_RECALL=1 pnpm exec tsx --test examples/tutorial/18-recall-judge-host.ittest.ts`。该用例默认 skip，显式开启后使用真实 Pi headless + loopback fake provider，验证两次主单轮请求、独立 Judge、报告和清理，零 token；不覆盖共享 PTY 历史或真实 provider。
+> 真实宿主补充验证：`E2E_PI_RECALL=1 pnpm exec tsx --test examples/tutorial/18-recall-judge-host.ittest.ts`。该用例默认 skip，显式开启后使用真实 Pi headless + loopback fake provider，验证两次主单轮请求、独立 Judge、报告和清理，零 token；不覆盖共享 PTY 历史。真实 provider 另有 Cedar 单轮 live smoke，见 integrations/itrepos/cedar/README.md。
 
 ## Judge + Pi borrowed + Assertions
 

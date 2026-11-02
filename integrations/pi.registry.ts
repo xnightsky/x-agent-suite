@@ -4,8 +4,11 @@
  * 不变量：不选择渠道、不持有凭据，不自动加载消费者真实目录。
  */
 import { textContains, textNotContains } from "@x-agent-suite/criteria";
-import type { TurnCriterion } from "@x-agent-suite/contracts";
-import type { RecallRegistry } from "@x-agent-suite/recall";
+import type { SessionCriterion, TurnCriterion } from "@x-agent-suite/contracts";
+import type {
+  RecallAssertionScoreResolver,
+  RecallRegistry,
+} from "@x-agent-suite/recall";
 import { posix } from "node:path";
 import { createPiRecallDriver } from "../profiles/pi-recall.ts";
 import { artifactJson, scriptExecution } from "./script.criteria.ts";
@@ -48,9 +51,39 @@ const skillLoaded: TurnCriterion = {
   },
 };
 
+/** 核对最终回答前缀的 session 机械判据；score 由自身输入协议显式 opt-in。 */
+const answerContract: SessionCriterion & {
+  readonly assertionScore: RecallAssertionScoreResolver;
+} = {
+  name: "answer-contract",
+  scope: "session",
+  assertionScore: (expect) =>
+    (expect as { score?: { hit?: number; miss?: number } }).score ?? {},
+  evaluate(session, { expect }) {
+    const wanted = expect as { requiredPrefix?: unknown } | null;
+    if (
+      !wanted ||
+      typeof wanted.requiredPrefix !== "string" ||
+      !wanted.requiredPrefix.trim()
+    ) {
+      throw new Error("answer-contract 需要非空 requiredPrefix");
+    }
+    const text = session.turns.at(-1)?.text ?? "";
+    const pass = text.startsWith(wanted.requiredPrefix);
+    return {
+      pass,
+      score: pass ? 1 : 0,
+      reason: pass
+        ? "最终回答前缀符合约定"
+        : `最终回答前缀不符合约定：期望 ${wanted.requiredPrefix}`,
+    };
+  },
+};
+
 /** 显式注册场景仓使用的宿主和判据，渠道仍由命令选择。 */
 const registry: RecallRegistry = {
   criteria: [
+    answerContract,
     textContains,
     textNotContains,
     skillLoaded,

@@ -210,7 +210,7 @@ casePass = 所有已声明断言细项的 pass 均为 true
 - 旧 decision DSL 与非法 score 在预检拒绝，不启动主执行或 Judge。
 - 同源批准、独立会话、取消与清理保持既有安全要求。
 
-上述一期行为已由默认 fake transport、合成 registry/Driver 与官方 CLI 子进程回归验证。另经 `E2E_PI_RECALL=1 E2E_PI_PTY=1 pnpm ittest` 验证真实宿主：既有 Pi PTY 两项与新 Recall headless 一项均通过，覆盖两次主单轮请求、一次独立 Judge、rawScore=3、case FAIL/CLI=0、权限隔离和现场清理，零 token。共享 PTY 对话历史、真实 provider/token、Judge 质量校准和消费者迁移仍未验证。
+上述一期行为已由默认 fake transport、合成 registry/Driver 与官方 CLI 子进程回归验证。另经 `E2E_PI_RECALL=1 E2E_PI_PTY=1 pnpm ittest` 验证真实宿主：既有 Pi PTY 两项与新 Recall headless 一项均通过，覆盖两次主单轮请求、一次独立 Judge、rawScore=3、case FAIL/CLI=0、权限隔离和现场清理，零 token。另经 `pnpm ittest:token:cedar-judge --carrier pi --approve-live` 完成真实 provider/token 的 Cedar 单轮 smoke：机械 answer-contract 与 AI ready 通过、AI forbidden 未通过，rawScore=4、case FAIL/CLI=0，现场已清理。共享 PTY 对话历史、其他消费者迁移及 Judge 质量校准仍未验证。
 
 ## 后续设计
 

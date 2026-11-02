@@ -216,4 +216,12 @@ Expected: 两个命令均通过；若格式失败，只格式化本轮文件后�
 - `E2E_PI_PTY=1 pnpm exec tsx --test examples/tutorial/09-pi-pty.ittest.ts`：真实 Pi 基线 1/1 pass。
 - `E2E_PI_RECALL=1 pnpm exec tsx --test examples/tutorial/18-recall-judge-host.ittest.ts`：真实 Pi headless 1/1 pass；两次主单轮请求、一次独立 Judge、rawScore=3、case FAIL/CLI=0、主 read-only/Judge none、两个现场均清理。
 - `E2E_PI_RECALL=1 E2E_PI_PTY=1 pnpm ittest`：3/3 pass、0 fail、0 skip，零 token。
-- 新用例默认 skip；共享 PTY 对话历史与真实 provider/token 仍未验证。
+- 新用例默认 skip；共享 PTY 对话历史仍未验证。真实 provider/token 已通过下述 Cedar 单轮 smoke。
+
+## itrepo 机械 + AI 同 case live 验证
+
+- 新增 `integrations/itrepos/cedar/judge/.recall.yaml` 与 `scripts/tests/itrepos-judge-config.test.ts`；真实 registry 编译通过。
+- `integrations/pi.registry.ts` 新增 session 机械判据 `answer-contract`，通过显式 `assertionScore` 读取自己的 score 配置。
+- 首次 `pnpm ittest:token:cedar-judge --carrier pi --approve-live` 暴露 AI forbidden 误判（rawScore=5、case PASS）；将 rubric 改为显式双向判定后重跑。
+- 最终 live 结果：机械 answer-contract pass（+1）、AI ready pass（+3）、AI forbidden fail（0），rawScore=4、case FAIL、CLI=0；主输出为 CEDAR_READY/已完成，workspaceCwd 已清理。
+- 该 smoke 不证明共享多轮上下文或 Judge 质量。
