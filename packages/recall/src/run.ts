@@ -21,6 +21,7 @@ import {
   type LoadRecallOptions,
   type RecallLoadCore,
 } from "./load.ts";
+import { adaptRecallAssertionResult } from "./assertion-results.ts";
 
 /** 单个 case 的成功执行与报告位置。 */
 export interface RecallCaseRun {
@@ -95,7 +96,10 @@ async function runCase(
     criteria,
     repeat: loaded.repeat,
   });
-  const last = executed.results[executed.results.length - 1]!;
+  const adapted = executed.results.map((item) =>
+    adaptRecallAssertionResult(spec, item, execution),
+  );
+  const last = adapted[adapted.length - 1]!;
   const result = {
     ...last,
     observation: {

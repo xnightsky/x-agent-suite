@@ -16,6 +16,7 @@ import {
   readRecallResources,
   type RecallCompiledResource,
 } from "./resources.ts";
+import { compileRecallCaseExpect } from "./assertion-dsl.ts";
 
 /** 单份考卷编译选项。 */
 export interface CompileRecallOptions {
@@ -35,24 +36,40 @@ function assertRegisteredMetrics(
   criteria: readonly RecallCriterionDescriptor[],
   filePath: string,
 ): void {
-  const registered = new Set(
-    criteria.filter((item) => item.scope === "turn").map((item) => item.name),
-  );
+  const registered = {
+    turn: new Set(
+      criteria.filter((item) => item.scope === "turn").map((item) => item.name),
+    ),
+    session: new Set(
+      criteria
+        .filter((item) => item.scope === "session")
+        .map((item) => item.name),
+    ),
+  };
+  const assertRegistered = (
+    scope: "turn" | "session",
+    metric: string,
+    id: string,
+  ) => {
+    if (registered[scope].has(metric)) return;
+    throw new Error(
+      "Recall metric 未注册：" +
+        metric +
+        "（" +
+        filePath +
+        "，case " +
+        id +
+        "）",
+    );
+  };
   for (const item of definition.cases) {
     for (const turn of item.turns) {
       for (const metric of Object.keys(turn.expect ?? {})) {
-        if (!registered.has(metric)) {
-          throw new Error(
-            "Recall metric 未注册：" +
-              metric +
-              "（" +
-              filePath +
-              "，case " +
-              item.id +
-              "）",
-          );
-        }
+        assertRegistered("turn", metric, item.id);
       }
+    }
+    for (const metric of Object.keys(item.expect ?? {})) {
+      if (metric !== "judge") assertRegistered("session", metric, item.id);
     }
   }
 }
@@ -137,10 +154,12 @@ export async function compileRecallFile(
       plans,
       options,
     );
+    const caseExpect = compileRecallCaseExpect(item.expect);
     scenarios.push({
       id: definition.id + "/" + item.id,
       turns: item.turns.map((turn) => ({ ...turn })),
       ...(item.timeoutMs !== undefined ? { timeoutMs: item.timeoutMs } : {}),
+      ...(caseExpect.expect ? { expect: caseExpect.expect } : {}),
       ...(provision.value !== undefined ? { provision: provision.value } : {}),
       metadata: {
         ...item.metadata,
@@ -149,6 +168,7 @@ export async function compileRecallFile(
           fileId: definition.id,
           caseId: item.id,
           provision: provision.attribution,
+          ...(caseExpect.judge ? { judge: caseExpect.judge } : {}),
         },
       },
     });

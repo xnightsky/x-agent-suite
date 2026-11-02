@@ -12,6 +12,10 @@ import type {
   ScenarioSpec,
 } from "@x-agent-suite/contracts";
 import type {
+  AssertionScoreConfig,
+  AssertionScoreResolver,
+} from "@x-agent-suite/assertions";
+import type {
   LiveBackend,
   LiveConfigOptions,
   LiveTransport,
@@ -25,7 +29,7 @@ import { assertKnownFields, isNonEmptyString, isRecord } from "./validation.ts";
 export interface RecallCriterionDescriptor {
   /** 判据名；考卷 expect 按名引用。 */
   readonly name: Criterion["name"];
-  /** 判据作用域；当前考卷只引用 turn 级。 */
+  /** 判据作用域；turn 与 case/session expect 分别按 scope 引用。 */
   readonly scope: Criterion["scope"];
 }
 
@@ -61,8 +65,22 @@ export interface RecallCriterionFactory extends RecallCriterionDescriptor {
   ) => Criterion | Promise<Criterion>;
 }
 
-/** 判据注册项：静态 Criterion（有 evaluate）或通用工厂（有 create），恰居其一。 */
-export type RecallCriterionRegistration = Criterion | RecallCriterionFactory;
+/** Recall 注册 resolver 的返回配置；通用定义归 @x-agent-suite/assertions。 */
+export type RecallAssertionScoreConfig = AssertionScoreConfig;
+
+/** Recall 注册 resolver；通用同步解析协议归 @x-agent-suite/assertions。 */
+export type RecallAssertionScoreResolver = AssertionScoreResolver;
+
+/**
+ * 判据注册项：静态 Criterion（有 evaluate）或通用工厂（有 create），恰居其一。
+ * assertionScore 为显式 opt-in；只对实际引用在装配预检调用并逐 case 缓存，运行/报告不再调用。
+ * 未声明时 Recall 不读取插件 input.score，仅按 pass 使用默认贡献。
+ */
+export type RecallCriterionRegistration = (
+  Criterion | RecallCriterionFactory
+) & {
+  readonly assertionScore?: RecallAssertionScoreResolver;
+};
 
 /** borrowed Driver 创建上下文；由每次 case/repeat 独立传入。 */
 export interface RecallProfileDriverContext {
@@ -126,6 +144,12 @@ function validateCriteria(
     const hasCreate = typeof criterion.create === "function";
     if (hasEvaluate === hasCreate) {
       throw new Error("Recall 判据 evaluate 与 create 必须恰有一个是函数");
+    }
+    if (
+      criterion.assertionScore !== undefined &&
+      typeof criterion.assertionScore !== "function"
+    ) {
+      throw new Error("Recall 判据 assertionScore 必须是函数");
     }
     const key = String(criterion.scope) + ":" + String(criterion.name);
     if (seen.has(key)) throw new Error("Recall 判据重复注册：" + key);

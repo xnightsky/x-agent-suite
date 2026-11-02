@@ -19,6 +19,8 @@ export {
   emptyRecallRegistry,
   loadRecallRegistry,
   type RecallCriterionDescriptor,
+  type RecallAssertionScoreConfig,
+  type RecallAssertionScoreResolver,
   type RecallCriterionFactory,
   type RecallCriterionFactoryContext,
   type RecallCriterionRegistration,

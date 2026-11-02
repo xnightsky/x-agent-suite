@@ -21,12 +21,15 @@ import type {
   RecallRegistry,
 } from "./registry.ts";
 import { isRecord } from "./validation.ts";
+import { recallJudgeCriterionName } from "./assertion-dsl.ts";
+import { createRecallJudgeCriteria } from "./judge-criterion.ts";
+import { preflightRecallAssertionScores } from "./assertion-score.ts";
 
 /** assembleRecallCriteria 入参。 */
 export interface AssembleRecallCriteriaOptions {
   /** 独立 registry 声明（静态判据 + 通用工厂）。 */
   readonly registry: RecallRegistry;
-  /** 已编译场景；引用收集只扫 turns[].expect。 */
+  /** 已编译场景；引用收集扫描 turn 与 case expect。 */
   readonly scenarios: readonly ScenarioSpec[];
   /** 当前已选 target 的执行实现。 */
   readonly execution: RecallResolvedExecution;
@@ -40,17 +43,24 @@ export interface AssembleRecallCriteriaOptions {
   readonly effects: RecallEffects;
 }
 
-/** 收集全部场景 turn.expect 的引用键（字段存在即算引用）。 */
-function collectTurnReferences(
+/** 收集全部场景机械判据引用；内部 Judge 键由专用装配器处理。 */
+function collectReferences(
   scenarios: readonly ScenarioSpec[],
 ): ReadonlySet<string> {
   const referenced = new Set<string>();
   for (const scenario of scenarios) {
     for (const turn of scenario.turns) {
-      if (!turn.expect) continue;
-      for (const name of Object.keys(turn.expect)) {
+      for (const name of Object.keys(turn.expect ?? {})) {
         referenced.add("turn:" + name);
       }
+    }
+    const recall = scenario.metadata?.recall as
+      { judge?: { rubrics?: Record<string, unknown> } } | undefined;
+    const judgeKeys = new Set(
+      Object.keys(recall?.judge?.rubrics ?? {}).map(recallJudgeCriterionName),
+    );
+    for (const name of Object.keys(scenario.expect ?? {})) {
+      if (!judgeKeys.has(name)) referenced.add("session:" + name);
     }
   }
   return referenced;
@@ -88,12 +98,13 @@ async function createFromFactory(
 
 /**
  * 按已选 target 装配实际引用的动态判据；静态判据原样保留，工厂按声明顺序就地替换。
- * 未引用工厂不调用；session scope 工厂声明合法，但当前 DSL 无 session 引用入口。
+ * 未引用工厂不调用；case expect 可引用 session 判据，内置 Judge 单独展开。
  */
 export async function assembleRecallCriteria(
   options: AssembleRecallCriteriaOptions,
 ): Promise<readonly Criterion[]> {
-  const referenced = collectTurnReferences(options.scenarios);
+  preflightRecallAssertionScores(options);
+  const referenced = collectReferences(options.scenarios);
   const { execution } = options;
   const context: RecallCriterionFactoryContext = {
     target: execution.target,
@@ -114,5 +125,5 @@ export async function assembleRecallCriteria(
     if (!referenced.has(key)) continue;
     assembled.push(await createFromFactory(registration, context, key));
   }
-  return assembled;
+  return [...assembled, ...createRecallJudgeCriteria(options)];
 }
