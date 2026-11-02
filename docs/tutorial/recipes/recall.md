@@ -102,6 +102,49 @@ x-agent-suite recall   --carrier consumer-carrier   --live-config private-live.y
 
 Runner 只消费场景 provision，不做执行 provision 合并。资源 source/destination 经过 realpath 与逃逸校验；profile 负责物化和 finally cleanup。挂载不等于模型实际读取，行为仍由 Observation/Criterion 验证。
 
+## case 级断言直接计分（已实现）
+
+一期作者配置可直接声明机械 session 判据与内置 Judge；简写 Judge 如下，完整形态另支持 `rubrics/timeoutMs/maxRetries/instructions`：
+
+```yaml
+cases:
+  - id: answer-quality
+    turns:
+      - send: 准备回答
+      - send: 给出最终结论
+    expect:
+      output-shape:
+        required: [summary]
+        score: { miss: -1 }
+      judge:
+        accurate:
+          rubric: 是否准确
+          score: { hit: 3 }
+        concise:
+          rubric: 是否简洁
+          score: { miss: 0 }
+```
+
+机械判据只有显式 opt-in 才让 Recall 解析分值。resolver 的形状由消费者输入协议决定，例如这个插件从自己的 `score` 字段读取；另一个插件完全可以改读 `points`：
+
+```ts
+const criterion = {
+  name: "output-shape",
+  scope: "session" as const,
+  assertionScore: (expect: unknown) =>
+    (expect as { score?: { hit?: number; miss?: number } }).score ?? {},
+  evaluate: () => ({ pass: true, score: 1, reason: "结构合法" }),
+};
+```
+
+resolver 仅对实际引用在装配预检同步调用并按 case 缓存；非法返回或抛错为 CLI=2。未注册 resolver 时，Recall 不解释插件 `input.score`。score 省略或空对象默认 hit=1/miss=-1，部分覆盖独立默认。
+
+报告 `artifact.outcomes` 保留原始 0..1 分数，`artifact.assertions` 保存 name/source/pass/reason/贡献，`artifact.rawScore` 为贡献和；所有断言通过才通过，正总分不抵消失败。缺裁定/判据结果与调用、超时、解析失败为 CLI=1，非法定义为 CLI=2，内容失败为 CLI=0。完整契约见 [`docs/spec/recall-judge-dsl.md`](../../spec/recall-judge-dsl.md)。
+
+> 本 recipe 的 `pnpm tutorial:recall` 仍展示消费者手动组合 Judge client 与 Assertions；一期内置 DSL 的默认验证位于 `packages/recall/tests`，使用 fake transport 和官方 CLI 子进程，零 token。
+>
+> 真实宿主补充验证：`E2E_PI_RECALL=1 pnpm exec tsx --test examples/tutorial/18-recall-judge-host.ittest.ts`。该用例默认 skip，显式开启后使用真实 Pi headless + loopback fake provider，验证两次主单轮请求、独立 Judge、报告和清理，零 token；不覆盖共享 PTY 历史。真实 provider 另有 Cedar 单轮 live smoke，见 integrations/itrepos/cedar/README.md。
+
 ## Judge + Pi borrowed + Assertions
 
 现有公开能力可以直接组合，不需要消费者另写裁判启动、发送、清理或普通 verdict 转换。运行同一教程即可覆盖这条链：

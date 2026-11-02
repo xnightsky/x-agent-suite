@@ -10,6 +10,7 @@
 
 import type {
   Criterion,
+  CriterionResult,
   CriterionOutcome,
   ExpectBlock,
   SessionObservation,
@@ -52,6 +53,22 @@ function assertExpectIntegrity(
     }
   }
 }
+function assertCriterionResult(result: CriterionResult, key: string): void {
+  if (typeof result?.pass !== "boolean") {
+    throw new Error("判据结果缺少 boolean pass：" + key);
+  }
+  if (
+    typeof result.score !== "number" ||
+    !Number.isFinite(result.score) ||
+    result.score < 0 ||
+    result.score > 1
+  ) {
+    throw new Error("判据结果 score 必须是 0..1 有限数：" + key);
+  }
+  if (typeof result.reason !== "string") {
+    throw new Error("判据结果缺少字符串 reason：" + key);
+  }
+}
 
 /**
  * 调度入口：分发判据并按序收集具名结果。
@@ -76,6 +93,7 @@ export async function runCriteria(
         session,
         expect,
       });
+      assertCriterionResult(result, `turn:${turn.index}:${name}`);
       outcomes.push({ name, scope: "turn", turnIndex: turn.index, ...result });
     }
   }
@@ -86,6 +104,7 @@ export async function runCriteria(
       const criterion = index.get(`session:${name}`)!;
       if (criterion.scope !== "session") continue; // 索引键已保证，仅供类型收窄
       const result = await criterion.evaluate(session, { expect });
+      assertCriterionResult(result, `session:${name}`);
       outcomes.push({ name, scope: "session", ...result });
     }
   }

@@ -47,11 +47,19 @@ PTY、headless、sandbox 是机制，smoke 是抽样范围，contract 是验证�
 
 `packages/recall/tests/effects.test.ts`、`compile.test.ts`、`discovery.test.ts` 与 `recall.test.ts` 都属于单元测试：临时 live YAML、合成 TargetTags、fake transport 和 MockDriver 不访问真实 provider，也不读取真实 home 配置。它们覆盖无参数拒绝、carrier 多 default、provider/model 过滤、默认无 effects、文件内 plans/context 继承覆盖、inline 权限、direct/borrowed、ephemeral-client Adapter、live 审批、资源清理和报告归因，进入 `pnpm test` 与 `pnpm check`。`packages/llm-fixture/tests/live-config-carriers.test.ts` 另行覆盖 kind 缺省 cli、clientRef、channelsFrom、非法引用与 target 归因。
 
+`packages/recall/tests/registry.test.ts`、`criterion-assembly.test.ts` 与 `recall-assembly.test.ts` 同属零 token 单元测试：registry 校验覆盖静态判据与通用工厂混合注册的加载期形状把关；装配测试用合成 registry/scenarios/execution 验证引用键存在性、每 target 一次、形状校验与安全错误包装；CLI 装配路径用合成 registry + fake profile driver 验证装配早于主 Driver、repeat/case 复用闭包与批准同源到达。
+
+AI 断言完整场景的目标验收以 [`docs/spec/recall-judge-dsl.md`](./recall-judge-dsl.md) 为准：使用 case 级 expect、内置 Judge 与注册机械判据，固定最终输出和脚本化 Judge transport，验证每个机械细项与 AI rubric 的判断、原因和得分。覆盖可选 score 的默认 hit=1／miss=-1、命中加 3、miss 默认扣 1、显式 miss=0、五项机械检查失败一项扣 1／两项扣 2、混合求和及正总分仍不掩盖失败；全部断言通过测试才通过。裁定缺项与整体不可评测仍报评测错误，多轮只把最后回答送入标准 Judge。一期不验收 decision、评分维度、阈值、否决、归一分或缺席映射。实施计划待重排，测试文件与数量不沿用旧 decision 计划。
+
+`packages/recall/tests/execution-resolution.test.ts` 与 `execution-params.test.ts` 用合成 catalog/registry 覆盖执行实现唯一选择、live 审批语义与执行参数归一，不创建 Driver、零 provider 请求。
+
 `packages/recall/tests/resource-install-schema.test.ts` 与 `resource-install-materialize.test.ts` 使用临时文件和隔离工作区，验证 install 的默认兼容、显式启停、destination 条件必填与禁用互斥、禁用项不读取来源、目标路径约束及安装现场无残留。它们属于零 token 单元测试，不运行原生安装器、不启动真实宿主。
 
 `scripts/tests/itrepos-resources.test.ts` 读取场景仓实际考卷，在临时安装布局与沙箱中验证已安装、显式禁用、替代项目位置、考卷不泄漏和脚本 JSON 效果；执行通用 Node 脚本仍归单元测试，不证明真实宿主的发现与触发。
 
 `packages/llm-fixture/tests/target-tags-home.test.ts` 使用临时 home 覆盖公共实例、home 私有全局实例与 live overlay 的合并顺序，并验证后续 `live.allowed` 不会放松此前的 `review-required`；生产默认 home 与测试注入 home 分离。
+
+`scripts/tests/target-tags-artifact.test.ts` 同样为源码态和模拟安装态的每次加载注入临时空 home，验证公共资源定位、显式路径优先级、缺失资源错误及 Judge 准入。自定义词典不应受开发者 home 私有实例影响，也不应为通过测试而跳过生产加载器的私有实例校验。
 
 真实 Recall live 调用会消耗 token，只能在显式选择渠道、已有 live 配置和 `--approve-live`（策略为 review-required 时）下执行。`pnpm ittest:token:cedar --carrier pi --approve-live` 精确运行场景仓的 `.recall.yaml`，复用 CLI 而非包装另一层驱动；脚本未提供渠道时失败，不发出请求。计费分类在 borrowed 测试阶段暂不设为条件，live 策略检查继续执行。不得以 fake transport 或 MockDriver 的成功推断真实 direct/borrowed/ephemeral-client 已获 live 验证。
 

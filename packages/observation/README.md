@@ -4,7 +4,7 @@ Observation 层：判据调度、分数聚合与报告落盘。
 
 ## 用途
 
-- **判据调度**：`runCriteria(options)` 按 `expect` 把已注册判据分发到各轮与会话。
+- **判据调度**：`runCriteria(options)` 按 `expect` 把已注册判据分发到各轮与会话，并在结果源校验 boolean pass、字符串 reason 和 0..1 有限 score；缺结果或畸形结果显式抛错，合法小数原样保留。
 - **分数聚合**：`resolveAggregate(outcomes, spec)` 按静态维度表算出出口分。
 - **报告落盘**：`writeScenarioReports(rows, options)` 一次产出 `.md` 结论表与 `.json` 明细。
 - **报告对比**：`diffScenarioReports(before, after, lens?)` 对比两份同场景报告。

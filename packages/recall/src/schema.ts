@@ -16,6 +16,10 @@ import {
   isRecord,
   requiredString,
 } from "./validation.ts";
+import {
+  parseRecallCaseExpect,
+  type RecallCaseExpectDefinition,
+} from "./assertion-dsl.ts";
 
 /** 场景资源类别。 */
 export type RecallResourceKind = "file" | "directory";
@@ -61,6 +65,7 @@ export interface RecallCaseDefinition {
   readonly timeoutMs?: number;
   readonly metadata?: Record<string, unknown>;
   readonly context?: RecallContextDefinition;
+  readonly expect?: RecallCaseExpectDefinition;
 }
 
 /** 单轮声明。 */
@@ -261,7 +266,7 @@ function parseCase(
   if (!isRecord(value)) throw schemaError(filePath, at + " 必须是对象");
   assertFields(
     value,
-    ["id", "turns", "timeoutMs", "metadata", "context"],
+    ["id", "turns", "expect", "timeoutMs", "metadata", "context"],
     filePath,
     at,
   );
@@ -282,6 +287,11 @@ function parseCase(
       : {}),
     ...(value.metadata
       ? { metadata: value.metadata as Record<string, unknown> }
+      : {}),
+    ...(value.expect !== undefined
+      ? {
+          expect: parseRecallCaseExpect(value.expect, filePath, at + ".expect"),
+        }
       : {}),
     ...(value.context !== undefined
       ? { context: parseContext(value.context, filePath, at + ".context") }

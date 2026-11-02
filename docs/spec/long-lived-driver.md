@@ -89,6 +89,21 @@ export interface JsonRpcLongLivedAdapter {
 - sandbox / 宿主编排不进骨架：`spawn.command/args` 由消费者直接给出。
 - adapter 可持有跨调用状态（如工具调用合并器）；`buildPrompt` 每轮调用一次，可作为轮次边界重置时机。adapter 抛错显式失败，不静默吞错。
 
+`JsonRpcPeer` 在消费循环终止时、调用 `onStreamEnd` 前保存终止原因。
+非法 JSONL、无法路由或其他消费故障后，即使尚未 `close()`，后续 `request()`（包括结束回调内重入）
+也立即以原始 `Error` 拒绝，不分配请求 id、不创建计时器或 pending、不调用底层 `send()`。
+自然 EOF 且无悬挂请求时，结束通知仍为 `error = null`，但后续请求明确以“对端流已结束”拒绝。
+调用 `close()` 后仍优先返回“已关闭”错误；未调用 `start()` 时的既有行为保持不变。
+
+`JsonRpcPeer.start()` 启动后台消费时立即观察其 Promise 的拒绝，但保留原 Promise 的失败状态。
+自然 EOF 后若 `onStreamEnd` 回调抛错，即使调用方稍后才关闭，也不会因后台消费的未处理拒绝
+导致进程崩溃；不安装全局 `unhandledRejection` handler，也不把消费失败转换为成功。
+`JsonRpcPeer.close()` 在等待原消费 Promise 后关闭底层进程，拒绝残留请求并清除其计时器。
+即使等待消费循环失败（包括 `onStreamEnd` 回调抛错），也不会跳过这些清理；
+即使进程关闭失败，仍会拒绝残留请求并清除计时器。等待消费循环的异常在进程清理成功后
+由 `close()` 原样拒绝；进程关闭失败时暴露该清理错误。重复或并发 `close()` 共用同一次关闭操作，
+失败时也不重复执行回调或清理，调用方仍能观察到相同的失败结果。
+
 可运行示例见 [long-lived-wire 教程](../tutorial/recipes/long-lived-wire.md)。
 
 ## 结论边界
@@ -120,5 +135,9 @@ packages/harness/src/pty-driver.ts              # PTY 版长驻驱动（可选�
 - 断言落在被测系统侧记录与消费者自定义证据，不依赖宿主自报文本。
 - `inject` / `sendPrompt` 均返回 `Observation`（含 `ToolCall.status`）。
 - wire 层：请求/响应 id 配对（严格按 id 类型与值，字符串 id 不命中数值 id）与超时显式拒绝；反向请求未注册时回 `-32601`；
-  流断或非法 JSONL 时悬挂请求显式失败且 close 仍能清理干净；close 幂等。
+  非法 JSONL、无法路由或自然 EOF 后（含结束回调内重入）的请求立即拒绝，不写进程、不创建请求计时器或残留 pending，
+  故障保留原始 Error，自然 EOF 保持正常结束通知，关闭后仍报“已关闭”；
+  流断或非法 JSONL 时悬挂请求显式失败且 close 仍能清理干净；结束回调抛错时仍回收进程、
+  拒绝残留请求并清除计时器，close 显式暴露原错且幂等；隔离调用方子进程以结束回调信号
+  等待真实自然 EOF，再跨过事件循环轮次后 close，验证后台拒绝不使进程崩溃、延迟关闭清理资源且重复关闭仍拒绝原错。
 - `packages/driver/src/` 的 wire 层与骨架不出现任何具体协议方法名（由 `pnpm boundary` 与代码评审双重保证）。

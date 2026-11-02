@@ -68,6 +68,23 @@ x-agent-suite recall skills-def/change-summary/.recall.yaml \
 x-agent-suite recall .recall.yaml --carrier pi --registry ../../pi.registry.ts --approve-live
 ```
 
+## 内置 Judge live smoke（显式 token）
+
+`judge/.recall.yaml` 使用单轮主执行和完整 case 级 `expect.judge`，用于验证真实消费者装配 `pi.registry.ts + profiles/pi-recall`，不改变现有项目规则或 Skill 考卷。主执行使用 `use:skill-readonly`，内置 Judge 使用独立单轮 spec、`effects:none` 和空执行参数。
+
+在本目录运行：
+
+```bash
+x-agent-suite recall judge/.recall.yaml --carrier pi --registry ../../pi.registry.ts \
+  --plan use:skill-readonly --approve-live
+```
+
+也可从源码仓根目录运行 `pnpm ittest:token:cedar-judge --carrier pi --approve-live`。这些命令会真实消耗 token，不进入默认回归，必须显式授权。
+
+若机械 `answer-contract` 与 AI `ready` 通过、AI `forbidden` 未通过，则三项贡献为 +1/+3/0、rawScore=4、case FAIL、CLI=0；报告应分别保留一个机械细项和两个 AI 细项及原始裁定，不得把批量 Judge 压成一个布尔。2026-11-02 的实际 live 运行已取得该结果，且 workspaceCwd 已清理。若实际回答或裁定不同，应保留并分析真实结果，不为求绿修改预期。此 smoke 验证执行、计分与清理，不证明 Judge 质量或共享多轮上下文。
+
+仅校验配置时运行 `pnpm exec tsx --test scripts/tests/itrepos-judge-config.test.ts`，零 token。
+
 ## 带脚本 Skill：改动统计报告
 
 安装 `change-report` 仍由当前 AI 在本目录完成：

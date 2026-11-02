@@ -6,13 +6,13 @@
 
 五种输入职责固定：
 
-| 输入                  | 职责                                                                                                            |
-| --------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Recall YAML           | case 测试意图、文件内 `plans`、全局/case `context`，最终只编译为 `ScenarioSpec.provision`。                     |
-| 执行 Plan YAML        | 只声明 `version: 1` 与 `effects: none/use/inline`。不得包含 driver、mode、cliRef、criteria 或 provision。       |
-| 独立 registry TS 模块 | 注册 Criterion、CLI/临时 Client execution profiles、EffectsProfile 与可选 transport；不是 Recall config 闭包。  |
-| `.env.e2e.yaml`       | 复用 carrier/provider/model、Carrier kind/clientRef/channelsFrom、凭据与私密 TargetTags，不建立第二套模型配置。 |
-| 本次命令执行参数      | `--execution-params <JSON对象>`，仅交给已选 Profile/Adapter；不参与渠道、权限或执行路径选择。                   |
+| 输入                  | 职责                                                                                                                          |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Recall YAML           | case 测试意图、文件内 `plans`、全局/case `context`，最终只编译为 `ScenarioSpec.provision`。                                   |
+| 执行 Plan YAML        | 只声明 `version: 1` 与 `effects: none/use/inline`。不得包含 driver、mode、cliRef、criteria 或 provision。                     |
+| 独立 registry TS 模块 | 注册 Criterion 与通用判据工厂、CLI/临时 Client execution profiles、EffectsProfile 与可选 transport；不是 Recall config 闭包。 |
+| `.env.e2e.yaml`       | 复用 carrier/provider/model、Carrier kind/clientRef/channelsFrom、凭据与私密 TargetTags，不建立第二套模型配置。               |
+| 本次命令执行参数      | `--execution-params <JSON对象>`，仅交给已选 Profile/Adapter；不参与渠道、权限或执行路径选择。                                 |
 
 不读取、发现或兼容 `x-agent-suite.config.ts`。旧 `--config` 会返回定义错误。Recall 不预置 metric、具体宿主 profile 或领域 EffectsProfile；独立消费者配置投影入口见 [宿主配置保真](./host-config-projection.md)。
 
@@ -62,7 +62,7 @@ x-agent-suite recall \
 
 ## 独立 registry
 
-`--registry` 是显式模块路径；无路径时使用空注册表，不读取任何默认 TS 文件。考卷引用 metric、使用 borrowed/ephemeral-client 或 `effects.use` 时，必须在 registry 注册对应实现。
+`--registry` 是显式模块路径；无路径时使用空注册表，不读取任何默认 TS 文件。考卷引用自定义 metric、使用 borrowed/ephemeral-client 或 `effects.use` 时，必须在 registry 注册对应实现；内置 `expect.judge` 由框架提供。
 
 ```ts
 import type { RecallRegistry } from "@xnightsky/x-agent-suite/recall";
@@ -107,6 +107,45 @@ export default registry;
 ```
 
 重复判据、非法 profile、未知 registry 字段均在执行前拒绝。registry 只注册实现，不参与 model/default 或 Carrier kind 选择。
+
+### 通用判据工厂
+
+`criteria` 支持静态 Criterion 与通用工厂混合注册，用于扩展自定义判据。工厂只声明 `name`、`scope` 与 `create`，加载期要求 `evaluate` 与 `create` 恰有一个；编译期按 name/scope 描述符验证自定义判据引用。
+
+运行前按已选 target 装配实际引用的自定义工厂，每 target 每工厂恰好调用一次，全部完成于任何主 Driver 创建之前，case 与 repeat 复用同一闭包。装配上下文提供同源的 target/config/tags/live 批准、cliRef/clientRef 与 effects，具体契约见 [Recall 运行时组合](./recall-runtime-composition.md)。
+
+`turn:judge` 与 `turn:judge.*` 是框架的标准保留命名空间，registry 为其他自定义判据提供实现。
+
+### 考卷侧驱动：expect 即判据输入
+
+> 以下内置 Judge 与断言直接计分为第一阶段已确认的目标契约，尚未实现；decision 已移到未来，实施计划需按收缩范围重排。
+>
+> case 的执行过程与断言配置分离，`expect` 是断言根：
+
+```yaml
+cases:
+  - id: answer-quality
+    turns:
+      - send: 先阅读规则
+      - send: 介绍这个仓库
+    expect:
+      judge:
+        准确性:
+          rubric: 回答必须说出三个核心包
+        诚实性:
+          rubric: 不确定的内容必须明说
+```
+
+首版标准 Judge 只评最后一轮回答，默认使用主流程的 AI 配置，每次裁定创建独立会话。机械断言与每个 AI rubric 在自己的声明中配置分值：score 可选，默认 hit=1／miss=-1；命中配 3 就加 3，miss 不写默认扣 1，显式配 0 才不扣分，hit=0 可只累计失败扣分。框架统一求和，所有已声明断言通过测试才通过，正总分不能抵消失败。一期不提供 decision、评分维度、阈值、否决、归一分或缺席映射。Judge 缺少必需裁定或评测失败仍报错，不伪装成正常零分。完整作者接口见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
+
+其他 expect 键继续按名称引用 registry 自定义判据，值原样透传给对应 `evaluate`。标准 Judge 与自定义判据可以在同一 case 级 `expect` 组合。
+
+| 谁            | 能决定什么                                                            | 在哪写         |
+| ------------- | --------------------------------------------------------------------- | -------------- |
+| 考卷作者      | 最终回答的 rubric、各断言分值、是否启用标准 Judge、引用哪些自定义判据 | 考卷 YAML      |
+| 命令行调用方  | 主执行与默认 Judge 同源使用的 target 与 live 批准                     | CLI 参数       |
+| registry 作者 | 自定义判据、执行 profile、transport 与其他扩展实现                    | TS 模块        |
+| 框架          | 标准 Judge 装配、独立裁定会话与结果映射                               | Recall / Judge |
 
 ## 单次运行参数
 
@@ -193,7 +232,7 @@ cases:
       - send: 改用文件资源
 ```
 
-- 顶层字段为 `version/id/context/plans/cases`；case 可另含 `context`，与 `id/turns/timeoutMs/metadata` 并列。
+- 顶层字段为 `version/id/context/plans/cases`；case 可另含 `context` 与 `expect`，与 `id/turns/timeoutMs/metadata` 并列。内置 Judge 与逐项计分目标契约见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
 - `plans.<name>.resources` 只是**当前 Recall YAML 文档内部**的资源别名注册表；禁止覆盖内置 `none`，不支持 extends、继承、深合并或跨 YAML 引用。
 - 全局 `context.plan` 是所有 case 的默认；case 未声明 context 时继承，声明时整块覆盖。`context.plan: none` 清空全局资源；case 也可改用 `context.files`。
 - 同一 context 的 `files` 与 `plan` 互斥。未注册 plan 或跨文件引用在 Driver 前失败。

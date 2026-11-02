@@ -42,20 +42,20 @@ export interface ScenarioResult {
 
 借鉴评测实践的分层评分：先硬判，后模糊，最后才 LLM judge。
 
-| 层               | 例子                                                                  | 实现                                        |
-| ---------------- | --------------------------------------------------------------------- | ------------------------------------------- |
-| **Dry contract** | fixture 结构合法、fake provider 能启动、工具 schema 正确              | `dryChecks()`                               |
-| **Hard**         | 期望工具被调用**且 `status === "completed"`**、入参正确、外部证据匹配 | `hardChecks()`                              |
-| **Fuzzy**        | 返回文本包含 `done=true`                                              | regex / contains                            |
-| **LLM judge**    | 模型回复是否满足自然语言 rubric                                       | 显式注册 `createJudgeAssertion`，复用 Judge |
+| 层               | 例子                                                                  | 实现                                               |
+| ---------------- | --------------------------------------------------------------------- | -------------------------------------------------- |
+| **Dry contract** | fixture 结构合法、fake provider 能启动、工具 schema 正确              | `dryChecks()`                                      |
+| **Hard**         | 期望工具被调用**且 `status === "completed"`**、入参正确、外部证据匹配 | `hardChecks()`                                     |
+| **Fuzzy**        | 返回文本包含 `done=true`                                              | regex / contains                                   |
+| **LLM judge**    | 模型回复是否满足自然语言 rubric                                       | `createJudgeAssertion`；Recall 内置 `expect.judge` |
 
-确定性检查与判据实现在 `@x-agent-suite/assertions`；`criteria` 与 observation 的旧检查入口只作兼容重导出。AI 判据只有调用方显式注册并注入 client 后才执行，不默认触发模型调用。
+确定性检查与判据实现在 `@x-agent-suite/assertions`；`criteria` 与 observation 的旧检查入口只作兼容重导出。AI 判据只有显式启用后才执行模型调用。Recall 一期的 case 级 expect.judge、机械与 AI 断言直接计分见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)：逐项得分求和，全部断言通过才通过，不提供 decision。
 
-各判据的具名结果如何加权汇总成出口分（weight / knockout / absent / threshold），见 [scoring-aggregation.md](./scoring-aggregation.md)。
+已有通用聚合契约的具名结果如何加权汇总（weight / knockout / absent / threshold），见 [scoring-aggregation.md](./scoring-aggregation.md)；这些组合政策不是 Recall 一期作者接口。
 
 通用 AI 裁定执行、absent 与 not-evaluated 分层见 [judge.md](./judge.md)；Judge 只产具名布尔 verdict，不替代上述确定性层或静态聚合。
 
-`createJudgeAssertion({ name, client, timeoutMs?, maxRetries? })` 返回 `TurnCriterion`，该名称对应的每轮 `expect` 为 `JudgeRubric[]`。全部显式 verdict 为 true 才通过；真实 false 才映射为失败与 0 分；`not-evaluated` 与缺 verdict 分别抛带 `[not-evaluated:<kind>]` / `[absent]` 前缀的错误，不冒充普通不通过。Recall 继续按名称透传 `expect`，不增加专用 YAML 字段，注册示例见 [assertions 包说明](../../packages/assertions/README.md)。
+`createJudgeAssertion({ name, client, timeoutMs?, maxRetries? })` 返回 `TurnCriterion`，该名称对应的每轮 `expect` 为 `JudgeRubric[]`。全部显式 verdict 为 true 才通过；真实 false 才映射为失败与 0 分；`not-evaluated` 与缺 verdict 分别抛带 `[not-evaluated:<kind>]` / `[absent]` 前缀的错误。`judgeAssertionResults` 向需要细项的调用方展开同一裁定，Recall 一期复用该接缝。`runCriteria` 统一拒绝缺结果、非 boolean pass、非字符串 reason 和越出 0..1/非有限 score。Recall case 级 KV 裁定池、各 rubric 可选 score 与完整执行配置已实现，只评最后一轮回答；每个 rubric 独立计分并与机械结果求和，正总分不能抵消失败，详见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
 
 ## 执行不变量
 

@@ -9,21 +9,54 @@
  */
 import type { CriterionResult, TurnCriterion } from "@x-agent-suite/contracts";
 import {
+  createJudgeClient,
   judge,
+  type CreateJudgeClientOptions,
   type JudgeModelClient,
   type JudgeRubric,
 } from "@x-agent-suite/judge";
+import { judgeAssertionResults } from "./judge-results.ts";
 
-/** AI 断言的调用方配置；不含渠道、目标或审批参数。 */
-export interface JudgeAssertionOptions {
+/** AI 断言的公共基础选项；不含渠道、目标或审批参数。 */
+export interface JudgeAssertionBaseOptions {
   /** 判据名，由调用方给定。 */
   readonly name: string;
-  /** 模型客户端；本包不创建默认客户端。 */
-  readonly client: JudgeModelClient;
   /** 每次 attempt 超时；透传给 judge()，undefined 走其默认值。 */
   readonly timeoutMs?: number;
   /** 首次调用后的重试上限；透传给 judge()，undefined 走其默认值。 */
   readonly maxRetries?: number;
+}
+
+/**
+ * AI 断言的调用方配置：client 与 clientOptions 必须恰有一个。
+ * client 分支注入现成客户端（fake、自定义或零 token 测试）；
+ * clientOptions 分支在创建判据时同步经原生 Judge 工厂创建客户端。
+ */
+export type JudgeAssertionOptions =
+  | (JudgeAssertionBaseOptions & {
+      /** 现成模型客户端；与 clientOptions 互斥。 */
+      readonly client: JudgeModelClient;
+      readonly clientOptions?: never;
+    })
+  | (JudgeAssertionBaseOptions & {
+      readonly client?: never;
+      /** 原生 Judge 工厂配置；与 client 互斥，创建期为纯决策。 */
+      readonly clientOptions: CreateJudgeClientOptions;
+    });
+
+/** 解析模型客户端来源；互斥规则在运行时再次把关，不回显配置内容。 */
+function resolveJudgeAssertionClient(
+  options: JudgeAssertionOptions,
+): JudgeModelClient {
+  const hasClient = options.client !== undefined;
+  const hasClientOptions = options.clientOptions !== undefined;
+  if (hasClient === hasClientOptions) {
+    throw new TypeError(
+      "AI 断言的 client 与 clientOptions 必须恰有一个：注入现成 client，" +
+        "或提供 clientOptions 由原生 Judge 工厂创建；二者互斥",
+    );
+  }
+  return hasClient ? options.client : createJudgeClient(options.clientOptions);
 }
 
 /**
@@ -35,10 +68,11 @@ export interface JudgeAssertionOptions {
 export function createJudgeAssertion(
   options: JudgeAssertionOptions,
 ): TurnCriterion {
-  const { name, client, timeoutMs, maxRetries } = options;
+  const { name, timeoutMs, maxRetries } = options;
   if (typeof name !== "string" || name.trim().length === 0) {
     throw new TypeError("AI 断言判据名必须是非空字符串");
   }
+  const client = resolveJudgeAssertionClient(options);
   return {
     name,
     scope: "turn",
@@ -50,23 +84,13 @@ export function createJudgeAssertion(
         },
         { client, timeoutMs, maxRetries },
       );
-      if (outcome.status === "not-evaluated") {
-        const { kind, message } = outcome.failure;
-        throw new Error(
-          `[not-evaluated:${kind}] 判据 ${name} 本次不可评测：${message}`,
-        );
-      }
-      if (outcome.absent.length > 0) {
-        throw new Error(
-          `[absent] 判据 ${name} 缺少 rubric 证据：${outcome.absent.join("、")}`,
-        );
-      }
-      const failed = outcome.verdicts.filter((verdict) => !verdict.pass);
+      const results = judgeAssertionResults(outcome, name);
+      const failed = results.filter((result) => !result.pass);
       if (failed.length === 0) {
         return {
           pass: true,
           score: 1,
-          reason: `全部 ${outcome.verdicts.length} 项 rubric 通过`,
+          reason: `全部 ${results.length} 项 rubric 通过`,
         };
       }
       return {

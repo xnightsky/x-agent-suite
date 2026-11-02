@@ -1,0 +1,32 @@
+version: 1
+id: cedar-judge-smoke
+plans:
+  project:
+    resources:
+      - source: AGENTS.md
+        destination: AGENTS.md
+context:
+  plan: project
+cases:
+  - id: obvious-verdicts
+    turns:
+      - send: 请严格只输出两行：第一行 CEDAR_READY，第二行“已完成”。不要输出其他内容。
+    expect:
+      answer-contract:
+        requiredPrefix: CEDAR_READY
+        score:
+          hit: 1
+          miss: -1
+      judge:
+        timeoutMs: 60000
+        maxRetries: 0
+        instructions: 只根据最终回答文本判断，不读取其他上下文。
+        rubrics:
+          ready:
+            rubric: 最终回答的第一行是否恰好是 CEDAR_READY
+            score:
+              hit: 3
+          forbidden:
+            rubric: 判断最终回答是否包含字符串 FORBIDDEN_MARKER；不包含时必须返回 pass=false，只有包含时才返回 pass=true
+            score:
+              miss: 0

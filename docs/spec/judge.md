@@ -257,10 +257,10 @@ pnpm ittest:token:judge
 
 Judge 与 Assertions 来自独立公开 bundle 时，`JudgeModelError` 仍保留已知类别与对应重试预算。跨 bundle 识别必须同时满足内部共享品牌、Error 身份、已知 `kind` 与字符串 `message`；仅凭 `name/kind` 的伪造对象、畸形实例和未知普通错误仍归为 `client`，不重试并继续使用脱敏诊断。内部识别器不新增公开 API。
 
-## 与 Criterion、decision、Recall 的关系
+## 与 Criterion、断言计分、Recall 的关系
 
-Judge 的结果不是 `CriterionResult`。可用 `@x-agent-suite/assertions` 的 `createJudgeAssertion` 适配为 `TurnCriterion`，或由消费者自行映射；该薄适配按每轮 `expect: JudgeRubric[]` 取规则，缺证据与不可评测显式抛错。若需聚合，再把结果交给静态聚合机。weight、threshold、knockout、decision 和 absent 计分映射均不在 Judge 内。
+Judge 的结果不是 `CriterionResult`。可用 `@x-agent-suite/assertions` 的 `createJudgeAssertion` 适配为 `TurnCriterion`，或用 `judgeAssertionResults` 展开逐 rubric 原始结果；缺证据与不可评测显式抛错。Recall 一期已在 case 级 expect.judge 实现 KV rubric 与每项可选 score，只评最后一轮回答；每项裁定与机械结果独立计分，默认 hit=1／miss=-1，统一求和且全部通过才通过，不需要 decision。score 配置留在断言侧，不进入 Judge prompt 或协议；必需裁定缺失时报评测错误。详见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。原生 Judge 的诊断与生命周期未改写。
 
 公开入口已支持 `createJudgeClient({mode:"borrowed"}) + profiles/pi-recall.createPiRecallDriver + createJudgeAssertion` 的直接组合。消费者的 `createDriver` 只需把 `backend/target/cliRef` 显式适配到 Pi 工厂，并提供独立的单轮 spec 与 `effects:none`；不得复制裁判生命周期、复用主运行 spec/provision/workspace，或把原考卷、评分实现和秘密环境交给裁判。最小可执行接法及合成宿主验证见 [Judge + Pi borrowed + Assertions](../tutorial/recipes/recall.md#judge--pi-borrowed--assertions)。该组合不改变不可评测/absent 语义，也不提供 judge()/assertion 级外部 signal。
 
-原生 Recall v1 的 YAML、config、compile、run 与 CLI 不因本包改变；`expected.judge/decision` 仍不是原生 Recall 字段。默认测试使用 fake client/transport/driver，真实 provider 或具体宿主验证必须走显式 token 集成入口。
+Recall 的内置 `expect.judge` 已实现；标准 AI 断言默认复用主 AI 同源配置，每次裁定创建独立会话。默认测试使用 fake client/transport/driver，真实 provider 或具体宿主验证走显式 token 集成入口。

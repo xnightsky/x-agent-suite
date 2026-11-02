@@ -4,6 +4,18 @@
 
 ## Unreleased
 
+## 0.10.0 - 2026-11-02
+
+### Added
+
+- Recall case 级 `expect.judge` 支持简写 rubric KV 与完整执行配置，仅评最后一轮文本；机械断言与 AI rubric 分别保留名称、来源、pass、reason 和独立贡献，`artifact.rawScore` 直接求和，全部断言通过才通过。score 可省略或部分配置，默认 hit=1/miss=-1，原始 CriterionOutcome 的 0..1 分数与贡献分离。
+- Assertions 新增 `judgeAssertionResults` 多值裁定适配及 `parseAssertionScore`、`assertionContribution` 直接贡献原语；Recall registry 可用显式 `assertionScore` 从插件原始 expect 解析机械分值，装配预检并逐 case 缓存，未 opt-in 时不解释历史 input.score。
+- 新增真实宿主与真实 provider 验收：Recall 两轮机械+AI 同 case、独立 Judge、权限隔离和现场清理，以及 Cedar 单轮 live smoke；增加显式 `ittest:token:cedar-judge` 入口，默认回归不运行 token。
+
+### Changed
+
+- `runCriteria` 在结果源统一拒绝缺失或非 boolean pass、非字符串 reason、非有限或越出 0..1 的 score，合法小数原样保留；缺失裁定/判据结果、调用/解析/超时失败与内容失败分别保持 CLI=1 与 CLI=0，定义错误保持 CLI=2。
+
 ## 0.9.0 - 2026-10-28
 
 ### Added

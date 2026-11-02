@@ -12,7 +12,11 @@
  * - 未注册 handler 的反向请求必须回复 {error: {code: -32601}}，防止对端挂起；
  * - 流断且仍有悬挂请求 / 解析失败 / 无法路由时 failPending：显式拒绝所有悬挂请求；
  *   流自然结束且无悬挂请求属正常结束，不产生失败；
- * - close 幂等（closePromise ??=），顺序：先停消费循环，再关 JsonlProcess。
+ * - 消费终止原因在结束回调前保存；终止后的 request 立即拒绝且不分配 id、计时器或 pending，
+ *   不写进程；故障复用原 Error，自然 EOF 明确拒绝但结束通知仍为 null；已关闭错误优先；
+ * - close 幂等（closePromise ??=），先停消费循环，再关 JsonlProcess 并拒绝残留；
+ *   消费循环或结束回调失败不阻断清理，错误仍由 close 显式暴露；
+ * - 后台消费拒绝从 start 起即被观察，原 Promise 保留失败状态供稍后 close 暴露。
  */
 import { JsonlProcess } from "./proc.ts";
 
@@ -92,6 +96,7 @@ export class JsonRpcPeer {
   private streamEndHandler: ((error: Error | null) => void) | null = null;
   private rpcId = 0;
   private consumePromise: Promise<void> | null = null;
+  private terminalError: Error | null = null;
   private stopConsume: (() => void) | null = null;
   private closePromise: Promise<void> | null = null;
 
@@ -115,20 +120,22 @@ export class JsonRpcPeer {
     this.reverseHandler = handler;
   }
 
-  /** 注册流结束回调：error 为 null 表示正常停止（主动 close，或无悬挂请求的自然流结束）。 */
+  /** 注册流结束回调：error 为 null 表示正常停止；回调抛错由 close 在清理后显式暴露。 */
   onStreamEnd(handler: (error: Error | null) => void): void {
     this.streamEndHandler = handler;
   }
 
-  /** 启动消费循环；重复 start 显式抛错。 */
+  /** 启动消费循环并即时观察后台拒绝；原错误保留给 close，重复 start 显式抛错。 */
   start(): void {
     if (this.consumePromise) {
       throw new Error("JsonRpcPeer: 重复 start");
     }
     this.consumePromise = this.consume();
+    // 只标记拒绝已处理，close 仍等待原 Promise 并暴露原错。
+    void this.consumePromise.catch(() => undefined);
   }
 
-  /** 发一个 client→server 请求并等响应（id 配对，超时显式拒绝）。 */
+  /** 发请求并按 id 等响应；超时显式拒绝，消费终止后以原错或流结束错误立即拒绝且不写进程。 */
   request(
     method: string,
     params?: unknown,
@@ -136,6 +143,9 @@ export class JsonRpcPeer {
   ): Promise<unknown> {
     if (this.closePromise) {
       return Promise.reject(new Error("JsonRpcPeer: 已关闭，不能 request"));
+    }
+    if (this.terminalError) {
+      return Promise.reject(this.terminalError);
     }
     const id = ++this.rpcId;
     const budget = timeoutMs ?? this.defaultTimeoutMs;
@@ -165,12 +175,18 @@ export class JsonRpcPeer {
     return this.closePromise;
   }
 
-  /** 关闭实现：停消费 → 关进程 → 拒绝残留。 */
+  /** 关闭实现：消费失败仍关进程，进程关闭失败仍拒绝残留并清除计时器。 */
   private async doClose(): Promise<void> {
     this.stopConsume?.();
-    await this.consumePromise;
-    await this.proc.close();
-    this.failPending(new Error("JsonRpcPeer: 已关闭"));
+    try {
+      await this.consumePromise;
+    } finally {
+      try {
+        await this.proc.close();
+      } finally {
+        this.failPending(new Error("JsonRpcPeer: 已关闭"));
+      }
+    }
   }
 
   /** 消费 stdout 行流：可被 stopConsume 打断；结束后回调 onStreamEnd。 */
@@ -210,6 +226,8 @@ export class JsonRpcPeer {
     } catch (error) {
       failure = error instanceof Error ? error : new Error(String(error));
     } finally {
+      this.terminalError =
+        failure ?? new Error("JsonRpcPeer: 对端流已结束，不能 request");
       if (failure) {
         this.failPending(failure);
       }

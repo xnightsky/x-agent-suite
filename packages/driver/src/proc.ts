@@ -4,7 +4,7 @@
  * stderr 捕获到环形缓冲（失败诊断）、close 先优雅退出（SIGTERM 或 stdin 关闭）超时后强杀。
  * 不变量：所有错误显式抛带上下文的 Error；close 幂等；
  * win32 无信号语义，优雅路径改为关闭 stdin 请求对端退出，超时后 kill；
- * 分帧只认 \n（U+2028 / U+2029 不断行），由 jsonl-framing 保证。
+ * 分帧只认 \n（U+2028 / U+2029 不断行），由 jsonl-framing 保证；data/EOF 分帧及 stdin 错误均交给异步队列。
  */
 import { spawn, type ChildProcess } from "node:child_process";
 import type { Readable } from "node:stream";
@@ -99,6 +99,7 @@ export class JsonlProcess {
       stdio: ["pipe", "pipe", "pipe"],
     });
     this.child = child;
+    child.stdin?.on("error", (error) => this.failStdin(error));
     await new Promise<void>((resolve, reject) => {
       child.once("spawn", () => resolve());
       child.once("error", (error) => {
@@ -128,7 +129,7 @@ export class JsonlProcess {
     }
   }
 
-  /** 写一行 JSONL 到子进程 stdin；未启动或已关闭显式抛错。 */
+  /** 写一行 JSONL 到子进程 stdin；未启动或已关闭显式抛错，异步写入错误交给 lines()。 */
   send(message: unknown): void {
     const stdin = this.child?.stdin;
     if (!stdin || stdin.destroyed) {
@@ -139,13 +140,18 @@ export class JsonlProcess {
     const line = JSON.stringify(message);
     stdin.write(`${line}\n`, (error) => {
       if (error) {
-        this.queue.fail(
-          new Error(
-            `JsonlProcess stdin 写入失败（command=${this.options.command}）: ${error.message}`,
-          ),
-        );
+        this.failStdin(error);
       }
     });
+  }
+
+  /** write 回调与流 error 事件共用失败路径，由队列保留首次错误。 */
+  private failStdin(error: Error): void {
+    this.queue.fail(
+      new Error(
+        `JsonlProcess stdin 写入失败（command=${this.options.command}）: ${error.message}`,
+      ),
+    );
   }
 
   /** 按序消费 stdout JSONL 解析结果；进程退出或解析失败后迭代终止。 */
@@ -250,8 +256,14 @@ export class JsonlProcess {
       }
     });
     stdout.on("end", () => {
-      framer.end();
-      this.queue.end();
+      try {
+        framer.end();
+        this.queue.end();
+      } catch (error) {
+        this.queue.fail(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      }
     });
   }
 

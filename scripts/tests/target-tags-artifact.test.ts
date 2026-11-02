@@ -1,7 +1,7 @@
 /**
  * @module scripts/tests/target-tags-artifact
  * 验证 TargetTags 在源码和模拟安装布局中的资源定位、显式覆盖及 Judge 准入。
- * 不变量：只构建通用模块、读取公共 YAML；不启动宿主、不读私密配置、零 token。
+ * 不变量：只构建通用模块、读取公共 YAML；注入临时空 home，不启动宿主、不读私密配置、零 token。
  */
 import assert from "node:assert/strict";
 import { cp, mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
@@ -19,11 +19,14 @@ const ROOT = resolve(import.meta.dirname, "../..");
 let stage: string;
 let packageRoot: string;
 let customRoot: string;
+let homeDir: string;
 let loadInstalled: typeof loadTargetTagCatalog;
 let createInstalledJudgeClient: typeof createJudgeClient;
 
 before(async () => {
   stage = await mkdtemp(join(tmpdir(), "xas-target-tags-artifact-"));
+  homeDir = join(stage, "home");
+  await mkdir(homeDir);
   packageRoot = join(stage, "consumer/node_modules/@xnightsky/x-agent-suite");
   customRoot = join(stage, "custom");
   await mkdir(packageRoot, { recursive: true });
@@ -81,27 +84,32 @@ async function writeCustomCatalog(root: string): Promise<void> {
 
 test("源码默认加载与显式 repoRoot 一致", async () => {
   assert.deepEqual(
-    await loadTargetTagCatalog(),
-    await loadTargetTagCatalog({ repoRoot: ROOT }),
+    await loadTargetTagCatalog({ homeDir }),
+    await loadTargetTagCatalog({ repoRoot: ROOT, homeDir }),
   );
 });
 
 test("安装布局默认使用包内公共资源，不读取消费者同名目录", async () => {
-  const catalog = await loadInstalled();
+  const catalog = await loadInstalled({ homeDir });
   assert.ok(catalog.dictionary.keys.length > 0);
-  assert.deepEqual(catalog, await loadTargetTagCatalog({ repoRoot: ROOT }));
+  assert.deepEqual(
+    catalog,
+    await loadTargetTagCatalog({ repoRoot: ROOT, homeDir }),
+  );
 });
 
 test("安装布局保留 repoRoot 与单文件路径的显式覆盖优先级", async () => {
-  const custom = await loadInstalled({ repoRoot: customRoot });
+  const custom = await loadInstalled({ repoRoot: customRoot, homeDir });
   assert.deepEqual(custom.dictionary.keys, []);
   const explicit = await loadInstalled({
+    homeDir,
     repoRoot: ROOT,
     dictionaryPath: join(customRoot, "config/target-tags/keys.yaml"),
     instancesPath: join(customRoot, "config/target-tags/instances.yaml"),
   });
   assert.deepEqual(explicit, custom);
   const mixed = await loadInstalled({
+    homeDir,
     instancesPath: join(customRoot, "config/target-tags/instances.yaml"),
   });
   assert.ok(mixed.dictionary.keys.length > 0);
@@ -112,7 +120,7 @@ test("包内资源缺失显式失败，不回退到消费者或源码仓", async
   const path = join(packageRoot, "config/target-tags/keys.yaml");
   await rename(path, `${path}.backup`);
   try {
-    await assert.rejects(loadInstalled(), (error: unknown) => {
+    await assert.rejects(loadInstalled({ homeDir }), (error: unknown) => {
       assert.ok(error instanceof Error);
       assert.equal(error.name, "TargetTagDefinitionError");
       assert.ok(error.message.includes(path));
@@ -127,7 +135,7 @@ test("包内资源缺失显式失败，不回退到消费者或源码仓", async
 test("打包 Judge 公开入口接受本次获批的 API-credit borrowed 候选", async (t) => {
   const { dictionary } = await loadTargetTagCatalog({
     repoRoot: ROOT,
-    homeDir: stage,
+    homeDir,
   });
   const target = {
     carrier: "fixture-carrier",

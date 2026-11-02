@@ -2,6 +2,8 @@
 
 > 判据负责判定，聚合机负责算分。AI 只产具名裁定，分数恒由静态机出口。
 
+本文描述现有通用聚合契约，不是 Recall 一期作者 DSL。Recall 一期只做各断言 hit／miss 直接计分与总分求和，所有断言通过才通过；decision、阈值、组合维度和否决留待未来，见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。下述已有公共契约与行为不因本次文档收缩改变。
+
 ## 目的
 
 在框架内建一个**领域中立的打分聚合机**：把若干判据的具名判定结果（`CriterionOutcome`）按声明好的维度规则聚合成一个出口分。它回答的问题：「一组判定结果，怎么变成一个可分、可比、可审计的总分？」
@@ -55,7 +57,7 @@ AggregateResult               （出口：pass + 归一分 + 原始分 + coverag
 
 ```mermaid
 flowchart TD
-    A["CriterionOutcome[]<br/>判据已产出的具名 pass/fail"] --> B["逐维求三态<br/>同名全过=hit · 有结果未过=miss · 无结果=absent<br/>（OR 数组：任一命中即 hit）"]
+    A["CriterionOutcome[]<br/>判据已产出的具名 pass/fail"] --> B["逐维求三态<br/>任一同名结果 absent=absent · 否则同名全过=hit · 有结果未过=miss<br/>无结果=absent（OR 数组：任一命中即 hit）"]
     B --> C{"state = absent?"}
     C -->|是| D["absent 映射<br/>zero=中立不进分母<br/>pass=视为命中 · fail=视为未中"]
     C -->|否| E["hit → +weight<br/>miss → −weight"]
@@ -107,7 +109,7 @@ export interface DimensionSpec {
 /** 聚合声明：一张静态表。 */
 export interface AggregationSpec {
   readonly dimensions: readonly DimensionSpec[];
-  /** 过线阈值，作用于归一分（0..1）。省略时：全部在场维命中且无 knockout 触发才 pass。 */
+  /** 过线阈值，作用于可为负的归一分；必须为任意有限数。省略时：计入维全部命中且无 knockout 触发才 pass。 */
   readonly threshold?: number;
 }
 
@@ -145,15 +147,15 @@ export declare function resolveAggregate(
 
 语义细节（实现级口径，代码以此为准）：
 
-- **维度状态（映射前）**：该 `metric` 名下有判定结果且**全部** `pass=true` → hit；有结果但至少一个 `pass=false` → miss；名下无任何结果 → absent。同名多结果（turn 判据每轮一条）取严格口径「全过才算命中」，与 hard 门禁哲学一致。
-- **metric 数组（OR）**：任一引用 metric 为 hit → 本维 hit；引用都有结果但无一 hit → miss；引用全部无结果 → absent。
+- **维度状态（映射前）**：该 `metric` 名下任一结果显式 `state: "absent"`，或名下无任何结果 → absent；否则全部 `pass=true` → hit，至少一个 `pass=false` → miss。`state` 缺省为 evaluated。同名多结果（turn 判据每轮一条）取完整覆盖口径：任一轮 absent 即整个 metric absent，全部轮次有结果且全过才算命中。
+- **metric 数组（OR）**：先按上条求各引用 metric 的状态；任一引用为 hit → 本维 hit；无 hit 但至少一个引用为 miss → 本维 miss；引用全部为 absent → 本维 absent。
 - **absent 映射**：`zero` → 贡献 0、**不计入** maxScore（中立，靠 coverage 披露）；`pass` → 视为 hit、计入 maxScore；`fail` → 视为 miss、计入 maxScore。
 - **maxScore**：计入维（hit / miss / absent→pass / absent→fail）的 weight 总和；全部维度 absent→zero 或无维度时 `maxScore = 0`，`score` 记 0。
 - **负分是刻意的**：未命中 `−weight` 惩罚臆答/乱答（「不答」经 `absent: zero` 反而中立），防止「蒙一个总比不答划算」。这是与 promptfoo（miss 计 0）的有意分歧。归一分 `score = rawScore / maxScore` 不截断到 `[0,1]`，负分原样进报告——「比零分还差」是有信息量的。报告 reason 必须体现每维贡献。
 - **判定顺序**：knockout 短路 → 累加 → threshold / 缺省 pass 判定。任一 `knockout` 维**映射后**非 hit（含 absent→zero / absent→fail）→ `pass=false`，压过累加与 threshold。环境失败应在上游判据层被拦（不产出结果、走 `FailureCategory`），到达聚合机的 absent 只是数据。
-- **pass 判定**：knockout 未触发，且 `threshold` 存在时 `score >= threshold`；省略时计入维全部 hit。
-- **空考警示**：`coverage.evaluated = 0`（无任何在场维）时 reason 必须显式声明「无在场维度」——机制上不替场景做 zero/fail 选择，但绝不允许「免费绿」被静默误读。
-- **coverage**：`evaluated` = 映射前非缺席维数，`total` = 声明维数。
+- **pass 判定**：knockout 未触发，且 `threshold` 存在时 `score >= threshold`；省略时计入维全部 hit。threshold 可为任意有限数，与归一分可为负的语义一致。
+- **空考警示**：`coverage.evaluated = 0`（无任何在场维）时 reason 必须显式声明「无在场维度」——机制上不替场景做 zero/fail 选择，但绝不允许「免费绿」被静默误读。该规则仅描述本通用聚合契约；Recall 目标 DSL 不再提供缺席计分机制。
+- **coverage**：`evaluated` = OR 归约后、映射前非缺席维数，`total` = 声明维数。多轮部分 absent 的 metric 不计入 `evaluated`；若它属于 OR 维度，则以整个维度的归约状态为准。`absent: pass/fail` 只影响计分，不倒推提高 coverage。
 - **引用完整性**：`metric` 引用了任何判据都未产出的名字时，按 absent 处理（不报错），但 `resolveAggregate` 在 reason 中逐个点名，供场景作者发现拼写错误（呼应 [scenario-dsl.md](./scenario-dsl.md) 的引用完整性校验原则）。
 
 ## 接线位置
@@ -169,13 +171,13 @@ provision（铺安装态，消费者写）
 
 - **类型**：`@x-agent-suite/contracts`（与本包「只导出类型」一致，上述接口均为类型声明）。
 - **实现**：`@x-agent-suite/observation` 新增 `resolveAggregate` 纯函数——该包已是「判据结果 → 报告」的汇聚点。
-- **spec 载体**：当前框架无通用 runner（P3 未交付），聚合声明由消费者放在自己的场景文件 / `metadata` 自由区，调用 `resolveAggregate` 后把 `AggregateResult` 塞进 `ScenarioResult.evidence` 进报告。runner 落地时再定官方载体，本设计不预设。
+- **spec 载体**：`ScenarioSpec.aggregate` 是现有通用运行时聚合入口。Recall 一期不暴露 decision 或聚合维度 DSL，只要求独立断言计分、求和与固定全通过；未来组合政策见 [Decision 预设计](../research/recall-decision-pre-design.md)。
 
 ## judge 接入面（通用执行器，不内建领域判据）
 
-- `@x-agent-suite/judge` 提供通用批量裁定执行器，输出 `JudgeVerdict`，不是 `CriterionOutcome`。消费者自行把具名布尔裁定适配为判据结果，再进入聚合机；框架仍不内建任何领域判据，分数恒由静态机出口。完整契约见 [judge.md](./judge.md)。
+- `@x-agent-suite/judge` 提供通用批量裁定执行器，输出 `JudgeVerdict`，不是 `CriterionOutcome`。Recall 一期目标保留每个 AI rubric 的独立判断与分值，与机械断言直接求和，不以 decision 为前提。完整目标见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
 - Judge 复用 live 配置与 `LiveBackend`，通过通用 TargetTags 决策 direct/borrowed；唯一候选可自动选择，多候选必须显式 mode/cliRef，借用凭据不等于 direct 授权，失败不跨 mode fallback。真实裁判调用属于 token 消耗，只能在显式 token 测试层运行。
-- **失败分层**：单项缺失或无法识别是 `completed + absent`，由消费者决定 absent 映射；整体未配置、调用失败或不可解析是 `not-evaluated`，不得直接压成内容零分。
+- **失败分层**：原生 Judge 的单项缺失或无法识别仍为 `completed + absent`；整体未配置、调用失败或不可解析为 `not-evaluated`。Recall 目标适配在缺少必需裁定时报告评测错误，不提供缺席计分映射，也不得把评测失败压成内容零分。
 
 ## 依赖决策记录
 
@@ -189,16 +191,17 @@ provision（铺安装态，消费者写）
 
 ## 落地决策记录
 
-| 日期       | 决策                                                                    | 理由                                                                                                                                   |
-| ---------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-09-19 | 第二个消费者坐实：内部宿主评估实践（多条确定性判据 + 分维度稳定率场景） | 边界自查「第二个消费者是否需要」从论证变为实证；其既有分维度指标需靠闭包 hack 实现、「未触达即空置通过」的假绿问题正是本机制的对症场景 |
-| 2026-09-19 | 落地顺序：基座先行实现，消费者侧接入另行排期                            | 消费者 pin 的基座版本尚无本机制，先产基座能力与新 release                                                                              |
-| 2026-09-19 | **`weight` 缺省 = 1**（从「未决事项」结案）                             | 权重是精调手段而非必填门槛：不熟悉打分配置的人一个数字都不写，也应得到合理打分（缺省表：weight=1、无 knockout、absent=zero）           |
-| 2026-09-19 | 「免费绿」的缺席语义（zero / fail 选型）归消费者场景侧                  | 机制三种映射全支持；选哪个是被测领域的语义判断，框架不替场景拍板                                                                       |
+| 日期       | 决策                                                                              | 理由                                                                                                                                   |
+| ---------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | 第二个消费者坐实：内部宿主评估实践（多条确定性判据 + 分维度稳定率场景）           | 边界自查「第二个消费者是否需要」从论证变为实证；其既有分维度指标需靠闭包 hack 实现、「未触达即空置通过」的假绿问题正是本机制的对症场景 |
+| 2026-09-19 | 落地顺序：基座先行实现，消费者侧接入另行排期                                      | 消费者 pin 的基座版本尚无本机制，先产基座能力与新 release                                                                              |
+| 2026-09-19 | **`weight` 缺省 = 1**（从「未决事项」结案）                                       | 权重是精调手段而非必填门槛：不熟悉打分配置的人一个数字都不写，也应得到合理打分（缺省表：weight=1、无 knockout、absent=zero）           |
+| 2026-09-19 | 「免费绿」的缺席语义（zero / fail 选型）归消费者场景侧                            | 机制三种映射全支持；选哪个是被测领域的语义判断，框架不替场景拍板                                                                       |
+| 2026-11-01 | 通用聚合 threshold 接受任意有限数；Recall 一期改为断言直接计分，decision 移到未来 | Recall 的 score 可选，默认 hit=1／miss=-1，分数直接求和；全部断言通过才通过，既有通用契约不随本次文档调整改变                          |
 
 ## 验收标准
 
-- 单元测试覆盖：三态映射、knockout 短路优先于累加、负分不截断、`maxScore=0` 全缺席、coverage 计算、threshold 边界（含缺省 pass 规则）、metric 数组 OR、未知名引用的 reason 点名。
+- 单元测试覆盖：三态映射、knockout 短路优先于累加、负分不截断、`maxScore=0` 全缺席、coverage 计算、有限 threshold 与负 threshold 边界、缺省 pass 规则、metric 数组 OR、未知名引用的 reason 点名。Recall 的默认 1／-1、显式 miss=0 与其他分值、直接求和及全部断言通过规则由后续 Recall 实施单独验收，不把此处组合政策列为其一期作者能力。
 - `pnpm boundary` 无新增违规；`pnpm check` 全绿。
 - 本文件与 `contracts.md` / `scenario-evaluation.md` 交叉引用同步。
 

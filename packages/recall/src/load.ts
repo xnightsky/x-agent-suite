@@ -11,8 +11,10 @@ import {
   loadLiveConfig,
   loadTargetTagCatalog,
   resolveLiveTargets,
+  type LiveConfigLoad,
   type LiveConfigOptions,
   type LiveTargetSelection,
+  type TargetTagCatalog,
 } from "@x-agent-suite/llm-fixture";
 import { findRecallFiles } from "./discovery.ts";
 import { compileRecallFile } from "./compile.ts";
@@ -57,6 +59,16 @@ export interface LoadRecallOptions {
 export interface RecallExecutionPlan {
   /** 已归一化的执行副作用策略。 */
   readonly effects: RecallEffects;
+}
+
+/** loadRecallCore 结果：公开加载结果 + 装配所需的同源 catalog 与归一化批准。 */
+export interface RecallLoadCore {
+  /** 公开加载形状，与 loadRecall 返回值一致。 */
+  readonly loaded: LoadedRecall;
+  /** 与主执行同源的四层能力目录；不公开到包 index。 */
+  readonly catalog: TargetTagCatalog;
+  /** 归一化后的本次命令 live 批准（approveLive ?? false）。 */
+  readonly liveReviewApproved: boolean;
 }
 
 /** 已完成全部前置校验的 Recall 输入。 */
@@ -142,84 +154,136 @@ async function loadScenarios(
   return scenarios;
 }
 
-async function resolveExecutions(options: {
+/** 单次加载 live 配置并构建同源 catalog；target 解析与判据装配共用这一次结果。 */
+async function resolveLiveCatalog(options: {
   readonly config: LiveConfigOptions;
-  readonly selection: LiveTargetSelection;
-  readonly effects: RecallEffects;
-  readonly registry: RecallRegistry;
-  readonly approveLive: boolean;
-}): Promise<readonly RecallResolvedExecution[]> {
+}): Promise<{
+  readonly live: LiveConfigLoad;
+  readonly catalog: TargetTagCatalog;
+}> {
   const live = await loadLiveConfig(options.config);
-  const resolved = resolveLiveTargets(live, options.selection);
-  if (resolved.kind !== "configured") {
-    throw new Error("Recall live target 未配置：" + resolved.reason);
-  }
   const catalog = await loadTargetTagCatalog({
     liveConfig: live,
     homeDir: options.config.homeDir,
   });
+  return { live, catalog };
+}
+
+async function resolveExecutions(options: {
+  readonly live: LiveConfigLoad;
+  readonly selection: LiveTargetSelection;
+  readonly effects: RecallEffects;
+  readonly registry: RecallRegistry;
+  readonly catalog: TargetTagCatalog;
+  readonly liveReviewApproved: boolean;
+}): Promise<readonly RecallResolvedExecution[]> {
+  const resolved = resolveLiveTargets(options.live, options.selection);
+  if (resolved.kind !== "configured") {
+    throw new Error("Recall live target 未配置：" + resolved.reason);
+  }
   return resolved.targets.map((target) =>
     resolveRecallExecution({
       target,
-      catalog,
+      catalog: options.catalog,
       effects: options.effects,
       registry: options.registry,
-      liveReviewApproved: options.approveLive,
+      liveReviewApproved: options.liveReviewApproved,
     }),
   );
 }
 
-/** 加载完整 Recall 输入；所有错误均发生在 Driver 创建之前。 */
-export async function loadRecall(
+/** 归一本次调用的全部路径；不读取文件，不做存在性检查。 */
+function resolveLoadPaths(
+  cwd: string,
+  options: Pick<
+    LoadRecallOptions,
+    "registryPath" | "planPath" | "rootDir" | "liveConfigPath" | "outDir"
+  >,
+): {
+  readonly registryPath?: string;
+  readonly planPath?: string;
+  readonly rootDir: string;
+  readonly liveConfigPath?: string;
+  readonly outDir: string;
+} {
+  return {
+    ...(options.registryPath
+      ? { registryPath: resolve(cwd, options.registryPath) }
+      : {}),
+    ...(options.planPath
+      ? {
+          planPath: options.planPath.startsWith("use:")
+            ? options.planPath
+            : resolve(cwd, options.planPath),
+        }
+      : {}),
+    rootDir: options.rootDir ? resolve(cwd, options.rootDir) : cwd,
+    ...(options.liveConfigPath
+      ? { liveConfigPath: resolve(cwd, options.liveConfigPath) }
+      : {}),
+    outDir: options.outDir
+      ? resolve(cwd, options.outDir)
+      : resolve(cwd, ".tmp/x-agent-suite"),
+  };
+}
+
+/**
+ * 加载完整 Recall 输入并保留装配所需同源数据（catalog 与归一化批准）。
+ * 所有错误均发生在 Driver 创建之前；不公开到包 index，仅供 run 装配使用。
+ */
+export async function loadRecallCore(
   options: LoadRecallOptions,
-): Promise<LoadedRecall> {
+): Promise<RecallLoadCore> {
   validateSelection(options.selection);
   const executionParams = copyExecutionParams(options.executionParams ?? {});
   const cwd = resolve(options.cwd ?? process.cwd());
   if (options.repeat !== undefined && !isPositiveInteger(options.repeat)) {
     throw new Error("Recall repeat 必须是正整数");
   }
-  const registryPath = options.registryPath
-    ? resolve(cwd, options.registryPath)
-    : undefined;
-  const planPath = options.planPath
-    ? options.planPath.startsWith("use:")
-      ? options.planPath
-      : resolve(cwd, options.planPath)
-    : undefined;
-  const registry = await loadRecallRegistry(registryPath);
-  const effects = await loadRecallEffectsPlan(planPath, registry);
+  const paths = resolveLoadPaths(cwd, options);
+  const registry = await loadRecallRegistry(paths.registryPath);
+  const effects = await loadRecallEffectsPlan(paths.planPath, registry);
   const files = await findRecallFiles({
     cwd,
     target: options.target,
-    excludePath: planPath?.startsWith("use:") ? undefined : planPath,
+    excludePath: paths.planPath?.startsWith("use:")
+      ? undefined
+      : paths.planPath,
   });
-  const rootDir = options.rootDir ? resolve(cwd, options.rootDir) : cwd;
-  const scenarios = await loadScenarios(files, rootDir, registry);
-  const liveConfigPath = options.liveConfigPath
-    ? resolve(cwd, options.liveConfigPath)
-    : undefined;
-  const config = liveConfigOptions(cwd, liveConfigPath, options.homeDir);
+  const scenarios = await loadScenarios(files, paths.rootDir, registry);
+  const config = liveConfigOptions(cwd, paths.liveConfigPath, options.homeDir);
+  const liveReviewApproved = options.approveLive ?? false;
+  const { live, catalog } = await resolveLiveCatalog({ config });
   const executions = await resolveExecutions({
-    config,
+    live,
     selection: options.selection,
     effects,
     registry,
-    approveLive: options.approveLive ?? false,
+    catalog,
+    liveReviewApproved,
   });
   return {
-    cwd,
-    executionParams,
-    rootDir,
-    files,
-    registry,
-    plan: { effects },
-    scenarios,
-    executions,
-    config,
-    repeat: options.repeat ?? 1,
-    outDir: options.outDir
-      ? resolve(cwd, options.outDir)
-      : resolve(cwd, ".tmp/x-agent-suite"),
+    catalog,
+    liveReviewApproved,
+    loaded: {
+      cwd,
+      executionParams,
+      rootDir: paths.rootDir,
+      files,
+      registry,
+      plan: { effects },
+      scenarios,
+      executions,
+      config,
+      repeat: options.repeat ?? 1,
+      outDir: paths.outDir,
+    },
   };
+}
+
+/** 加载完整 Recall 输入；所有错误均发生在 Driver 创建之前。 */
+export async function loadRecall(
+  options: LoadRecallOptions,
+): Promise<LoadedRecall> {
+  return (await loadRecallCore(options)).loaded;
 }

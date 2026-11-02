@@ -17,8 +17,10 @@
     "test": "tsx --test \"tests/*.test.ts\""
   },
   "dependencies": {
+    "@x-agent-suite/assertions": "workspace:*",
     "@x-agent-suite/contracts": "workspace:*",
     "@x-agent-suite/harness": "workspace:*",
+    "@x-agent-suite/judge": "workspace:*",
     "@x-agent-suite/llm-fixture": "workspace:*",
     "@x-agent-suite/observation": "workspace:*",
     "@x-agent-suite/runner": "workspace:*",

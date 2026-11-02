@@ -78,6 +78,9 @@ importers:
       '@types/node':
         specifier: ^25.6.0
         version: 25.9.5
+      '@x-agent-suite/llm-fixture':
+        specifier: workspace:*
+        version: link:../llm-fixture
       tsx:
         specifier: ^4.21.0
         version: 4.23.12
@@ -244,12 +247,18 @@ importers:
 
   packages/recall:
     dependencies:
+      '@x-agent-suite/assertions':
+        specifier: workspace:*
+        version: link:../assertions
       '@x-agent-suite/contracts':
         specifier: workspace:*
         version: link:../contracts
       '@x-agent-suite/harness':
         specifier: workspace:*
         version: link:../harness
+      '@x-agent-suite/judge':
+        specifier: workspace:*
+        version: link:../judge
       '@x-agent-suite/llm-fixture':
         specifier: workspace:*
         version: link:../llm-fixture

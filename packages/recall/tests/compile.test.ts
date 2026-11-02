@@ -346,3 +346,40 @@ cases: [{ id: c, turns: [{ send: x }] }]
   }
   await assert.rejects(access(destination));
 });
+
+test("工厂描述符参与 metric 注册校验：声明即可通过引用检查，缺声明仍拒绝", async (t) => {
+  const root = await workspace(t);
+  const file = join(root, "suite.yaml");
+  await writeFile(
+    file,
+    `version: 1
+id: mixed-registry
+cases:
+  - id: c
+    turns:
+      - send: x
+        expect: { text-contains: [x], factory-metric: [{ name: q, rubric: 标准 }] }
+`,
+  );
+  const factoryDescriptor = {
+    name: "factory-metric",
+    scope: "turn" as const,
+    create: async () => {
+      throw new Error("编译期不得调用工厂 create");
+    },
+  };
+  const scenarios = await compileRecallFile(file, {
+    rootDir: root,
+    criteria: [textContains, factoryDescriptor],
+  });
+  assert.equal(scenarios.length, 1);
+  assert.deepEqual(Object.keys(scenarios[0]!.turns[0]!.expect!), [
+    "text-contains",
+    "factory-metric",
+  ]);
+
+  await assert.rejects(
+    compileRecallFile(file, { rootDir: root, criteria: [textContains] }),
+    /factory-metric|未注册/,
+  );
+});
