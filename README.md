@@ -1,10 +1,28 @@
 # x-agent-suite
 
+[![npm version](https://img.shields.io/npm/v/@xnightsky/x-agent-suite.svg)](https://www.npmjs.com/package/@xnightsky/x-agent-suite)
+[![CI](https://github.com/xnightsky/x-agent-suite/actions/workflows/ci.yml/badge.svg)](https://github.com/xnightsky/x-agent-suite/actions/workflows/ci.yml)
+[![Release](https://github.com/xnightsky/x-agent-suite/actions/workflows/release.yml/badge.svg)](https://github.com/xnightsky/x-agent-suite/actions/workflows/release.yml)
+[![Node.js >=24](https://img.shields.io/badge/node-%3E%3D24.0.0-339933?logo=node.js&logoColor=white)](package.json)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 通用 Agent 测试套件框架：为多种 Agent（自研 Agent、通用 Agent、编程 Agent）提供可复用的多轮行为评估基础设施。
 
 > 目标：把多类真实评测实践中已验证的跨宿主测试能力，按领域中立原则抽取为可供不同消费者复用的独立框架。
 
 仓库统一术语以 [CONTEXT.md](CONTEXT.md) 为锚，详细契约与执行规则仍由各 spec 承载。
+
+## 安装
+
+当前稳定版为 [`0.10.0`](https://github.com/xnightsky/x-agent-suite/releases/tag/v0.10.0)，可从 npm 安装核心包：
+
+```bash
+pnpm add @xnightsky/x-agent-suite@0.10.0
+```
+
+需要 PTY 时，从同一 Release 下载 `x-agent-suite-pty-driver-0.10.0.tgz`，与核心包保持相同版本。更多交付方式见[打包与版本管理](docs/spec/packaging.md)。
+
+**文档导航**：[使用教程](docs/tutorial/README.md) · [模块组合](docs/tutorial/combinations.md) · [接口契约](docs/spec/README.md) · [测试分层](docs/spec/testing.md) · [发布与安装](docs/spec/packaging.md)
 
 ## 核心纪律
 
@@ -123,7 +141,7 @@ live 组合的凭证按三级阶梯解析，有下级就不用上级：
 
 ## 状态
 
-v0 · 版本化交付阶段。基础模块与本地制品打包已可用，Release 工作流在同一构建中提供 GitHub 制品上传和 npm 主包发布；各版本是否可用以对应发布记录为准，框架能力继续按路线图演进。
+当前稳定版：[`0.10.0`](https://github.com/xnightsky/x-agent-suite/releases/tag/v0.10.0)。基础模块、GitHub 制品与 npm 主包均已发布；各版本能力以对应发布记录为准，框架继续按路线图演进。
 
 > [!CAUTION]
 > **AI CLI 自动化风险：风险自担！！！**
