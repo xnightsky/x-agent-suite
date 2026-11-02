@@ -170,6 +170,57 @@ test("判据结果必须满足公共形状，合法 0.4 原样保留", async () 
   assert.equal(outcomes[0]!.score, 0.4);
 });
 
+test("判据附加身份字段不得覆盖调度器写入的 name/scope/turnIndex", async () => {
+  const turnCriterion: Criterion = {
+    name: "turn-real",
+    scope: "turn",
+    evaluate: () =>
+      ({
+        name: "spoofed-turn",
+        scope: "session",
+        turnIndex: 99,
+        pass: true,
+        score: 1,
+        reason: "turn",
+      }) as CriterionResult,
+  };
+  const sessionCriterion: Criterion = {
+    name: "session-real",
+    scope: "session",
+    evaluate: () =>
+      ({
+        name: "spoofed-session",
+        scope: "turn",
+        pass: true,
+        score: 1,
+        reason: "session",
+      }) as CriterionResult,
+  };
+  const outcomes = await runCriteria({
+    session: makeSession([makeTurn(0, "你好")]),
+    criteria: [turnCriterion, sessionCriterion],
+    turnExpects: [{ "turn-real": true }],
+    sessionExpect: { "session-real": true },
+  });
+  assert.deepEqual(outcomes, [
+    {
+      name: "turn-real",
+      scope: "turn",
+      turnIndex: 0,
+      pass: true,
+      score: 1,
+      reason: "turn",
+    },
+    {
+      name: "session-real",
+      scope: "session",
+      pass: true,
+      score: 1,
+      reason: "session",
+    },
+  ]);
+});
+
 test("evidence 作为普通 TurnCriterion 复用现有调度与 outcome 投影", async () => {
   const turn: TurnObservation = {
     ...makeTurn(0, "依据 docs/a.md"),

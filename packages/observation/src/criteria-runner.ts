@@ -94,7 +94,7 @@ export async function runCriteria(
         expect,
       });
       assertCriterionResult(result, `turn:${turn.index}:${name}`);
-      outcomes.push({ name, scope: "turn", turnIndex: turn.index, ...result });
+      outcomes.push({ ...result, name, scope: "turn", turnIndex: turn.index });
     }
   }
 
@@ -105,7 +105,7 @@ export async function runCriteria(
       if (criterion.scope !== "session") continue; // 索引键已保证，仅供类型收窄
       const result = await criterion.evaluate(session, { expect });
       assertCriterionResult(result, `session:${name}`);
-      outcomes.push({ name, scope: "session", ...result });
+      outcomes.push({ ...result, name, scope: "session" });
     }
   }
 
