@@ -32,6 +32,14 @@ test("核心聚合包导出全部稳定子路径并外置 YAML/TSX 依赖", asyn
     types: "./types/packaging/entries/assertions.d.ts",
     import: "./dist/assertions.js",
   });
+  assert.deepEqual(manifest.exports["./assertions/evidence"], {
+    types: "./types/packaging/entries/assertions/evidence.d.ts",
+    import: "./dist/assertions/evidence.js",
+  });
+  assert.deepEqual(manifest.exports["./assertions/judge"], {
+    types: "./types/packaging/entries/assertions/judge.d.ts",
+    import: "./dist/assertions/judge.js",
+  });
   assert.deepEqual(manifest.exports["./profiles/pi-recall"], {
     types: "./types/profiles/pi-recall.d.ts",
     import: "./dist/profiles/pi-recall.js",
@@ -45,6 +53,8 @@ test("核心聚合包导出全部稳定子路径并外置 YAML/TSX 依赖", asyn
   assert.ok(manifest.files.includes("config/target-tags/instances.yaml"));
   assert.deepEqual(Object.keys(manifest.exports), [
     ...CORE_EXPORT_NAMES.map((name) => `./${name}`),
+    "./assertions/evidence",
+    "./assertions/judge",
     "./profiles/pi-config",
     "./profiles/pi-recall",
   ]);

@@ -22,7 +22,7 @@
 | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `runScenarioSpec` 先执行主 Driver、形成 SessionObservation，再调用 `runCriteria`                                      | `packages/runner/src/run-scenario.ts`         | 单次调用已经符合"执行 → assert"                                                                                        |
 | `runScenarioRepeat` 只顺序调用 `runScenarioSpec`，复用 criteria 并重新创建主 Driver                                   | `packages/runner/src/repeat.ts`               | repeat 只是可选稳定性复测，不需要新装配接缝                                                                            |
-| `createJudgeAssertion({ client })` 已调用原生 `judge()` 并转换 verdict                                                | `packages/assertions/src/judge-assertion.ts`  | 不新增第二套 AI 断言、prompt 或结果转换                                                                                |
+| `createJudgeAssertion({ client })` 已调用原生 `judge()` 并转换 verdict                                                | `packages/assertions/src/judge/assertion.ts`  | 不新增第二套 AI 断言、prompt 或结果转换                                                                                |
 | assertions 已依赖 judge                                                                                               | `packages/assertions/package.json`            | 可以直接复用 `createJudgeClient`，无需新增依赖层                                                                       |
 | `createJudgeClient` 已接收 target、config、tags、批准及 direct/borrowed 配置                                          | `packages/judge/src/types.ts`                 | 配置入口应透传原生能力，不另造渠道或审批系统                                                                           |
 | `createJudgeClient` 是同步函数，构造期只做参数校验与 TargetTags 决策；backend/Driver 在每次 `complete()` 内创建并清理 | `packages/judge/src/client.ts`                | `createJudgeAssertion` 保持同步签名；`clientOptions` 在装配期同步解析即满足"构造阶段不启动 Driver、不联网、不调用模型" |
@@ -33,7 +33,7 @@
 | Recall DSL 只有 turn 级 `expect`，无 session 级 expect                                                                | `packages/recall/src/schema.ts`、`compile.ts` | 引用收集只扫 `turn.expect`；session scope 工厂声明合法但当前不会被引用装配                                             |
 | 编译期 `assertRegisteredMetrics` 只按 `scope === "turn"` 过滤判据名验证引用                                           | `packages/recall/src/compile.ts`              | 编译器只需 name/scope 描述符，判据描述符化即可兼容工厂                                                                 |
 | `runCriteria` 已按 scope + name 和字段存在分派已有 Observation                                                        | `packages/observation/src/criteria-runner.ts` | 不新增断言调度器，也不用 truthy 判断是否启用判据                                                                       |
-| `JudgeAssertionOptions` 当前是含必填 `client` 的导出 interface                                                        | `packages/assertions/src/judge-assertion.ts`  | 改为判别联合 `type`；包为 0.0.0 private，类型层破坏可接受，但须在 README 记录                                          |
+| `JudgeAssertionOptions` 当前是含必填 `client` 的导出 interface                                                        | `packages/assertions/src/judge/assertion.ts`  | 改为判别联合 `type`；包为 0.0.0 private，类型层破坏可接受，但须在 README 记录                                          |
 
 registry 本身是正常插件注册边界；本方案不把它改名为服务容器，也不要求 assertions 反向依赖 observation 或 recall。
 

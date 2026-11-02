@@ -9,3 +9,11 @@ export {
   toolCall,
   type ToolCallExpect,
 } from "@x-agent-suite/assertions";
+export { createEvidenceCriterion, evidence } from "@x-agent-suite/assertions";
+export type {
+  CitationEvidenceExpect,
+  EvidenceCriterionOptions,
+  EvidenceExpect,
+  ToolResultEvidenceExpect,
+  WorkspaceResourceExpect,
+} from "@x-agent-suite/assertions";

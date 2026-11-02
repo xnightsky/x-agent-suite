@@ -51,6 +51,8 @@ export interface ScenarioResult {
 
 确定性检查与判据实现在 `@x-agent-suite/assertions`；`criteria` 与 observation 的旧检查入口只作兼容重导出。AI 判据只有显式启用后才执行模型调用。Recall 一期的 case 级 expect.judge、机械与 AI 断言直接计分见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)：逐项得分求和，全部断言通过才通过，不提供 decision。
 
+通用 `evidence` 判据提供成功非空工具结果、workspace 路径、引用关联与 `not/allOf` 组合；它复用同一 Observation/Criterion 调度，错误与内容失败分离，详见 [访问痕迹证据断言](./evidence-assertions.md)。
+
 已有通用聚合契约的具名结果如何加权汇总（weight / knockout / absent / threshold），见 [scoring-aggregation.md](./scoring-aggregation.md)；这些组合政策不是 Recall 一期作者接口。
 
 通用 AI 裁定执行、absent 与 not-evaluated 分层见 [judge.md](./judge.md)；Judge 只产具名布尔 verdict，不替代上述确定性层或静态聚合。
@@ -169,7 +171,8 @@ Live 模式断言 model-agnostic：不断言具体文本，只断言行为形态
 packages/assertions/src/
 ├── checks.ts           # dry / hard / fuzzy / enumerate 与工具匹配
 ├── deterministic.ts    # text / tool-call 判据
-└── judge-assertion.ts  # AI→TurnCriterion 薄适配
+├── evidence/         # 访问痕迹证据与路径/输出原语
+└── judge/            # AI→TurnCriterion 薄适配与结果展开
 
 packages/observation/src/
 ├── checks.ts           # 旧检查入口的兼容重导出

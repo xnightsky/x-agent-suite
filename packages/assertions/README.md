@@ -5,7 +5,7 @@
 ## 用途
 
 - **检查层原语**：`dryChecks`（结构门禁）、`hardChecks`（工具调用与入参）、`fuzzyChecks`（文本兜底）、`checkListResult`（列举逐条核对）。
-- **三个确定性判据**：`textContains`、`textNotContains`、`toolCall`，均为 `TurnCriterion`，注册后由每轮 `expect` 按名引用。
+- **四个确定性判据**：`textContains`、`textNotContains`、`toolCall`、`evidence`，均为 `TurnCriterion`，注册后由每轮 `expect` 按名引用。
 - **AI 断言适配**：`createJudgeAssertion` 把 `judge()` 的具名裁定包成 `TurnCriterion`；`judgeAssertionResults` 将同一 `JudgeOutcome` 展开为逐 rubric 的原始 name/pass/reason/0..1 结果，两者共用 absent/not-evaluated 语义。
 - **直接贡献原语**：`parseAssertionScore` 封闭校验 `{hit?,miss?}`，`assertionContribution` 独立应用 hit=1/miss=-1 默认并计算 `pass ? hit : miss`；`AssertionDetail` 与原始 CriterionOutcome 分离，不回写其 0..1 score。
 
@@ -19,14 +19,17 @@
 
 ## 公开入口
 
-| 分组       | 导出                                                                                                                |
-| ---------- | ------------------------------------------------------------------------------------------------------------------- |
-| 工具匹配   | `toolNameMatches`、`toolActionMatches`                                                                              |
-| 检查原语   | `dryChecks`、`hardChecks`、`fuzzyChecks`、`checkListResult`                                                         |
-| 确定性判据 | `textContains`、`textNotContains`、`toolCall`、`ToolCallExpect`                                                     |
-| AI 断言    | `createJudgeAssertion`、`judgeAssertionResults`、`JudgeAssertionOptions`、`NamedAssertionResult`                    |
-| 直接贡献   | `parseAssertionScore`、`assertionContribution`、`AssertionScoreConfig`、`AssertionScoreResolver`、`AssertionDetail` |
-| 契约类型   | `EnumerateCheck`、`EnumerateResult`、`HardExpectation`（重导出）                                                    |
+| 分组         | 导出                                                                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| 工具匹配     | `toolNameMatches`、`toolActionMatches`                                                                                   |
+| 检查原语     | `dryChecks`、`hardChecks`、`fuzzyChecks`、`checkListResult`                                                              |
+| 确定性判据   | `textContains`、`textNotContains`、`toolCall`、`ToolCallExpect`                                                          |
+| 访问痕迹证据 | `evidence`、`createEvidenceCriterion`、`EvidenceExpect`；输出/路径原语 `extractToolOutputText`、`normalizeWorkspacePath` |
+| AI 断言      | `createJudgeAssertion`、`judgeAssertionResults`、`JudgeAssertionOptions`、`NamedAssertionResult`                         |
+| 直接贡献     | `parseAssertionScore`、`assertionContribution`、`AssertionScoreConfig`、`AssertionScoreResolver`、`AssertionDetail`      |
+| 契约类型     | `EnumerateCheck`、`EnumerateResult`、`HardExpectation`（重导出）                                                         |
+
+`@x-agent-suite/assertions/evidence` 与 `@x-agent-suite/assertions/judge` 分别提供访问痕迹证据和 AI 断言适配的窄入口；根入口继续重导出相同符号。
 
 `dryChecks` / `hardChecks` / `fuzzyChecks` 返回失败原因列表，空数组即通过；`checkListResult` 返回 `hallucinated` / `missing`。`hardChecks` 的 `args` 是浅层 JSON 相等，`toolCall` 的 `args` 是递归子集约束——两者刻意不同。
 
@@ -109,10 +112,14 @@ const fromOptions = createJudgeAssertion({
 
 ## 包形态与分发
 
-| 场景       | 导入路径                              | 形态                                            |
-| ---------- | ------------------------------------- | ----------------------------------------------- |
-| 本仓内     | `@x-agent-suite/assertions`           | workspace 私有包（`private: true`），不单独发布 |
-| 仓外消费者 | `@xnightsky/x-agent-suite/assertions` | 聚合分发包 `@xnightsky/x-agent-suite` 的子路径  |
+| 场景               | 导入路径                                       | 形态                                            |
+| ------------------ | ---------------------------------------------- | ----------------------------------------------- |
+| 本仓内             | `@x-agent-suite/assertions`                    | workspace 私有包（`private: true`），不单独发布 |
+| 仓外消费者         | `@xnightsky/x-agent-suite/assertions`          | 聚合分发包 `@xnightsky/x-agent-suite` 的子路径  |
+| 本仓证据子路径     | `@x-agent-suite/assertions/evidence`           | 与根入口共享同一实现                            |
+| 仓外证据子路径     | `@xnightsky/x-agent-suite/assertions/evidence` | 聚合包内独立 JS/声明入口                        |
+| 本仓 AI 断言子路径 | `@x-agent-suite/assertions/judge`              | 仅 AI 断言适配，不替代底层 Judge 入口           |
+| 仓外 AI 断言子路径 | `@xnightsky/x-agent-suite/assertions/judge`    | 聚合包内独立 JS/声明入口                        |
 
 ## 命令（仓库根执行）
 
@@ -124,6 +131,7 @@ pnpm --filter @x-agent-suite/assertions test
 ## 正式文档
 
 - [场景评估](../../docs/spec/scenario-evaluation.md)：判据如何进入评分
+- [访问痕迹证据断言](../../docs/spec/evidence-assertions.md)：非空读取、workspace 路径、引用与组合
 - [打分聚合](../../docs/spec/scoring-aggregation.md)：判据结果如何变成出口分
 - [通用 AI Judge](../../docs/spec/judge.md)：AI 断言的底层执行器
 - [打包与分发](../../docs/spec/packaging.md)：聚合子路径机制

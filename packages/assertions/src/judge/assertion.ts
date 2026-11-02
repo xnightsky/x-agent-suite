@@ -1,5 +1,5 @@
 /**
- * @module @x-agent-suite/assertions/judge-assertion
+ * @module @x-agent-suite/assertions/judge/assertion
  * AI 断言的薄适配：judge() 的具名裁定 → turn 判据结果。
  * 不变量：
  * - rubric 清单来自该轮 expect（JudgeRubric[]），形状交 judge() 现有校验；
@@ -15,7 +15,7 @@ import {
   type JudgeModelClient,
   type JudgeRubric,
 } from "@x-agent-suite/judge";
-import { judgeAssertionResults } from "./judge-results.ts";
+import { judgeAssertionResults } from "./results.ts";
 
 /** AI 断言的公共基础选项；不含渠道、目标或审批参数。 */
 export interface JudgeAssertionBaseOptions {

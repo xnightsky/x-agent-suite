@@ -4,6 +4,14 @@
 
 ## Unreleased
 
+## 0.11.0 - 2026-11-02
+
+### Added
+
+- Assertions 新增普通 `evidence` TurnCriterion 与 `createEvidenceCriterion`，支持成功非空工具结果、显式 workspace 路径归一、引用—实读关联及 `not/allOf` 组合；新增输出文本和路径纯原语，复用现有 Runner/Outcome，不新增 Driver 契约或结构化子项结果。
+- Assertions 新增 `assertions/evidence` 与 `assertions/judge` 窄导入子路径，workspace 与聚合分发均提供对应 JS/声明入口，根入口保持兼容。
+- 新增 `integrations/itrepos/evidence` 场景仓及 `ittest:token:evidence` 精确入口，覆盖检索、实读、引用和禁止访问；默认回归只运行零 token 配置编译测试。
+
 ## 0.10.0 - 2026-11-02
 
 ### Added

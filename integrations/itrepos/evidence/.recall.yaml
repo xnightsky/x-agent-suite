@@ -1,0 +1,49 @@
+version: 1
+id: observed-evidence
+plans:
+  resources:
+    resources:
+      - source: docs/research.md
+        destination: docs/research.md
+      - source: docs/attachment.md
+        destination: docs/attachment.md
+context:
+  plan: resources
+cases:
+  - id: read-and-cite
+    turns:
+      - send: 请依次完成：1）用 grep 在 docs 中检索“研究流程”；2）阅读 docs/research.md（可分两次读取前后段）和 docs/attachment.md；3）用一句简体中文总结，必须包含 EVIDENCE_OK，并明确写出引用路径 docs/research.md。不要读写其他文件。
+        expect:
+          evidence:
+            allOf:
+              - name: search
+                toolResult:
+                  tool: grep
+                  args: { pattern: 研究流程 }
+                  contains: [research.md]
+              - name: entry
+                toolResult:
+                  tool: read
+                  path: { arg: path, resource: docs/research.md }
+                  contains: [提取关键词与目标, 完成标准]
+              - name: attachment
+                toolResult:
+                  tool: read
+                  path: { arg: path, resource: docs/attachment.md }
+                  contains: [附件约束]
+              - name: cite
+                citation:
+                  tool: read
+                  pathArg: path
+                  path: docs/research.md
+          text-contains: [EVIDENCE_OK]
+  - id: no-target-access
+    turns:
+      - send: 17 乘以 3 是多少？只回答 51，不要调用任何工具，也不要读取文件。
+        expect:
+          evidence:
+            not:
+              toolResult:
+                tool: read
+                path: { arg: path, resource: docs/research.md }
+          text-contains: ["51"]

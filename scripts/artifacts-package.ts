@@ -81,6 +81,14 @@ export function createCorePackageManifest(version: string): PackageManifest {
       },
     ]),
   );
+  exports["./assertions/evidence"] = {
+    types: "./types/packaging/entries/assertions/evidence.d.ts",
+    import: "./dist/assertions/evidence.js",
+  };
+  exports["./assertions/judge"] = {
+    types: "./types/packaging/entries/assertions/judge.d.ts",
+    import: "./dist/assertions/judge.js",
+  };
   exports["./profiles/pi-config"] = {
     types: "./types/profiles/pi-config.d.ts",
     import: "./dist/profiles/pi-config.js",

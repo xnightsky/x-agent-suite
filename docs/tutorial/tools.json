@@ -634,7 +634,7 @@
     },
     {
       "id": "criteria",
-      "purpose": "通用判据子包：文本包含/排除与工具调用核对（可选插件）。",
+      "purpose": "通用判据子包：文本、工具调用与组合证据（可选插件）。",
       "tools": [
         {
           "name": "textContains",
@@ -656,6 +656,20 @@
           "purpose": "工具调用核对判据（completed + 入参子集）。",
           "risk": "safe",
           "recipes": ["criteria-aggregation", "harness-runner"]
+        },
+        {
+          "name": "createEvidenceCriterion",
+          "category": "advanced",
+          "purpose": "创建可注入逐 turn workspace resolver 的证据判据。",
+          "risk": "safe",
+          "reason": "高级证据 DSL；完整声明与接入示例见 docs/spec/evidence-assertions.md，当前无独立教程 recipe。"
+        },
+        {
+          "name": "evidence",
+          "category": "advanced",
+          "purpose": "组合非空工具结果、workspace 路径、引用与否定证据。",
+          "risk": "safe",
+          "reason": "高级证据 DSL；完整声明与接入示例见 docs/spec/evidence-assertions.md，当前无独立教程 recipe。"
         }
       ]
     },

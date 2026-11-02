@@ -23,15 +23,25 @@ export {
   toolCall,
   type ToolCallExpect,
 } from "./deterministic.ts";
+export { extractToolOutputText } from "./evidence/tool-output.ts";
+export { normalizeWorkspacePath } from "./evidence/workspace-path.ts";
+export { createEvidenceCriterion, evidence } from "./evidence/index.ts";
+export type {
+  CitationEvidenceExpect,
+  EvidenceCriterionOptions,
+  EvidenceExpect,
+  ToolResultEvidenceExpect,
+  WorkspaceResourceExpect,
+} from "./evidence/types.ts";
 export {
   createJudgeAssertion,
   type JudgeAssertionBaseOptions,
   type JudgeAssertionOptions,
-} from "./judge-assertion.ts";
+} from "./judge/assertion.ts";
 export {
   judgeAssertionResults,
   type NamedAssertionResult,
-} from "./judge-results.ts";
+} from "./judge/results.ts";
 export {
   assertionContribution,
   parseAssertionScore,

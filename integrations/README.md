@@ -4,6 +4,7 @@
 每个仓自己的 README 维护前置条件、安装步骤与运行命令；进入哪个仓，就按哪个仓的引导准备。
 
 - [Cedar](./itrepos/cedar/README.md)：全局提示词、Skill 安装态触发与可选内置 Judge live smoke 验证。
+- [访问痕迹证据](./itrepos/evidence/README.md)：检索、实读、引用与禁止访问的 Recall 示例，含零 token 配置验证和显式 token 入口。
 - `pi.registry.ts`：共享的宿主工厂、判据及可显式选择的只读权限配置，不持有渠道或凭据。
 
 场景资源、任务和断言由各仓或 Skill 自己的 Recall 考卷定义，直接复用 Recall 执行和报告。

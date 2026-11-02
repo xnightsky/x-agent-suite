@@ -1,5 +1,5 @@
 /**
- * @module @x-agent-suite/assertions/judge-results
+ * @module @x-agent-suite/assertions/judge/results
  * JudgeOutcome → 每 rubric 原始断言结果；只映射 boolean 与 0/1，不计算作者贡献。
  */
 import type { CriterionResult } from "@x-agent-suite/contracts";

@@ -74,11 +74,17 @@ async function writeCoreSmokeProject(
   const runtimeImports = CORE_EXPORT_NAMES.map(
     (name) => `import("@xnightsky/x-agent-suite/${name}")`,
   );
+  runtimeImports.push(
+    'import("@xnightsky/x-agent-suite/assertions/evidence")',
+    'import("@xnightsky/x-agent-suite/assertions/judge")',
+  );
   const typeImports = CORE_EXPORT_NAMES.map(
     (name, index) =>
       `type Core${index} = typeof import("@xnightsky/x-agent-suite/${name}");`,
   );
   typeImports.push(
+    'type EvidenceAssertionsSmoke = typeof import("@xnightsky/x-agent-suite/assertions/evidence");',
+    'type JudgeAssertionsSmoke = typeof import("@xnightsky/x-agent-suite/assertions/judge");',
     'type PiConfigSmoke = typeof import("@xnightsky/x-agent-suite/profiles/pi-config");',
     'type PiRecallSmoke = typeof import("@xnightsky/x-agent-suite/profiles/pi-recall");',
   );
@@ -88,7 +94,7 @@ async function writeCoreSmokeProject(
     "x-agent-suite-core-artifact-smoke",
     dependencies,
     `${createCoreRuntimeSmoke(runtimeImports)}\n`,
-    `${typeImports.join("\n")}\nexport type CoreSmoke = [${tuple}, PiConfigSmoke, PiRecallSmoke];\n`,
+    `${typeImports.join("\n")}\nexport type CoreSmoke = [${tuple}, EvidenceAssertionsSmoke, JudgeAssertionsSmoke, PiConfigSmoke, PiRecallSmoke];\n`,
   );
 }
 

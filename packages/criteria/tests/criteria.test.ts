@@ -7,8 +7,10 @@ import { test } from "node:test";
 import * as assertions from "@x-agent-suite/assertions";
 import * as legacy from "../src/index.ts";
 
-test("判据兼容入口不复制实现，也不新增默认判据", () => {
+test("判据兼容入口只原样重导出公开判据", () => {
   assert.deepEqual(Object.keys(legacy).sort(), [
+    "createEvidenceCriterion",
+    "evidence",
     "textContains",
     "textNotContains",
     "toolCall",
@@ -16,4 +18,9 @@ test("判据兼容入口不复制实现，也不新增默认判据", () => {
   assert.equal(legacy.textContains, assertions.textContains);
   assert.equal(legacy.textNotContains, assertions.textNotContains);
   assert.equal(legacy.toolCall, assertions.toolCall);
+  assert.equal(legacy.evidence, assertions.evidence);
+  assert.equal(
+    legacy.createEvidenceCriterion,
+    assertions.createEvidenceCriterion,
+  );
 });

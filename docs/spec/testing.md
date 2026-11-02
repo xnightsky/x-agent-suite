@@ -64,6 +64,8 @@ AI 断言完整场景的目标验收以 [`docs/spec/recall-judge-dsl.md`](./reca
 真实 Recall live 调用会消耗 token，只能在显式选择渠道、已有 live 配置和 `--approve-live`（策略为 review-required 时）下执行。`pnpm ittest:token:cedar --carrier pi --approve-live` 精确运行场景仓的 `.recall.yaml`，复用 CLI 而非包装另一层驱动；脚本未提供渠道时失败，不发出请求。计费分类在 borrowed 测试阶段暂不设为条件，live 策略检查继续执行。不得以 fake transport 或 MockDriver 的成功推断真实 direct/borrowed/ephemeral-client 已获 live 验证。
 
 `pnpm ittest:token:cedar-skill --carrier pi --approve-live` 精确运行 Skill 自带考卷，显式引用 `use:skill-readonly` 权限。
+
+`pnpm ittest:token:evidence --carrier pi --approve-live` 精确运行 `integrations/itrepos/evidence/.recall.yaml`，显式引用 `use:evidence-readonly`；正向 case 验证检索、实读与引用，反向 case 验证无目标访问痕迹。零 token 配置回归为 `scripts/tests/itrepos-evidence-config.test.ts`。
 安装由操作者按该仓 README 在测试前完成，默认回归不执行安装或真实模型调用。
 源仓的安装入口是软链，隔离现场按现有资源契约读取其内容并生成实体快照；该验证不证明宿主在原仓中的软链遍历行为。
 

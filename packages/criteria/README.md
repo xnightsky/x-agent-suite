@@ -5,7 +5,7 @@
 ## 用途
 
 - 保留既有导入路径 `@x-agent-suite/criteria`，让已注册该路径的消费者与教程无需改代码。
-- 逐符号重导出 `textContains`、`textNotContains`、`toolCall` 与 `ToolCallExpect`。
+- 逐符号重导出 `textContains`、`textNotContains`、`toolCall`、`evidence`、`createEvidenceCriterion` 及相关声明类型。
 
 ## 不负责什么
 
@@ -17,12 +17,14 @@
 
 `src/index.ts` 只做一件事：从 `@x-agent-suite/assertions` 重导出下列符号。
 
-| 导出              | 说明                                            |
-| ----------------- | ----------------------------------------------- |
-| `textContains`    | 文本包含（AND 语义），metric 名 `text-contains` |
-| `textNotContains` | 红线排除，metric 名 `text-not-contains`         |
-| `toolCall`        | 工具调用核对，metric 名 `tool-call`             |
-| `ToolCallExpect`  | `toolCall` 的 expect 形状类型                   |
+| 导出                      | 说明                                                 |
+| ------------------------- | ---------------------------------------------------- |
+| `textContains`            | 文本包含（AND 语义），metric 名 `text-contains`      |
+| `textNotContains`         | 红线排除，metric 名 `text-not-contains`              |
+| `toolCall`                | 工具调用核对，metric 名 `tool-call`                  |
+| `ToolCallExpect`          | `toolCall` 的 expect 形状类型                        |
+| `evidence`                | 非空结果、路径、引用与组合证据，metric 名 `evidence` |
+| `createEvidenceCriterion` | 注入按 turn 动态求值的 workspace resolver            |
 
 ## 最小示例（零 token）
 
@@ -60,5 +62,6 @@ pnpm --filter @x-agent-suite/criteria test
 ## 正式文档
 
 - [场景评估](../../docs/spec/scenario-evaluation.md)
+- [访问痕迹证据断言](../../docs/spec/evidence-assertions.md)
 - [能力演进](../../docs/spec/capability-system.md)：判据子包的定位
 - [打包与分发](../../docs/spec/packaging.md)

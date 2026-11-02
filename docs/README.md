@@ -35,6 +35,7 @@ x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenari
 | [`spec/llm-fixture.md`](./spec/llm-fixture.md)                                     | 自研 fake provider 与 HarnessProfile 配置                    |
 | [`spec/ephemeral-client.md`](./spec/ephemeral-client.md)                           | 同级 Carrier 与临时 Client 配置、Adapter 和报告归因          |
 | [`spec/scenario-evaluation.md`](./spec/scenario-evaluation.md)                     | 评分层与报告格式                                             |
+| [`spec/evidence-assertions.md`](./spec/evidence-assertions.md)                     | 访问痕迹证据断言：非空读取、路径、引用与组合                 |
 | [`spec/matrix.md`](./spec/matrix.md)                                               | 同场景多宿主对照表                                           |
 | [`spec/long-lived-driver.md`](./spec/long-lived-driver.md)                         | 长驻会话驱动契约                                             |
 | [`spec/pty-driver.md`](./spec/pty-driver.md)                                       | PTY 驱动层                                                   |

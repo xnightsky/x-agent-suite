@@ -4,6 +4,7 @@
  * 不变量：不选择渠道、不持有凭据，不自动加载消费者真实目录。
  */
 import { textContains, textNotContains } from "@x-agent-suite/criteria";
+import { createEvidenceCriterion } from "@x-agent-suite/assertions/evidence";
 import type { SessionCriterion, TurnCriterion } from "@x-agent-suite/contracts";
 import type {
   RecallAssertionScoreResolver,
@@ -80,9 +81,18 @@ const answerContract: SessionCriterion & {
   },
 };
 
+/** 从当前消费者观察动态提供隔离 workspace 的访问痕迹证据判据。 */
+const observedEvidence = createEvidenceCriterion({
+  resolveWorkspaceCwd: (turn) =>
+    typeof turn.metadata.workspaceCwd === "string"
+      ? turn.metadata.workspaceCwd
+      : undefined,
+});
+
 /** 显式注册场景仓使用的宿主和判据，渠道仍由命令选择。 */
 const registry: RecallRegistry = {
   criteria: [
+    observedEvidence,
     answerContract,
     textContains,
     textNotContains,
@@ -105,6 +115,7 @@ const registry: RecallRegistry = {
   },
   effectsProfiles: {
     "skill-readonly": { tools: "allowlist", maxSteps: 4, timeoutMs: 60000 },
+    "evidence-readonly": { tools: "allowlist", maxSteps: 8, timeoutMs: 120000 },
     "skill-script": {
       tools: "allowlist",
       commands: {

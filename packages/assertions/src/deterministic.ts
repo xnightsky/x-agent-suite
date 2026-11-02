@@ -66,7 +66,7 @@ function asToolCallExpect(expect: unknown): ToolCallExpect {
 }
 
 /** 递归子集匹配：subset 的每个键值都在 target 中（对象递归，其余 JSON 相等）。 */
-function inputContains(
+export function inputContains(
   target: unknown,
   subset: Record<string, unknown>,
 ): boolean {

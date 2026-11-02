@@ -11,6 +11,7 @@ import type {
   TurnObservation,
 } from "@x-agent-suite/contracts";
 import { runCriteria } from "../src/criteria-runner.ts";
+import { createEvidenceCriterion } from "@x-agent-suite/assertions";
 
 /** 构造一轮观测。 */
 function makeTurn(index: number, text: string): TurnObservation {
@@ -167,4 +168,38 @@ test("判据结果必须满足公共形状，合法 0.4 原样保留", async () 
     turnExpects: [{ decimal: true }],
   });
   assert.equal(outcomes[0]!.score, 0.4);
+});
+
+test("evidence 作为普通 TurnCriterion 复用现有调度与 outcome 投影", async () => {
+  const turn: TurnObservation = {
+    ...makeTurn(0, "依据 docs/a.md"),
+    toolCalls: [
+      {
+        name: "read",
+        input: { path: "docs/a.md" },
+        output: { content: [{ type: "text", text: "正文" }] },
+        status: "completed",
+      },
+    ],
+    metadata: { workspaceCwd: "/sandbox/root" },
+  };
+  const criterion = createEvidenceCriterion({
+    resolveWorkspaceCwd: (current) =>
+      current.metadata.workspaceCwd as string | undefined,
+  });
+  const outcomes = await runCriteria({
+    session: makeSession([turn]),
+    criteria: [criterion],
+    turnExpects: [
+      {
+        evidence: {
+          citation: { tool: "read", pathArg: "path", path: "docs/a.md" },
+        },
+      },
+    ],
+  });
+  assert.equal(outcomes.length, 1);
+  assert.equal(outcomes[0]!.name, "evidence");
+  assert.equal(outcomes[0]!.pass, true);
+  assert.equal(outcomes[0]!.score, 1);
 });
