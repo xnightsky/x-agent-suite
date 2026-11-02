@@ -49,7 +49,7 @@ PTY、headless、sandbox 是机制，smoke 是抽样范围，contract 是验证�
 
 `packages/recall/tests/registry.test.ts`、`criterion-assembly.test.ts` 与 `recall-assembly.test.ts` 同属零 token 单元测试：registry 校验覆盖静态判据与通用工厂混合注册的加载期形状把关；装配测试用合成 registry/scenarios/execution 验证引用键存在性、每 target 一次、形状校验与安全错误包装；CLI 装配路径用合成 registry + fake profile driver 验证装配早于主 Driver、repeat/case 复用闭包与批准同源到达。
 
-AI 断言完整场景的目标验收以 [`docs/spec/recall-judge-dsl.md`](./recall-judge-dsl.md) 为准：使用 case 级 `expect.judge` 与 `expect.decision`、固定最终输出和脚本化 Judge transport，覆盖简单 PASS/FAIL/absent/not-evaluated、精确字面命中、加权否决、absent 映射、混合判据与多轮只评最后回答。现有实施计划将在书面规格确认后重排，测试文件与场景数量不沿用旧计划推断。
+AI 断言完整场景的目标验收以 [`docs/spec/recall-judge-dsl.md`](./recall-judge-dsl.md) 为准：使用 case 级 expect、内置 Judge 与注册机械判据，固定最终输出和脚本化 Judge transport，验证每个机械细项与 AI rubric 的判断、原因和得分。覆盖可选 score 的默认 hit=1／miss=-1、命中加 3、miss 默认扣 1、显式 miss=0、五项机械检查失败一项扣 1／两项扣 2、混合求和及正总分仍不掩盖失败；全部断言通过测试才通过。裁定缺项与整体不可评测仍报评测错误，多轮只把最后回答送入标准 Judge。一期不验收 decision、评分维度、阈值、否决、归一分或缺席映射。实施计划待重排，测试文件与数量不沿用旧 decision 计划。
 
 `packages/recall/tests/execution-resolution.test.ts` 与 `execution-params.test.ts` 用合成 catalog/registry 覆盖执行实现唯一选择、live 审批语义与执行参数归一，不创建 Driver、零 provider 请求。
 

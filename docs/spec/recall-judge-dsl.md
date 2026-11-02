@@ -1,107 +1,95 @@
-# Recall 内置 Judge 与 Decision DSL
+# Recall 内置 Judge 与断言计分 DSL
 
-> 状态：第一阶段设计已确认（2026-11-01），尚未实现。
+> 状态：第一阶段设计已确认，尚未实现；本文已按断言直接计分的范围收缩。
 >
-> 本文定义目标作者接口。现有实现与既有测试仍以 `docs/spec/testing.md` 登记为准；实施计划需在书面规格确认后重排。
+> 一期不提供 `decision` DSL。机械断言与 AI 断言各自产生判断和得分，框架统一汇总；所有已声明断言通过，测试才通过。实施计划需按本次修订重排。
 
-## 目标
+## 目标与一期范围
 
-把 AI 断言与精确评分提供为 Recall 的标准能力，同时保持执行配置与断言配置分离：
+- `turns` 描述主 Agent 的执行过程，case 级 `expect` 声明断言。
+- `expect.judge` 提供具名 AI 裁定池；机械断言继续由消费者注册 Criterion。
+- 每项机械判断、每个 AI rubric 都保留独立名称、是否通过、原因与得分。
+- 分值写在各断言自己的声明里，不再单独维护一张评分维度表。
+- 框架只做固定计分与求和，不提供阈值、分数组合补偿或一票否决配置。
+- 首版内置 Judge 只评 case 最后一轮文本；既有自定义判据的调度契约不因本设计批量改写。
 
-- `turns` 只描述主 Agent 的执行过程。
-- case 级 `expect` 是断言根，集中声明 `judge`、`decision` 与其他判据输入。
-- `judge` 只产具名 boolean verdict，不直接出分。
-- `decision` 用精确命中器与静态规则计算成绩，支持权重、否决、缺席映射、OR、threshold 和 coverage。
-- 首版只评 case 最后一轮输出；逐轮评价与条件控制不在第一阶段扩展。
-
-自定义 Criterion 与通用判据工厂继续服务其他扩展判据。
+本设计不提供缺席计分机制。评测错误与被测内容未通过必须区分，但不为此增加第三种作者计分状态。
 
 ## 第一阶段总览
 
 ```yaml
 cases:
-  - id: routing
+  - id: answer-quality
     turns:
       - send: 先阅读规则并准备回答
       - send: 现在给出最终结论
-
     expect:
+      output-shape:
+        required: [summary, evidence]
+        score:
+          miss: -1
+
       judge:
-        timeoutMs: 30000
-        maxRetries: 2
-        instructions: 只根据最终回答中的证据判断
-        rubrics:
-          ownership:
-            rubric: 是否说明写新队列属于 author 侧
-          polite:
-            rubric: 措辞是否礼貌
-          concise:
-            rubric: 是否简洁
-
-      decision:
-        threshold: 0.5
-        dimensions:
-          chosen_skill:
-            eq: recall-author
-            knockout: true
-
-          reasoning:
-            verdict: judge.ownership
-            weight: 3
-
-          style_ok:
-            verdict: [judge.polite, judge.concise]
-            absent: fail
+        ownership:
+          rubric: 是否说明写新队列属于 author 侧
+          score:
+            hit: 3
+        polite:
+          rubric: 措辞是否礼貌
+        concise:
+          rubric: 是否简洁
 ```
+
+`output-shape` 是消费者注册的机械判据，不是框架内建名称；示例的 `required` 与 `score` 由该判据的输入协议解释。既有自定义判据输入继续原样透传，不强制包装历史输入，也不由 Recall 抢占插件已有字段。消费者判据应显式支持并校验自己的分值声明，不支持时须明确拒绝；未声明分值时遵循默认 1／-1 规则。
 
 执行顺序：
 
-1. 主 Agent 依次执行两轮 `send`。
-2. 第一轮只建立上下文，不进入本 case 的内置 Judge。
-3. 最后一轮 `turn.text` 同时成为字面命中器与 Judge 的输入。
-4. Judge 一次批量返回 `ownership / polite / concise` 的 verdict。
-5. `decision` 对字面值与 verdict 做精确命中、缺席映射和静态计分。
-6. 报告保留逐维证据、rawScore、归一分 `score`、coverage 与否决原因。
+1. 主 Agent 执行全部 send。
+2. 标准 Judge 只接收最后一轮文本，一次批量返回各 rubric 的 boolean verdict。
+3. 机械判据与每个 AI rubric 分别产生具名判断结果。
+4. 按各断言自己的 hit／miss 分值计算贡献，再求和。
+5. 所有已声明断言通过，case 才通过；报告同时保留总分与失败明细。
 
 ## case 级 `expect`
-
-`expect` 是 case 的断言根，不是新一轮执行指令：
 
 ```text
 case
 ├── turns                 执行：发送什么、按什么顺序发送
-└── expect                断言：期望什么、如何判定、如何计分
-    ├── judge             AI 裁定池与执行参数
-    ├── decision          精确命中与静态评分表
-    └── <custom-metric>   消费者注册的其他判据输入
+└── expect                断言：期望什么、各项如何计分
+    ├── judge             AI rubric 与各项可选分值
+    └── <custom-metric>   消费者注册的机械或其他判据输入
 ```
 
-第一阶段中，内置 `judge` 与 `decision` 只出现在 case 级 `expect`。`turns[].expect` 不声明这两个内置字段；既有自定义判据的调度契约不因本设计被批量改写。
+不增加 `decision / dimensions / verdict / outcome` 作者引用层。已有 Criterion 与通用判据工厂仍是机械判断、产物检查和特殊证据的扩展入口；不把旧 decision 的 `eq / one_of / from` 改名后塞进新的框架 DSL。
 
-### 为什么使用 `expect`
-
-- 它表达声明式的“期望”，而不是立即执行动作的 `assert`。
-- 它能同时容纳判定依据与评分规则。
-- 它与本仓既有 `ExpectBlock` 术语一致。
+`expect.judge` 只出现在 case 级；首版不向 `turns[].expect` 开放内置 Judge。既有自定义逐轮判据保持原契约。
 
 ## `judge`：具名裁定池
 
-### 简写：只声明 rubric
+### 简写
 
 ```yaml
 expect:
   judge:
-    ownership:
-      rubric: 是否说明写新队列属于 author 侧
-    no_invention:
-      rubric: 是否没有臆造仓库中不存在的字段
+    accurate:
+      rubric: 回答是否准确
+      score:
+        hit: 3
+    complete:
+      rubric: 是否覆盖必要信息
+      score:
+        miss: -1
+    honest:
+      rubric: 不确定的内容是否明确说明
 ```
 
-每个 KV key 是稳定的 rubric 名，后续通过 `judge.<name>` 引用。简写不再重复声明 `name`。
+每个 KV key 是稳定的 rubric 名，不重复声明 name。每项值只接受 `rubric` 与可选 `score`：
 
-只写 `judge`、不写 `decision` 时保持简单模式：产生单个 `judge` outcome，全部 verdict 明确为 true 才 PASS，任一明确 false 为内容 FAIL，任一缺 verdict 为 `[absent]`。
+- `rubric` 为非空字符串。
+- `score` 是可选的封闭对象，只接受 hit 与 miss。
+- 所有声明的 rubric 都参与判断和计分，不需要引用，也不存在未引用 rubric 的隐式补维规则。
 
-### 完整形态：声明执行参数
+### 完整形态：执行参数
 
 ```yaml
 expect:
@@ -110,215 +98,129 @@ expect:
     maxRetries: 2
     instructions: 只根据最终回答中的证据判断
     rubrics:
-      ownership:
-        rubric: 是否说明写新队列属于 author 侧
-      no_invention:
-        rubric: 是否没有臆造仓库中不存在的字段
+      accurate:
+        rubric: 回答是否准确
+        score:
+          hit: 3
+      complete:
+        rubric: 是否覆盖必要信息
 ```
 
-| 字段           | 类型与默认值           | 语义                                       |
-| -------------- | ---------------------- | ------------------------------------------ |
-| `rubrics`      | KV map，必填且至少一项 | key 为裁定名，value 为 `{ rubric }`        |
-| `timeoutMs`    | 正整数，默认 `30000`   | 每次 attempt 的超时                        |
-| `maxRetries`   | 非负整数，默认 `2`     | 首次调用后的重试上限，仍受错误类别预算约束 |
-| `instructions` | 非空字符串，可选       | 在标准 judge-v1 协议后追加场景约束         |
+| 字段           | 类型与默认值         | 语义                                          |
+| -------------- | -------------------- | --------------------------------------------- |
+| `rubrics`      | KV map，至少一项     | key 为裁定名，value 为 `{ rubric, score? }`。 |
+| `timeoutMs`    | 正整数，默认 `30000` | 每次 attempt 的超时。                         |
+| `maxRetries`   | 非负整数，默认 `2`   | 首次调用后的重试上限，仍受错误类别预算约束。  |
+| `instructions` | 非空字符串，可选     | 在标准 judge-v1 协议后追加场景约束。          |
 
-`rubrics` 在编译时转换为现有 `JudgeRubric[]`；KV 是作者接口，数组是执行接口，二者不要求形状相同。
+`rubrics / timeoutMs / maxRetries / instructions` 是保留键，不能作为简写裁定名；出现执行字段时使用完整形态。
 
-为避免简写与完整形态产生歧义，`rubrics / timeoutMs / maxRetries / instructions` 是保留键，不能作为简写裁定名。出现任一执行字段时必须使用完整形态。
+编译时把 rubric 名与文本转换为 `JudgeRubric[]`，分值配置留在断言侧，不进入 Judge prompt 或裁定协议。Judge 只返回裁定，不负责计算得分。
 
-### 首版输入边界
+### 输入与会话边界
 
-- 只评 case 最后一轮 `turn.text`。
-- 每个含 `judge` 的 case 执行一次批量裁定，而不是每轮各调用一次。
-- Judge 不读取主对话历史、中间答案、文件、工具状态或 workspace。
-- 空 turns、缺失最终输出等既有执行错误在 Judge 前终止，不转换成内容 FAIL。
+- 每个含 judge 的 case 对最后一轮 `turn.text` 执行一次批量裁定。
+- 标准 Judge 不读取主对话历史、中间答案、文件、工具状态或 workspace。
+- 缺失最终输出等执行错误在 Judge 前终止，不转换成内容不通过。
+- 默认复用主执行同源的 target、config、TargetTags、live 批准、mode、cliRef、profile 与 transport。
+- 每次 attempt 创建独立 backend／Driver；borrowed 使用独立单轮 spec、`effects: none` 和空执行参数。
+- 支持同步／异步 profile 工厂；创建受 abort 管理，取消后迟到的 Driver 仍须关闭。
+- attempt 结束必须清理，不共享主 Driver，不做路径 fallback。
 
-## `decision`：具名评分维与精确命中器
+一期不增加 Judge 专用 target、grader、Driver 或 fallback DSL。
 
-`decision` 位于 case 级 `expect` 下：
+## 断言直接计分
 
-```yaml
-expect:
-  decision:
-    threshold: 0.5
-    dimensions:
-      chosen_skill:
-        eq: recall-author
-        knockout: true
-      reasoning:
-        verdict: judge.ownership
-        weight: 3
-```
+| 字段         | 默认值 | 语义                                                      |
+| ------------ | ------ | --------------------------------------------------------- |
+| `score.hit`  | `1`    | 断言通过时加多少分，可配置为 3，也可为 0。                |
+| `score.miss` | `-1`   | 断言未通过时加多少分；省略默认扣 1，显式配置 0 才不扣分。 |
 
-`dimensions` 使用 KV：key 是作者定义的评分维度名，value 是该维的命中与计分规则。保留 `dimensions` 包装后，`threshold` 可以与维度表同级，不占用维度命名空间。
+score 是可选字段；省略 score 或写空对象时，等价于 `score: { hit: 1, miss: -1 }`。只覆盖其中一项时，另一项仍应用默认值；hit 与 miss 均须为有限数：
 
-### 命中器
+- 不写 score：通过加 1，未通过扣 1；机械断言与 AI rubric 相同。
+- 只写 `hit: 3`：通过加 3，未通过仍扣 1，不自动扣 3。
+- 只写 `miss: 0`：通过默认加 1，未通过得 0。
+- 只写 `hit: 0`：通过得 0，未通过默认扣 1，只累计失败扣分。
 
-每个维度必须且只能选择下列一种命中来源：
-
-| 字段      | 形状                  | 命中语义                                                     |
-| --------- | --------------------- | ------------------------------------------------------------ |
-| `eq`      | 非空字符串            | 从最终回答抽取实际值，trim、大小写不敏感后与期望值精确相等   |
-| `one_of`  | 非空字符串数组        | 实际值等于任一候选即命中                                     |
-| `verdict` | `judge.<name>` 或数组 | 引用 Judge 的 boolean verdict；数组表示 OR，任一 pass 即命中 |
-| `outcome` | 字符串或字符串数组    | 引用其他 CriterionOutcome；数组沿用现有聚合机的 OR 归约语义  |
-
-例如：
-
-```yaml
-decision:
-  dimensions:
-    chosen_skill:
-      eq: recall-author
-
-    skill_family:
-      one_of: [recall-author, recall-eval]
-
-    reasoning:
-      verdict: judge.ownership
-
-    style_ok:
-      verdict: [judge.polite, judge.concise]
-
-    deterministic_evidence:
-      outcome: text-contains
-```
-
-`outcome` 是本仓为混合确定性判据保留的连接口，明确引用 `CriterionOutcome` 而非数值指标；不把字面命中器塞进 Judge，也不要求所有判断都先注册成分类。编译后仍映射到内部 `DimensionSpec.metric`。
-
-### `from`：字面维的可选抽取器
-
-`eq` 与 `one_of` 维度可声明 `from`：
-
-```yaml
-decision:
-  dimensions:
-    chosen_skill:
-      eq: recall-author
-      from: '^chosen_skill:\s*(.+?)\s*$'
-      knockout: true
-```
-
-规则：
-
-- `from` 是含一个捕获组的正则，只用于 `eq / one_of`；正则按 `m` 多行模式逐行求值，`^` 与 `$` 锚定行边界。
-- 不允许显式 flags、`s / g / y / u / v` 语义或 lookahead/lookbehind，避免跨行吞并、状态残留和灾难性回溯；作者需要更复杂的抽取时，应通过自定义确定性 Criterion 提供 `outcome`。
-- 未声明时使用 `^<维度名>: <值>$` 的行约定，同一 `m` 语义，维度名因此也是默认字段名。
-- 正则无法匹配、匹配结果为空或输入不存在时，该维为 absent，不猜测实际值。
-- `verdict / outcome` 维禁止声明 `from`。
-
-### 计分字段
-
-| 字段        | 默认值  | 语义                                                                          |
-| ----------- | ------- | ----------------------------------------------------------------------------- |
-| `weight`    | `1`     | 命中 `+weight`、未命中 `−weight`                                              |
-| `knockout`  | `false` | 映射后未命中时直接否决整个 case                                               |
-| `absent`    | `zero`  | 缺席映射：`zero / pass / fail`                                                |
-| `threshold` | 省略    | 任意有限数；对可为负的归一分设置通过线。省略时要求全部计入维命中且无 knockout |
-
-`absent: zero` 贡献 0 且不计入 maxScore；`pass` 按命中计入；`fail` 按未命中计入。coverage 统计映射前非缺席维数，`absent: pass/fail` 不会倒推提高 coverage。Recall `expect.decision` 基于通用聚合结果的 coverage 执行零覆盖门禁：`coverage.evaluated=0` 时默认 `pass=false`，即使 threshold 较低也不能让空考通过；只有至少一个维度显式声明 `absent: pass`，才表示作者允许缺证据宽免，可继续按映射、knockout 与 threshold 判定。
-
-### 默认参与与引用完整性
-
-当 case 同时声明 `judge` 与 `decision` 时：
-
-1. 显式维度按声明精调。
-2. 未被任何 `verdict` 引用的 rubric 自动形成隐式维度：`weight=1`、`knockout=false`、`absent=zero`。
-3. `verdict: judge.<name>` 必须引用当前 case 已声明的 rubric，未知引用在编译期拒绝。
-4. `outcome` 引用沿用现有聚合机的 outcome 与 absent 规则。
-5. 所有维度保留作者声明的 KV key，报告中必须能区分“维度名”和“命中来源”。
-
-## 编译与执行分层
-
-作者接口不直接等于运行时聚合结构：
+每项贡献与总分只有直接算术：
 
 ```text
-case.expect.judge（KV）
-  → 编译为 JudgeRubric[]
-  → 最后一轮文本的一次批量 Judge
-  → judge.<rubric> verdict outcomes
-
-case.expect.decision.dimensions（KV）
-  → eq / one_of 编译为字面抽取与精确匹配
-  → verdict / outcome 保留为结果引用
-  → 统一降低为 CriterionOutcome[] + DimensionSpec[]
-  → resolveAggregate
-  → ScenarioResult + artifact.aggregate + JSON 报告
+本项得分 = pass ? hit : miss
+rawScore = 所有断言细项得分之和
+casePass = 所有已声明断言细项的 pass 均为 true
 ```
 
-精确命中与零覆盖门禁发生在 Recall 编译/判据适配层，现有聚合机继续只做三态归约与算术，不引入第二套评分机，也不改变既有 `ScenarioSpec.aggregate` 的空考行为。
+一期不需要 maxScore、分母排除、归一分或分数通过线。0 分不自动表示通过或失败，负分也不是唯一的失败标志；是否通过以 boolean 判断为准。正分不能抵消某项断言失败。
 
-只有 `ScenarioSpec.expandOutcomes` 显式列出的判据才能调用 `evaluateMany()`；既有 `createJudgeAssertion + aggregate` 未声明该字段时保持原单结果名称与行为。
+### 机械与 AI 的统一汇总
+
+| 断言     | 类型 | 判断   | 得分           |
+| -------- | ---- | ------ | -------------- |
+| 字段正确 | 机械 | 通过   | +1             |
+| 产物有效 | 机械 | 未通过 | -1             |
+| 回答准确 | AI   | 通过   | +3             |
+| 信息完整 | AI   | 未通过 | 0，显式 miss=0 |
+
+总分为 `1 - 1 + 3 + 0 = 3`，但两项断言未通过，所以测试未通过。
+
+五项机械断言都配置 `hit: 0, miss: -1` 时，一项失败总分为 -1，两项失败为 -2；AI 细项可按同样规则加入求和。不需要先建评分维度或单独声明结果引用。
+
+报告至少保留断言名、机械／AI 来源、pass、reason、本项分值贡献、总分与失败项。总分不能替代逐项结果，也不能把一次 Judge 批量调用压成一个总布尔后再计细项分。
 
 ## 校验与错误语义
 
-- YAML 重复 key 必须在解析期拒绝，禁止后者覆盖前者。
-- rubric 名与维度名必须非空且不得包含 `.`，避免 `judge.<name>` 引用歧义。
-- 完整 `judge` 对象、rubric 项、decision 与维度项均使用封闭 schema，未知字段在编译期拒绝。
-- 每维必须恰好声明 `eq / one_of / verdict / outcome` 之一。
-- `verdict` 必须使用 `judge.` 前缀并引用已声明 rubric。
-- 字面维与 `from` 的组合、正则捕获组、多行行边界、受限 flags/语法、正权重、有限 threshold 及执行参数在编译期校验。
+- YAML 重复 key 在解析期拒绝。
+- rubric 名非空且不含点号，便于稳定归因。
+- Judge 完整对象、rubric 项和 score 对象使用封闭 schema；未知字段、非法分值与执行参数在主 Driver 前拒绝。
+- 自定义判据名称、声明与装配仍按 registry 规则校验；其领域输入由对应插件校验。
+- 一期不接受旧 `expect.decision`；不提供框架级 weight、threshold、knockout、缺席映射或 coverage 计分门禁。
+- Judge 缺少必需 boolean 裁定、判据未产出应有结果、整体调用或解析失败，都是评测错误，不伪装成正常 miss 或默认扣分。
+- 被测输出没有满足机械判据要求，包括未输出所需字段，属于内容未通过，按 miss 计分。
 
-| 场景                                     | 结果语义                                               |
-| ---------------------------------------- | ------------------------------------------------------ |
-| 简单模式全部通过                         | 单个 `judge` outcome `pass=true`、`score=1`；CLI=0     |
-| 简单模式明确 false                       | 单个 `judge` outcome `pass=false`、`score=0`；CLI=0    |
-| 简单模式缺 verdict                       | `[absent]` 基础设施 failure；CLI=1                     |
-| decision 单项缺 verdict / 字面值缺席     | 进入对应维的 absent 映射；属于聚合输入，内容结果 CLI=0 |
-| Judge 整体调用、超时、响应或整体解析失败 | `[not-evaluated:<kind>]` 基础设施 failure；CLI=1       |
-| DSL 结构、引用或执行参数非法             | 定义错误；CLI=2，不创建主 Driver 或 Judge              |
+| 场景                                           | 结果                                             |
+| ---------------------------------------------- | ------------------------------------------------ |
+| 全部断言通过                                   | case 通过，CLI=0，报告保留各项得分与总分。       |
+| 任一机械或 AI 细项未通过                       | case 未通过，CLI=0；总分正、零或负均不改变判断。 |
+| 必需裁定／判据结果缺失，或调用、超时、解析失败 | 评测错误，CLI=1，报告诊断，不给出正常评分结论。  |
+| DSL、registry 或执行参数定义非法               | CLI=2，不创建主 Driver 或 Judge。                |
 
-## 默认 AI 配置与独立裁定会话
+通用 Judge、Assertions 和已有聚合机的公开行为不由本文改写。本次仅收缩 Recall 目标 DSL；实现细节不进入作者配置。
 
-标准 Judge 默认复用主执行同源配置：target、config、TargetTags、live 批准、mode、cliRef、profile 与 transport。
+## 第一阶段验收
 
-每次 attempt 创建独立 backend/Driver：
+默认使用 fake transport、合成 registry 与 Driver，保持零 token：
 
-- direct 使用同源 target/config 与 direct transport。
-- borrowed 使用同源 cliRef/profile、独立单轮 judge spec、`effects: none` 和空执行参数。
-- 同步与异步 profile 工厂均受支持；异步创建纳入 abort，取消后迟到的 Driver 仍须关闭。
-- 每次 attempt 结束后清理，保持同 target、同 mode，不做 Driver fallback。
+- 多轮 case 只把最后一轮文本送入标准 Judge。
+- 简写／完整 judge 均支持各 rubric 的可选 score，评分配置不进入 Judge prompt。
+- 每个机械结果与 AI rubric 独立保留名称、pass、reason 和得分。
+- score 可省略，默认 hit=1／miss=-1；只写 hit、只写 miss、hit=0、显式 miss=0 与其他有限分值均按声明加减分。
+- 五项机械断言一项失败扣 1、两项失败扣 2；机械与 AI 结果进入同一求和出口。
+- 总分为正但存在失败项时测试仍未通过；miss=0 不会把失败改成通过。
+- 同一断言细项只计一次，不再区分显式评分维与隐式补维。
+- 缺少必需裁定、评测失败与内容未通过分别验证，不能静默计 0。
+- 旧 decision DSL 与非法 score 在预检拒绝，不启动主执行或 Judge。
+- 同源批准、独立会话、取消与清理保持既有安全要求。
 
-第一阶段不增加 Judge 专用 target、grader、Driver 或 fallback DSL。
+本文为尚未实现的目标设计；不得把上述验收要求当作已运行事实。
 
-## 第一阶段验收重点
+## 后续设计
 
-默认零 token 测试使用 fake transport 固定主回答与 Judge 响应，至少覆盖：
+### Decision：组合评分政策
 
-- 多轮 case 只把最后一轮文本送入 Judge。
-- 简单 PASS、明确 FAIL、absent 与整体 not-evaluated。
-- `eq` 精确命中、`one_of`、默认行约定与自定义 `from`。
-- `verdict` 单项引用、OR、weight 与 knockout。
-- 未引用 rubric 的隐式维度、未知引用与重复 key 拒绝。
-- 非法 DSL 的定义错误场景返回 CLI=2，主 transport 与 Judge transport 均无调用。
-- decision absent 映射、coverage、rawScore 与归一分。
-- Recall `expect.decision` 的零覆盖门禁与既有通用 aggregate 空考行为保持分离。
-- `outcome` 与 Judge verdict 的混合聚合。
-- 完整 judge 执行参数与 direct/borrowed 独立会话清理。
+`decision` 移到 [Recall Decision 预设计](../research/recall-decision-pre-design.md)，不属于一期。只有需要“允许部分失败但达到通过线”、组合结果、一票否决或跨阶段评分时再打开；不因机械与 AI 混合计分就引入它。
 
-## 后续发展方向（不属于第一阶段）
+### 分类、条件分支、逐轮断言与提前终止
 
-### 1. 逐轮细粒度断言
+后续能力按职责分别设计，不要求先实现 decision：
 
-未来可支持“在哪一轮配置，就在哪一轮评价”，使准备轮、行动轮与最终轮拥有不同 rubric。它需要定义轮次选择、输出引用、逐轮证据与跨轮 absent，而不是简单把 case 级 `judge` 复制到 `turns[]`。
+- [分类预设计](../research/recall-classification-pre-design.md)：choices／else 产出受约束类别。
+- [条件分支预设计](../research/recall-conditional-branching-pre-design.md)：按条件执行内嵌子步骤，结束后自然继续外层，不暴露跳表。
+- [轮次级断言预设计](../research/recall-turn-assertion-pre-design.md)：在哪轮配置就在哪轮评价。
+- [提前终止预设计](../research/recall-early-termination-pre-design.md)：onFail:stop 在明确失败后停止。
 
-### 2. 跨轮评分与阶段组合
+重要分支通过多个 case 覆盖，模型方差通过 repeat 观察，不要求单次运行走完所有路径。原混合文档已改为 [预设计索引](../research/recall-classification-branching-pre-design.md)。
 
-可将多个阶段的 verdict 汇总到后续 case 或最终 decision，并明确阶段间数据依赖、重复执行和报告归因。跨轮评分应与单 case 最终回答评分保持可区分的结果形状。
+### 独立 Judge 选择
 
-### 3. 条件分支与动态后续提示词
-
-例如前一轮被识别为 A 后选择 B 提示词。该方向会引入条件选择、分支可复现性与场景图执行，不应作为 `judge` 的隐式副作用加入。
-
-**与现有约束的关系：**`scenario-dsl.md` 当前要求 LLM 只作分类器、不作控制器。若允许 AI verdict 直接选择分支，必须先单独评审并修订该可比性约束；确定性条件分支与 AI 条件分支应分别设计。
-
-### 4. 提前终止与护栏
-
-当某轮已满足目标或出现不可恢复失败时，可跳过后续轮次。该能力需要区分“成功完成”“内容失败”“基础设施失败”和“作者主动终止”，并保证剩余轮次不会被误记为 absent 或 PASS。
-
-### 5. 独立 Judge 选择与固定答案评估
-
-出现明确消费者需求时，再设计 grader/target 覆盖、固定答案输入、离线 Judge 校准与真实 live 质量门禁；第一阶段不预设这些配置。
-
-实施拆分与测试文件落点在书面规格确认后通过实施计划另行定义。
+出现明确需求后，再设计 Judge target 覆盖、固定答案输入、离线校准与显式 token 质量门禁；一期不预设这些配置。

@@ -216,7 +216,7 @@ export interface TurnCriterion {
 }
 ```
 
-目标扩展：`TurnCriterionGroup extends TurnCriterion` 增加 `evaluateMany()`，用于一次昂贵调用产生多个具名结果；`TurnCriterionOutcome.state?: "evaluated" | "absent"` 显式保留缺失轮次，缺省为 evaluated，缺失 verdict 必须产生显式 absent outcome。`ScenarioSpec.expandOutcomes?: readonly string[]` 是多值展开的显式开关：只有其中列出的判据才能由调度器调用 `evaluateMany()`，不能仅凭存在 `aggregate` 就展开。未列出的判据及既有 `createJudgeAssertion + aggregate` 继续调用单结果 `evaluate()`，保持原结果名称与行为；见 [Recall 内置 Judge 与 Decision DSL](./recall-judge-dsl.md)。
+Recall 一期目标需要保留每个机械细项与 AI rubric 的独立判断、原因和得分，统一求和且全部通过才通过，不以 decision 或配置聚合维度为前提。一次昂贵调用如何返回多个具名结果、以及如何接入现有 Criterion 调度，由重排后的实施计划确认；此前的 TurnCriterionGroup／evaluateMany／expandOutcomes 仅为候选接缝，不作为本次文档调整已新增的公开 API。必需裁定缺失须报评测错误，不产生缺席计分结果。详见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
 
 ## Registry
 

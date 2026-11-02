@@ -73,7 +73,7 @@ export function runScenarioSpec(
 执行语义：
 
 - 逐轮 `sendPrompt`，超时显式抛错（基础设施失败抛错；评分不达标进 Result 不抛）；
-- 目标扩展：`ScenarioSpec.expandOutcomes` 显式列出判据名时，`runCriteria` 才对该 `TurnCriterionGroup` 调用 `evaluateMany()`，将具名多值结果交给 `resolveAggregate`；未列出的判据继续调用单结果 `evaluate()`。`spec.aggregate` 本身不启用多值展开，既有 `createJudgeAssertion + aggregate` 未声明 `expandOutcomes` 时保持原单结果名称与行为。详见 [Recall 内置 Judge 与 Decision DSL](./recall-judge-dsl.md)。
+- Recall 一期目标接线需保留每个机械细项与 AI rubric 的具名判断和分值，统一求和且全部断言通过才通过，不要求 decision 或配置聚合维度。具体多值调用接缝随实施计划重排，不把旧 evaluateMany／expandOutcomes 草案当作本次已交付 API；既有 Criterion 调度和独立 aggregate 调用保持原行为。详见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
 - `dryPass` = 每轮 `dryChecks` 全过；`hardPass` = 聚合出口（无 `aggregate` 时 = 判据全过）；
   `fuzzyPass` = 判据全过；
 - driver 取得后由 runner 负责清理：`start()` 与逐轮 `sendPrompt` 同在 try 内，任何路径（含 start 失败、发送失败、轮次超时）都在 finally 中幂等 close。

@@ -49,13 +49,13 @@ export interface ScenarioResult {
 | **Fuzzy**        | 返回文本包含 `done=true`                                              | regex / contains                                            |
 | **LLM judge**    | 模型回复是否满足自然语言 rubric                                       | `createJudgeAssertion`；Recall 内置 `expect.judge` 目标契约 |
 
-确定性检查与判据实现在 `@x-agent-suite/assertions`；`criteria` 与 observation 的旧检查入口只作兼容重导出。AI 判据只有显式启用后才执行模型调用。Recall 的 case 级 `expect.judge` 与 `expect.decision` 目标契约见 [Recall 内置 Judge 与 Decision DSL](./recall-judge-dsl.md)。
+确定性检查与判据实现在 `@x-agent-suite/assertions`；`criteria` 与 observation 的旧检查入口只作兼容重导出。AI 判据只有显式启用后才执行模型调用。Recall 一期的 case 级 expect.judge、机械与 AI 断言直接计分见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)：逐项得分求和，全部断言通过才通过，不提供 decision。
 
-各判据的具名结果如何加权汇总成出口分（weight / knockout / absent / threshold），见 [scoring-aggregation.md](./scoring-aggregation.md)。
+已有通用聚合契约的具名结果如何加权汇总（weight / knockout / absent / threshold），见 [scoring-aggregation.md](./scoring-aggregation.md)；这些组合政策不是 Recall 一期作者接口。
 
 通用 AI 裁定执行、absent 与 not-evaluated 分层见 [judge.md](./judge.md)；Judge 只产具名布尔 verdict，不替代上述确定性层或静态聚合。
 
-`createJudgeAssertion({ name, client, timeoutMs?, maxRetries? })` 返回 `TurnCriterion`，该名称对应的每轮 `expect` 为 `JudgeRubric[]`。全部显式 verdict 为 true 才通过；真实 false 才映射为失败与 0 分；`not-evaluated` 与缺 verdict 分别抛带 `[not-evaluated:<kind>]` / `[absent]` 前缀的错误。Recall 第一阶段目标设计另支持 case 级 KV 裁定池与完整执行配置，只评最后一轮回答，并在 `expect.decision` 下展开 `judge.<rubric>` 多值结果进入现有聚合机，详见 [Recall 内置 Judge 与 Decision DSL](./recall-judge-dsl.md)。
+`createJudgeAssertion({ name, client, timeoutMs?, maxRetries? })` 返回 `TurnCriterion`，该名称对应的每轮 `expect` 为 `JudgeRubric[]`。全部显式 verdict 为 true 才通过；真实 false 才映射为失败与 0 分；`not-evaluated` 与缺 verdict 分别抛带 `[not-evaluated:<kind>]` / `[absent]` 前缀的错误。Recall 第一期目标另支持 case 级 KV 裁定池、各 rubric 的可选 score 与完整执行配置，只评最后一轮回答；每个 rubric 独立计分并与机械结果求和，保留逐项 boolean，正总分不能抵消失败，详见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
 
 ## 执行不变量
 

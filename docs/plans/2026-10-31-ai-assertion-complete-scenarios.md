@@ -1,305 +1,109 @@
-# 内置 Judge、精确 Decision 与完整测试场景 Implementation Plan
+# 内置 Judge 与统一断言计分实施范围
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 状态：待重排，尚未执行。本文按已确认的一期收缩同步目标与验收；下列任务是重排依据，不是已交付记录，也不授权本轮修改代码。
+>
+> 旧 decision、精确评分维、阈值与否决的实施步骤已移出一期；未来组合政策见 [Decision 预设计](../research/recall-decision-pre-design.md)。
 
-**Goal:** 将 case 级 `expect.judge` 与 `expect.decision` 实现为 Recall 内置标准能力，以 KV 裁定池、精确命中器和静态聚合完成从 YAML 到 JSON 报告的完整链路。
+## 目标与架构
 
-**Architecture:** 作者侧 KV 在 Recall 编译层转换为 `JudgeRubric[]`、具名判据结果和 `DimensionSpec[]`，现有 `resolveAggregate` 继续作为唯一静态评分机。内置 Judge 只评 case 最后一轮输出，默认复用主执行同源配置，每次 attempt 创建独立 backend/Driver。
+一期从 case 级 expect 声明出发，保留每个机械判断和 AI rubric 的具名结果，按各断言自己的 hit／miss 分值直接计分并求和。全部已声明断言通过才通过，总分不改变 boolean 结果。
 
-**Tech Stack:** TypeScript、Node.js test runner、YAML、pnpm。
+标准 Judge 只评最后一轮文本，默认复用主执行同源配置，每次 attempt 使用独立 backend／Driver。机械判断继续通过消费者注册 Criterion，不新增另一套匹配 DSL。
 
-**Spec:** [`docs/spec/recall-judge-dsl.md`](../spec/recall-judge-dsl.md)、[`docs/spec/scoring-aggregation.md`](../spec/scoring-aggregation.md)、[`docs/spec/testing.md`](../spec/testing.md)
+规格以 [Recall 内置 Judge 与断言计分 DSL](../spec/recall-judge-dsl.md) 为准；测试分层见 [testing.md](../spec/testing.md)。现有通用聚合契约保持独立，不因本文提前改写。
 
-## 阅读路径
-
-1. 先读规格的“第一阶段总览”，确认 `turns` 与 case 级 `expect` 分离。
-2. 再读 `judge` 的 KV 简写/完整形态与 `decision.dimensions` 的精确命中器。
-3. 然后读编译与执行分层，理解作者 KV 如何降低为现有数组和聚合契约。
-4. 最后按 Task 1–5 查看实现步骤与验收命令。
-
-## 第一阶段作者接口
+## 一期作者接口
 
 ```yaml
 cases:
-  - id: routing
+  - id: answer-quality
     turns:
       - send: 先阅读规则并准备回答
       - send: 现在给出最终结论
     expect:
+      output-shape:
+        required: [summary, evidence]
+        score:
+          miss: -1
       judge:
-        timeoutMs: 30000
-        maxRetries: 2
-        instructions: 只根据最终回答中的证据判断
-        rubrics:
-          ownership: { rubric: 是否说明归 author 侧 }
-          polite: { rubric: 措辞是否礼貌 }
-          concise: { rubric: 是否简洁 }
-      decision:
-        threshold: 0.5
-        dimensions:
-          chosen_skill:
-            eq: recall-author
-            knockout: true
-          reasoning:
-            verdict: judge.ownership
-            weight: 3
-          style_ok:
-            verdict: [judge.polite, judge.concise]
-            absent: fail
+        ownership:
+          rubric: 是否说明归 author 侧
+          score:
+            hit: 3
+        polite:
+          rubric: 措辞是否礼貌
+        concise:
+          rubric: 是否简洁
 ```
 
-简写 `judge` 直接是 KV 裁定池；完整对象把裁定池放入 `rubrics`。`eq / one_of` 从最终回答抽取字面值，`verdict` 引用 Judge，`outcome` 引用其他判据结果。每维必须恰选一种来源。
+output-shape 是消费者注册判据，示例输入由插件解释，既有输入仍原样透传；不把 score 强加给所有历史自定义输入。judge 每个 rubric 的 score 属内置作者接口。
 
-## 固定执行数据
+## 固定规则
 
-主 transport 第一轮返回“正在准备”，第二轮返回：
+- score 是可选字段；省略时等价于 score: {hit:1, miss:-1}，hit 与 miss 分别独立应用默认值。
+- 命中配 3 就加 3；miss 不配默认扣 1，显式配 0 才不扣分；hit=0 可只累计失败扣分。
+- 分值均为有限数；一期不做 weight、分母排除、maxScore、归一分或分数通过线。
+- rawScore 为所有断言细项得分之和；测试通过要求所有已声明断言细项通过。
+- 每个机械结果和每个 AI rubric 计分一次，不存在结果引用表或隐式补维。
+- 正总分不能抵消失败，显式 miss=0 不能把未通过变成通过。
+- Judge 裁定缺项、判据结果缺失与整体执行／解析失败是评测错误，不生成正常评分。
+- 默认测试零网络、零 token；真实 provider 只走显式 token 入口。
 
-```text
-chosen_skill: recall-author
-写新队列属于 author 侧。措辞礼貌且简洁。
-```
+## Task 1：作者 schema 与编译
 
-测试必须证明 Judge 与字面命中器只接收第二轮文本。PASS 固定响应为：
+候选落点：recall 的 schema、compile、registry 及相应单元测试。具体文件与类型在正式实施计划中确认。
 
-```json
-{
-  "ownership": { "pass": true, "reason": "归属明确" },
-  "polite": { "pass": true, "reason": "措辞礼貌" },
-  "concise": { "pass": true, "reason": "表达简洁" }
-}
-```
+- [ ] 先写失败测试：case 级 judge 简写／完整形态、rubric 可选 score、独立默认值与非法分值。
+- [ ] 重复 YAML key、未知 rubric 字段、保留键与非法执行参数在主 Driver 前拒绝。
+- [ ] 旧 expect.decision 不作为一期内置能力接受。
+- [ ] 只把最终文本交给内置 Judge；score 配置不进入 Judge prompt。
+- [ ] 自定义判据继续注册、装配并接收原始输入，不强制包装旧输入。
 
-## Global Constraints
+## Task 2：细项结果与统一计分
 
-- 第一阶段只实现 case 级 `expect.judge / expect.decision`，只评最后一轮输出。
-- 不实现逐轮 Judge、AI 条件分支、动态后续提示词或提前终止。
-- 作者接口使用 KV；执行层继续使用数组，不为对齐内部实现把列表暴露给考卷作者。
-- 每维恰选 `eq / one_of / verdict / outcome`；`from` 仅用于字面维，作者 `outcome` 编译到内部 `DimensionSpec.metric`。
-- threshold 接受任意有限数；Recall `expect.decision` 的零 coverage 默认 FAIL，只有显式 `absent: pass` 才允许缺证据宽免。
-- 简单 `CriterionResult.score` 保持 0/1；decision 的 rawScore 与归一分只由 `resolveAggregate` 出口。
-- 未引用 rubric 自动形成 `weight=1`、`knockout=false`、`absent=zero` 的隐式维度。
-- 默认测试使用临时工作区、合成配置和 fake transport，保持零网络、零 token。
-- `turn:judge` 与 `turn:judge.*` 保持标准保留命名空间，其他自定义判据继续沿用 registry。
-- 新行为先写失败测试，再实现最小生产改动。
+候选落点：assertions、recall 的结果适配及报告接线；公共契约是否需要调整由正式计划确认，本轮不改实现。
 
-## Review Focus
+- [ ] 先写失败测试，验证机械细项与 AI rubric 都保留独立名称、pass、reason 与得分。
+- [ ] 省略 score 或空对象得到 1／-1；只配 hit=3 时 miss 仍为 -1；只配 miss=0 时 hit 仍为 1。
+- [ ] 五项机械检查采用 hit=0、miss=-1，一项失败 -1，两项失败 -2。
+- [ ] 机械与 AI 细项进入同一求和出口；每项只计一次。
+- [ ] 总分为正但有断言失败时测试仍未通过；显式 miss=0 时失败状态不变。
+- [ ] 缺少应有结果时报评测错误，不能以默认零分掩盖。
+- [ ] 既有独立 Assertions 与通用聚合使用方式保持兼容。
 
-- 多轮 case 的准备轮答案不得进入 Judge 或字面命中器；Task 1 与 Task 4 分别固定编译位置和官方 CLI 证据。
-- KV 重复键、保留键、带点名称与未知 verdict 引用必须在主 Driver 前失败；Task 1 覆盖。
-- `eq / one_of` 缺抽取值不得猜测为 false，必须进入 absent；Task 2 与 Task 4 覆盖。
-- 作者维度名与命中来源不得互相覆盖；Task 2 固定报告中的 `name` 与 `metric`。
-- `ScenarioSpec.expandOutcomes` 只能展开显式列名判据，既有 `createJudgeAssertion + aggregate` 保持单结果兼容；Task 2 覆盖。
-- Recall `expect.decision` 的零 coverage 不得因缺省规则或负 threshold 免费变绿；Task 2 与 Task 4 覆盖适配层默认 FAIL 和显式宽免，既有通用 aggregate 空考行为保持兼容。
-- 异步 borrowed 创建、取消与迟到 Driver 不得泄漏；Task 3 覆盖。
+## Task 3：标准 Judge 装配与隔离
 
----
+候选落点：recall 的 Judge 装配、通用工厂接线与 judge 生命周期测试。
 
-### Task 1: 落地 case 级 expect schema 与 KV 编译
+- [ ] 同源 target／config／tags／live 批准、mode 与 transport 正确到达。
+- [ ] borrowed 使用独立单轮 spec、effects:none 和空执行参数，不继承主工作区或工具权限。
+- [ ] 同步／异步 profile 工厂、取消、迟到 Driver 与 finally close 均有测试。
+- [ ] 装配阶段无 transport 与 Driver 调用；实际 attempt 才创建资源。
+- [ ] 无 expect.judge 时不增加 Judge 调用。
 
-**Files:**
+## Task 4：官方 CLI 完整场景
 
-- Create: `packages/recall/src/judge-dsl.ts`
-- Modify: `packages/recall/src/schema.ts`
-- Modify: `packages/recall/src/compile.ts`
-- Modify: `packages/recall/src/registry.ts`
-- Modify: `packages/recall/tests/compile.test.ts`
-- Modify: `packages/recall/tests/registry.test.ts`
+候选测试：recall-judge-assertion.test.ts 与 recall-assertion-scoring.test.ts；名称与数量待正式计划确认，不沿用旧 decision 场景计数。
 
-**Interfaces:**
+- [ ] 非法 DSL：CLI=2，主执行与 Judge 均无调用。
+- [ ] 全部通过、机械失败、AI 单项失败均保留细项证据。
+- [ ] 多轮准备答案不进入 Judge；最后文本与完整 rubric 到达。
+- [ ] 默认 1／-1、命中加 3、未命中默认扣 1、显式 miss=0 及只累计失败扣分均有固定算例。
+- [ ] 正总分但存在失败项：CLI=0，报告测试未通过。
+- [ ] 裁定缺项、超时、调用与解析错误：CLI=1，不输出正常评分结论。
+- [ ] 独立会话、repeat 创建与清理、敏感信息脱敏正确。
 
-- `RecallCaseDefinition.expect` 承载内置 `judge` 与 `decision`；执行 `turns` 不声明这两个内置字段。
-- `RecallJudgeDeclaration` 支持 KV 简写与 `{ rubrics, timeoutMs?, maxRetries?, instructions? }`。
-- `RecallDecisionDeclaration` 为 `{ threshold?, dimensions: Record<string, RecallDimensionDeclaration> }`。
-- 编译把内置 Judge 输入只接到最后一轮，并输出 `ScenarioSpec.aggregate` 与 `ScenarioSpec.expandOutcomes = ["judge"]`（使用 judge 的 decision 路径）。
+## Task 5：文档与正式收口
 
-- [ ] **Step 1: 编写 schema 与编译失败测试**
+- [ ] 一期文档只描述断言直接计分、总分求和与固定全通过，不再要求 decision、dimensions、结果引用、OR 组合、threshold 或 knockout。
+- [ ] Decision 候选政策只留在未来预设计，不出现在一期验收代码中。
+- [ ] 实现后再登记实际类型、文件与测试证据；不把目标示例当作已支持 API。
+- [ ] 先运行相关包的零 token 回归，再执行 pnpm check、pnpm format:check 与 git diff --check。
+- [ ] 真实调用、Judge 质量校准和消费者迁移分别报告，不以默认 fake 回归代替。
 
-  - case 级 KV 简写和完整 judge 对象均可编译，turn 内内置 judge/decision 被拒绝。
-  - 重复 YAML key、保留键简写、带点名称、未知字段和空 rubric 得到定义错误。
-  - 每维缺少或同时声明多个命中来源被拒绝。
-  - `verdict` 不带 `judge.` 前缀或引用未知 rubric 被拒绝。
-  - 多轮 case 仅最后一轮接收内置 Judge 与字面判据输入。
-  - 未引用 rubric 自动形成默认维度，自定义 `turn:judge` 与 `turn:judge.custom` 被保留命名空间拒绝。
+## 后续入口
 
-- [ ] **Step 2: 运行编译与 registry 测试，确认新增断言按预期失败**
-
-  ```bash
-  pnpm exec tsx --test packages/recall/tests/compile.test.ts packages/recall/tests/registry.test.ts
-  ```
-
-- [ ] **Step 3: 实现封闭 schema、KV 归一、引用校验与最后一轮编译**
-- [ ] **Step 4: 重跑 Task 1 测试并确认通过**
-
-### Task 2: 实现精确命中、具名维度与多值 outcome
-
-**Files:**
-
-- Create: `packages/recall/src/decision-assertion.ts`
-- Create: `packages/recall/tests/decision-assertion.test.ts`
-- Modify: `packages/contracts/src/criterion.ts`
-- Modify: `packages/contracts/src/aggregation.ts`
-- Modify: `packages/contracts/src/dsl.ts`
-- Modify: `packages/contracts/src/index.ts`
-- Modify: `packages/contracts/tests/contracts.test.ts`
-- Modify: `packages/assertions/src/judge-assertion.ts`
-- Modify: `packages/assertions/tests/judge-assertion.test.ts`
-- Modify: `packages/observation/src/criteria-runner.ts`
-- Modify: `packages/observation/src/aggregation.ts`
-- Modify: `packages/observation/tests/observation-criteria-runner.test.ts`
-- Modify: `packages/observation/tests/observation-aggregation.test.ts`
-- Modify: `packages/runner/src/run-scenario.ts`
-- Modify: `packages/runner/tests/run-scenario.test.ts`
-
-**Interfaces:**
-
-- `TurnCriterionGroup extends TurnCriterion`，增加 `evaluateMany()`；简单 `evaluate()` 保持现有行为。
-- `TurnCriterionOutcome.state?: "evaluated" | "absent"`，缺省 evaluated，缺失 verdict 必须产生显式 absent outcome。
-- `ScenarioSpec.expandOutcomes` 与 `RunCriteriaOptions.expandOutcomes` 使用判据名数组，仅显式列出的 group 展开。
-- `DimensionSpec.name?` 与 `DimensionOutcome.name?` 保留作者维度 KV key；`metric` 继续保存命中来源。
-- 字面维编译为确定性判据结果，`verdict / outcome` 编译为结果引用，统一进入 `resolveAggregate`；作者 `outcome` 映射到内部 `DimensionSpec.metric`。
-
-- [ ] **Step 1: 编写精确命中与多值结果失败测试**
-
-  - `eq` trim、大小写不敏感；`one_of` 任一候选命中。
-  - 默认行约定使用维度 key，自定义 `from` 必须含一个捕获组，并按 `m` 多行行边界匹配；显式 flags 与 lookahead/lookbehind 被拒绝。
-  - 抽取缺失产生 absent，不得当成明确 false。
-  - `verdict` 字符串与数组 OR、隐式维、coverage、weight 与 knockout 正确。
-  - threshold 接受负值等任意有限数并拒绝 NaN/Infinity；Recall decision 适配层对零覆盖默认 FAIL，显式 `absent: pass` 才可继续按映射判定；既有 `ScenarioSpec.aggregate` 空考行为保持不变。
-  - 报告同时保留作者 `name` 与来源 `metric`。
-  - 显式 expandOutcomes 时产生实际与 absent outcomes；未声明时既有 Judge + aggregate 保持原单结果名称。
-  - `TurnCriterionGroup` 与新增维度字段经 `@x-agent-suite/contracts` 公开入口可用。
-
-- [ ] **Step 2: 运行相关测试并确认新增接口导致预期失败**
-- [ ] **Step 3: 实现字面判据、具名维度与兼容的多值调度**
-- [ ] **Step 4: 重跑 Task 2 测试并确认通过**
-
-### Task 3: 装配主 AI 同源的标准 Judge
-
-**Files:**
-
-- Create: `packages/recall/src/judge-assembly.ts`
-- Create: `packages/recall/tests/judge-assembly.test.ts`
-- Modify: `packages/recall/src/criterion-assembly.ts`
-- Modify: `packages/recall/package.json`
-- Modify: `packages/judge/src/types.ts`
-- Modify: `packages/judge/src/client.ts`
-- Modify: `packages/judge/tests/client.test.ts`
-- Modify: `packages/judge/tests/client-cancel.test.ts`
-- Modify: `pnpm-lock.yaml`
-
-**Interfaces:**
-
-- `createRecallJudgeAssertion(options): TurnCriterionGroup` 创建标准判据。
-- `assembleRecallCriteria()` 在发现 case 级 `expect.judge` 时追加标准判据，每 target 一次。
-- `@x-agent-suite/assertions` 成为 recall 的运行时依赖。
-
-- [ ] **Step 1: 编写 direct/borrowed 装配失败测试**
-
-  - direct 接收同源 target/config/tags/live 批准、mode 与 transport。
-  - borrowed 接收同源 cliRef/profile，并生成独立单轮 spec、effects:none 和空执行参数。
-  - borrowed 支持异步 profile 工厂；异步创建成功、取消期间挂起及迟到 Driver 的 finally close 均有测试。
-  - 装配阶段记录零 transport、零 Driver 调用。
-  - 无 `expect.judge` 时保持现有自定义判据集合。
-
-- [ ] **Step 2: 运行 `packages/recall/tests/judge-assembly.test.ts`，确认模块与行为缺口导致失败**
-- [ ] **Step 3: 实现标准 Judge 装配**
-- [ ] **Step 4: 重跑 Task 3 测试并确认通过**
-
-### Task 4: 建立第一阶段的官方 CLI 全链场景
-
-**Files:**
-
-- Create: `packages/recall/tests/recall-judge-assertion.test.ts`
-- Create: `packages/recall/tests/recall-judge-decision.test.ts`
-- Modify: `packages/recall/tests/fixtures/recall.registry.ts`
-- Modify: `packages/recall/tests/fixtures/recall-workspace.ts`
-
-**Interfaces:**
-
-- 考卷使用 case 级 `expect.judge` 与 `expect.decision`。
-- fake transport 按主执行 prompt 与 `policy: judge-v1` 分流响应。
-- 测试状态记录主执行文本、Judge prompt 并在每次工作区创建时重置。
-
-- [ ] **Step 1: 编写定义错误与简单五场景**
-
-  | 场景                | 预期证据                                                          |
-  | ------------------- | ----------------------------------------------------------------- |
-  | 非法 DSL            | CLI=2；诊断指向定义错误；主 transport 与 Judge transport 均无调用 |
-  | PASS + 多轮最终回答 | CLI=0；准备轮不进入 Judge；最终回答和完整 rubric 进入 prompt      |
-  | 明确 FAIL           | CLI=0；报告保留失败 rubric 与 reason                              |
-  | absent              | CLI=1；failure 含 `[absent]` 与缺项名                             |
-  | not-evaluated       | CLI=1；failure 含 `[not-evaluated:`，诊断隐藏合成 secret          |
-
-- [ ] **Step 2: 编写 decision 五场景**
-
-  | 场景                         | 预期证据                                                                                |
-  | ---------------------------- | --------------------------------------------------------------------------------------- |
-  | `eq` + 默认行约定 + knockout | 精确选中字段；命中/未命中与否决原因正确                                                 |
-  | `one_of` + 自定义 `from`     | 任一候选命中；多行行边界正确；无匹配时进入 absent                                       |
-  | verdict 权重 + OR + 隐式维   | 显式权重精确生效，未引用 rubric 仍参与，coverage 与负 threshold 正确                    |
-  | decision absent 映射         | 缺 verdict 或缺字面值进入对应映射；Recall 零覆盖默认 FAIL，显式宽免生效，内容结果 CLI=0 |
-  | outcome 混合判据             | 确定性 outcome 与 `judge.<rubric>` 进入同一静态出口                                     |
-
-- [ ] **Step 3: 运行两个目标测试并记录实现缺口**
-
-  ```bash
-  pnpm exec tsx --test packages/recall/tests/recall-judge-assertion.test.ts packages/recall/tests/recall-judge-decision.test.ts
-  ```
-
-- [ ] **Step 4: 完成 fixture 并重跑，确认十个场景全部通过**
-
-### Task 5: 同步文档并执行回归
-
-**Files:**
-
-- Modify: `docs/spec/recall-judge-dsl.md`
-- Modify: `docs/spec/recall.md`
-- Modify: `docs/spec/judge.md`
-- Modify: `docs/spec/testing.md`
-- Modify: `docs/spec/scenario-dsl.md`
-- Modify: `docs/spec/contracts.md`
-- Modify: `docs/spec/scenario-runner.md`
-- Modify: `docs/spec/scenario-evaluation.md`
-- Modify: `docs/spec/scoring-aggregation.md`
-- Modify: `docs/spec/recall-runtime-composition.md`
-- Modify: `docs/spec/boundary-discipline.md`
-- Modify: `docs/tutorial/recipes/recall.md`
-- Modify: `docs/research/model-graded-assertion-testing.md`
-- Modify: `docs/research/recall-assertion-dsl-design.md`
-- Modify: `docs/research/README.md`
-- Modify: `docs/README.md`
-- Modify: `docs/spec/README.md`
-- Modify: `packages/assertions/README.md`
-- Modify: `packages/recall/README.md`
-
-- [ ] **Step 1: 登记实际契约与测试证据**
-
-  文档保持 case 级 `expect`、KV 作者接口、精确命中器、最后一轮评价和后续发展方向一致；不提前登记逐轮或条件控制为已交付能力。
-
-- [ ] **Step 2: 运行相关包回归**
-
-  ```bash
-  pnpm --filter @x-agent-suite/contracts test
-  pnpm --filter @x-agent-suite/assertions test
-  pnpm --filter @x-agent-suite/observation test
-  pnpm --filter @x-agent-suite/runner test
-  pnpm --filter @x-agent-suite/recall test
-  pnpm --filter @x-agent-suite/judge test
-  ```
-
-- [ ] **Step 3: 执行仓库收口**
-
-  ```bash
-  pnpm check
-  pnpm format:check
-  git diff --check
-  ```
-
-  Expected: boundary、typecheck、test、ittest 和文档检查全部通过；ittest 按现有显式前置条件运行或 skip。
-
-## 后续验证入口
-
-- **逐轮与条件控制调研：** 分别评估逐轮断言、跨轮计分、动态提示词和提前终止，不把研究方向当作第一阶段接口。
-- **真实 live 冒烟：** 使用 case 级 `expect.judge`，运行明显 PASS 与 FAIL，记录 target、Judge 版本、退出码、清理和脱敏结果。
-- **Judge 质量评估：** 建立固定输出的人工标注开发集与保留集，报告一致率、混淆矩阵、偏差切片、未评测计数和重复裁判翻转率。
-- **可选 grader/Driver 扩展：** 出现第二个明确消费者需求时，新增独立设计，扩展 Judge 的显式选择与归因。
+- Decision：确有部分失败仍可通过、组合证据或否决需求时再设计。
+- 后续能力分别见 [分类](../research/recall-classification-pre-design.md)、[条件分支](../research/recall-conditional-branching-pre-design.md)、[轮次级断言](../research/recall-turn-assertion-pre-design.md) 与 [提前终止](../research/recall-early-termination-pre-design.md)；条件分支采用树形内嵌步骤与自然汇合，均不依赖 decision，重要分支由多个 case 覆盖，模型方差通过 repeat 观察。
+- token 冒烟：固定 target，验证明显通过／未通过、协议与清理，不自动扩为 Judge 质量结论。
+- Judge 质量：固定候选输出和人工标签，报告一致率、误判与翻转率。
