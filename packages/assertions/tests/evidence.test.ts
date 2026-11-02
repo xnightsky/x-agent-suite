@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { evidence } from "../src/index.ts";
+import { createEvidenceCriterion, evidence } from "../src/index.ts";
 import { evaluateSync, makeContext, makeTurn } from "./support.ts";
 import {
   output,
@@ -157,6 +157,29 @@ test("evidence：缺 workspace、非法路径输入和缺失 status 均按非法
         makeContext({ toolResult: { tool: "read" } }),
       ),
     /status|观察/,
+  );
+});
+
+test("evidence：相对 workspace 在无调用和 not 下仍按非法观察抛错", () => {
+  const relativeWorkspaceEvidence = createEvidenceCriterion({
+    resolveWorkspaceCwd: () => "relative/workspace",
+  });
+  const expect = {
+    not: {
+      toolResult: {
+        tool: "read",
+        path: { arg: "path", resource: "docs/a.md" },
+      },
+    },
+  };
+  assert.throws(
+    () =>
+      evaluateSync(
+        relativeWorkspaceEvidence,
+        makeTurn("", []),
+        makeContext(expect),
+      ),
+    /workspace|观察/,
   );
 });
 

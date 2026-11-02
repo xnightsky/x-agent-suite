@@ -62,6 +62,21 @@ test("workspace 路径：Windows 分隔符、盘符和内部绝对路径按同�
   );
 });
 
+test("workspace 路径：正斜杠 UNC 按 Windows 边界处理", () => {
+  const workspace = "//server/share/root";
+  for (const input of [
+    "docs/a.md",
+    "//server/share/root/docs/a.md",
+    "\\\\server\\share\\root\\docs\\a.md",
+  ]) {
+    assert.equal(normalizeWorkspacePath(workspace, input), "docs/a.md", input);
+  }
+  assert.equal(
+    normalizeWorkspacePath(workspace, "C:\\..\\docs\\a.md"),
+    undefined,
+  );
+});
+
 test("workspace 路径：边界或输入无法可信归一时显式拒绝", () => {
   const illegal: readonly (readonly [string, string])[] = [
     ["", "docs/a.md"],

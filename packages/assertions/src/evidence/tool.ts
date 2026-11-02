@@ -90,6 +90,13 @@ function requireWorkspace(
   if (typeof workspace !== "string" || workspace.length === 0) {
     throw new Error("evidence 观察不完整：路径断言缺少可信 workspace 边界");
   }
+  try {
+    normalizeWorkspacePath(workspace, ".");
+  } catch (cause) {
+    throw new Error("evidence 观察不完整：workspace 边界无法可信归一", {
+      cause,
+    });
+  }
   return workspace;
 }
 

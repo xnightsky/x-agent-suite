@@ -7,7 +7,9 @@ import { posix, win32 } from "node:path";
 
 function isWindowsWorkspace(workspaceCwd: string): boolean {
   return (
-    /^[A-Za-z]:[\\/]/.test(workspaceCwd) || workspaceCwd.startsWith("\\\\")
+    /^[A-Za-z]:[\\/]/.test(workspaceCwd) ||
+    workspaceCwd.startsWith("\\\\") ||
+    workspaceCwd.startsWith("//")
   );
 }
 
