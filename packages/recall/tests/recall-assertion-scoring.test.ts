@@ -18,6 +18,7 @@ import type {
   TargetTagCatalog,
 } from "@x-agent-suite/llm-fixture";
 import { adaptRecallAssertionResult } from "../src/assertion-results.ts";
+import { preflightRecallAssertionScores } from "../src/assertion-score.ts";
 import { assembleRecallCriteria } from "../src/criterion-assembly.ts";
 import type { RecallEffects } from "../src/effects.ts";
 import type { RecallResolvedExecution } from "../src/execution.ts";
@@ -295,4 +296,51 @@ test("五项机械 hit=0/miss=-1：一项失败 -1，两项失败 -2", async () 
   assert.equal(second.artifact.rawScore, -2);
   assert.equal(first.hardPass, false);
   assert.equal(second.hardPass, false);
+});
+
+test("机械判据与原型属性同名时仍使用机械来源和预检分值", async () => {
+  const judgeName = "__recall_judge__:accurate";
+  const current: ScenarioSpec = {
+    ...scenario("suite/prototype-name", {
+      toString: {},
+      [judgeName]: { rubric: "accurate" },
+    }),
+    metadata: {
+      recall: {
+        judge: { rubrics: { accurate: { rubric: "accurate" } } },
+      },
+    },
+  };
+  const mechanical = {
+    name: "toString",
+    scope: "session" as const,
+    assertionScore: () => ({ hit: 7 }),
+    evaluate: () => booleanResult(true),
+  };
+  const ai: SessionCriterion = {
+    name: judgeName,
+    scope: "session",
+    evaluate: () => booleanResult(true),
+  };
+  preflightRecallAssertionScores({
+    registry: registry([mechanical]),
+    scenarios: [current],
+    execution: EXECUTION,
+  });
+  const raw = await runScenarioSpec(current, {
+    createDriver: driver,
+    criteria: [mechanical, ai],
+  });
+  const result = adaptRecallAssertionResult(current, raw, EXECUTION);
+  assert.deepEqual(
+    result.artifact.assertions?.map(({ name, source, score }) => ({
+      name,
+      source,
+      score,
+    })),
+    [
+      { name: "toString", source: "mechanical", score: 7 },
+      { name: "accurate", source: "ai", score: 1 },
+    ],
+  );
 });

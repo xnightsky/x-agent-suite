@@ -42,7 +42,10 @@ export function adaptRecallAssertionResult(
     return publicName ? { ...outcome, name: publicName } : outcome;
   });
   const assertions: AssertionDetail[] = outcomes.map((outcome) => {
-    const declaration = judge?.rubrics[outcome.name];
+    const declaration =
+      judge && Object.hasOwn(judge.rubrics, outcome.name)
+        ? judge.rubrics[outcome.name]
+        : undefined;
     return {
       name: outcome.name,
       source: declaration ? "ai" : "mechanical",
