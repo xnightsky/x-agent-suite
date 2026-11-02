@@ -28,3 +28,14 @@ export {
   type JudgeAssertionBaseOptions,
   type JudgeAssertionOptions,
 } from "./judge-assertion.ts";
+export {
+  judgeAssertionResults,
+  type NamedAssertionResult,
+} from "./judge-results.ts";
+export {
+  assertionContribution,
+  parseAssertionScore,
+  type AssertionDetail,
+  type AssertionScoreConfig,
+  type AssertionScoreResolver,
+} from "./score.ts";

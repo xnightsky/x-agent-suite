@@ -6,7 +6,8 @@
 
 - **检查层原语**：`dryChecks`（结构门禁）、`hardChecks`（工具调用与入参）、`fuzzyChecks`（文本兜底）、`checkListResult`（列举逐条核对）。
 - **三个确定性判据**：`textContains`、`textNotContains`、`toolCall`，均为 `TurnCriterion`，注册后由每轮 `expect` 按名引用。
-- **一个薄 AI 断言**：`createJudgeAssertion` 把 `judge()` 的具名裁定包成 `TurnCriterion`。
+- **AI 断言适配**：`createJudgeAssertion` 把 `judge()` 的具名裁定包成 `TurnCriterion`；`judgeAssertionResults` 将同一 `JudgeOutcome` 展开为逐 rubric 的原始 name/pass/reason/0..1 结果，两者共用 absent/not-evaluated 语义。
+- **直接贡献原语**：`parseAssertionScore` 封闭校验 `{hit?,miss?}`，`assertionContribution` 独立应用 hit=1/miss=-1 默认并计算 `pass ? hit : miss`；`AssertionDetail` 与原始 CriterionOutcome 分离，不回写其 0..1 score。
 
 ## 不负责什么
 
@@ -18,13 +19,14 @@
 
 ## 公开入口
 
-| 分组       | 导出                                                                         |
-| ---------- | ---------------------------------------------------------------------------- |
-| 工具匹配   | `toolNameMatches`、`toolActionMatches`                                       |
-| 检查原语   | `dryChecks`、`hardChecks`、`fuzzyChecks`、`checkListResult`                  |
-| 确定性判据 | `textContains`、`textNotContains`、`toolCall`、`ToolCallExpect`              |
-| AI 断言    | `createJudgeAssertion`、`JudgeAssertionOptions`、`JudgeAssertionBaseOptions` |
-| 契约类型   | `EnumerateCheck`、`EnumerateResult`、`HardExpectation`（重导出）             |
+| 分组       | 导出                                                                                                                |
+| ---------- | ------------------------------------------------------------------------------------------------------------------- |
+| 工具匹配   | `toolNameMatches`、`toolActionMatches`                                                                              |
+| 检查原语   | `dryChecks`、`hardChecks`、`fuzzyChecks`、`checkListResult`                                                         |
+| 确定性判据 | `textContains`、`textNotContains`、`toolCall`、`ToolCallExpect`                                                     |
+| AI 断言    | `createJudgeAssertion`、`judgeAssertionResults`、`JudgeAssertionOptions`、`NamedAssertionResult`                    |
+| 直接贡献   | `parseAssertionScore`、`assertionContribution`、`AssertionScoreConfig`、`AssertionScoreResolver`、`AssertionDetail` |
+| 契约类型   | `EnumerateCheck`、`EnumerateResult`、`HardExpectation`（重导出）                                                    |
 
 `dryChecks` / `hardChecks` / `fuzzyChecks` 返回失败原因列表，空数组即通过；`checkListResult` 返回 `hallucinated` / `missing`。`hardChecks` 的 `args` 是浅层 JSON 相等，`toolCall` 的 `args` 是递归子集约束——两者刻意不同。
 
@@ -75,7 +77,7 @@ await criterion.evaluate(turn, {
 
 rubric 清单来自该轮 `expect`，形状由 `judge()` 现有校验把关。执行失败抛 `[not-evaluated:<kind>]`，模型未返回某项 rubric 抛 `[absent]`，只有明确 `pass:false` 才产出 0 分。
 
-Recall 的内置 case 级 `expect.judge`、完整执行配置和 `expect.decision` 目标契约见 [`docs/spec/recall-judge-dsl.md`](../../docs/spec/recall-judge-dsl.md)。该路径复用本包的 Judge 断言与多值 verdict 适配能力；作者侧 KV 在编译层转换为现有数组接口。
+Recall 的内置 case 级 `expect.judge` 与完整执行配置已实现，`expect.decision` 不属于一期，见 [`docs/spec/recall-judge-dsl.md`](../../docs/spec/recall-judge-dsl.md)。该路径复用本包的 `judgeAssertionResults` 多值 verdict 适配与直接贡献原语；作者侧 KV 在编译层转换为现有数组接口。
 
 ### AI 断言的两种 client 入口（互斥）
 

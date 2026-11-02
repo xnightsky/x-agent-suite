@@ -15,6 +15,7 @@ import {
   type JudgeModelClient,
   type JudgeRubric,
 } from "@x-agent-suite/judge";
+import { judgeAssertionResults } from "./judge-results.ts";
 
 /** AI 断言的公共基础选项；不含渠道、目标或审批参数。 */
 export interface JudgeAssertionBaseOptions {
@@ -83,23 +84,13 @@ export function createJudgeAssertion(
         },
         { client, timeoutMs, maxRetries },
       );
-      if (outcome.status === "not-evaluated") {
-        const { kind, message } = outcome.failure;
-        throw new Error(
-          `[not-evaluated:${kind}] 判据 ${name} 本次不可评测：${message}`,
-        );
-      }
-      if (outcome.absent.length > 0) {
-        throw new Error(
-          `[absent] 判据 ${name} 缺少 rubric 证据：${outcome.absent.join("、")}`,
-        );
-      }
-      const failed = outcome.verdicts.filter((verdict) => !verdict.pass);
+      const results = judgeAssertionResults(outcome, name);
+      const failed = results.filter((result) => !result.pass);
       if (failed.length === 0) {
         return {
           pass: true,
           score: 1,
-          reason: `全部 ${outcome.verdicts.length} 项 rubric 通过`,
+          reason: `全部 ${results.length} 项 rubric 通过`,
         };
       }
       return {

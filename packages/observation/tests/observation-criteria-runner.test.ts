@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type {
+  CriterionResult,
   Criterion,
   SessionObservation,
   TurnObservation,
@@ -130,4 +131,40 @@ test("同名同 scope 判据重复注册显式抛错", async () => {
       }),
     /重复/,
   );
+});
+
+test("判据结果必须满足公共形状，合法 0.4 原样保留", async () => {
+  const invalid = [
+    undefined,
+    { pass: "yes", score: 1, reason: "bad" },
+    { pass: true, score: Number.NaN, reason: "bad" },
+    { pass: true, score: -0.5, reason: "bad" },
+    { pass: true, score: 1 },
+  ];
+  for (const value of invalid) {
+    const broken: Criterion = {
+      name: "broken",
+      scope: "turn",
+      evaluate: () => value as CriterionResult,
+    };
+    await assert.rejects(
+      runCriteria({
+        session: makeSession([makeTurn(0, "你好")]),
+        criteria: [broken],
+        turnExpects: [{ broken: true }],
+      }),
+      /pass|score|reason/,
+    );
+  }
+  const decimal: Criterion = {
+    name: "decimal",
+    scope: "turn",
+    evaluate: () => ({ pass: true, score: 0.4, reason: "decimal" }),
+  };
+  const outcomes = await runCriteria({
+    session: makeSession([makeTurn(0, "你好")]),
+    criteria: [decimal],
+    turnExpects: [{ decimal: true }],
+  });
+  assert.equal(outcomes[0]!.score, 0.4);
 });
