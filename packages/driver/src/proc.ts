@@ -37,6 +37,8 @@ const DEFAULT_KILL_GRACE_MS = 2_000;
 const DEFAULT_STDERR_RING_LINES = 200;
 const DEFAULT_STDERR_LINE_BYTES = 64 * 1024;
 
+type JsonlProcessState = "new" | "starting" | "running" | "closing" | "closed";
+
 function utf8Tail(value: string, maxBytes: number): string {
   const bytes = Buffer.from(value, "utf8");
   if (bytes.length <= maxBytes) return value;
@@ -63,6 +65,8 @@ export class JsonlProcess {
   private stderrPending = "";
   private child: ChildProcess | null = null;
   private closePromise: Promise<void> | null = null;
+  private state: JsonlProcessState = "new";
+  private startPromise: Promise<void> | null = null;
 
   constructor(options: SpawnJsonlOptions) {
     if (!options.command) {
@@ -86,34 +90,68 @@ export class JsonlProcess {
     return parts.slice(-limit).join("");
   }
 
-  /** 拉起子进程；spawn 失败显式抛错。重复 start 显式抛错。 */
-  async start(): Promise<void> {
-    if (this.child) {
-      throw new Error(
-        `JsonlProcess: 重复 start（command=${this.options.command}）`,
+  /** 拉起子进程；spawn 失败显式抛错。start 是终态入口，close 后禁止 restart。 */
+  start(): Promise<void> {
+    if (this.state !== "new") {
+      return Promise.reject(
+        new Error(
+          `JsonlProcess: 重复 start 或已关闭，禁止 start（command=${this.options.command}，state=${this.state}）`,
+        ),
       );
     }
-    const child = spawn(this.options.command, [...(this.options.args ?? [])], {
-      cwd: this.options.cwd,
-      env: this.options.env ?? process.env,
-      stdio: ["pipe", "pipe", "pipe"],
-    });
+    this.state = "starting";
+    this.startPromise = this.doStart();
+    return this.startPromise;
+  }
+
+  /** start 实现；close 可在启动期间抢占，启动方负责让出资源所有权。 */
+  private async doStart(): Promise<void> {
+    let child: ChildProcess;
+    try {
+      child = spawn(this.options.command, [...(this.options.args ?? [])], {
+        cwd: this.options.cwd,
+        env: this.options.env ?? process.env,
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+    } catch (error) {
+      this.state = "closed";
+      this.queue.end();
+      throw new Error(
+        `JsonlProcess spawn 失败（${this.options.command}）: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
     this.child = child;
     child.stdin?.on("error", (error) => this.failStdin(error));
-    await new Promise<void>((resolve, reject) => {
-      child.once("spawn", () => resolve());
-      child.once("error", (error) => {
-        reject(
-          new Error(
-            `JsonlProcess spawn 失败（${this.options.command}）: ${error.message}`,
-          ),
-        );
+    try {
+      await new Promise<void>((resolve, reject) => {
+        child.once("spawn", () => resolve());
+        child.once("error", (error) => {
+          reject(
+            new Error(
+              `JsonlProcess spawn 失败（${this.options.command}）: ${error.message}`,
+            ),
+          );
+        });
       });
-    });
+    } catch (error) {
+      if (this.child === child) this.child = null;
+      if (this.state === "starting") {
+        this.state = "closed";
+        this.queue.end();
+      }
+      throw error;
+    }
+    if (this.state !== "starting") {
+      throw new Error(
+        `JsonlProcess: 启动期间已关闭（command=${this.options.command}）`,
+      );
+    }
     const stdout = child.stdout;
     const stderr = child.stderr;
     if (!stdout || !stderr) {
       child.kill();
+      if (this.state === "starting") this.state = "closed";
+      this.queue.end();
       throw new Error(
         `JsonlProcess: stdio 未按 pipe 打开（command=${this.options.command}）`,
       );
@@ -127,12 +165,18 @@ export class JsonlProcess {
         // stdin 已销毁时忽略，不影响 stdout 消费。
       }
     }
+    if (this.state !== "starting") {
+      throw new Error(
+        `JsonlProcess: 启动期间已关闭（command=${this.options.command}）`,
+      );
+    }
+    this.state = "running";
   }
 
   /** 写一行 JSONL 到子进程 stdin；未启动或已关闭显式抛错，异步写入错误交给 lines()。 */
   send(message: unknown): void {
     const stdin = this.child?.stdin;
-    if (!stdin || stdin.destroyed) {
+    if (this.state !== "running" || !stdin || stdin.destroyed) {
       throw new Error(
         `JsonlProcess: 进程未运行，无法写入（command=${this.options.command}）`,
       );
@@ -159,19 +203,19 @@ export class JsonlProcess {
     return this.queue;
   }
 
-  /** 幂等关闭：先优雅退出（POSIX SIGTERM / win32 关闭 stdin）等待宽限，超时强杀。 */
-  async close(): Promise<void> {
-    this.closePromise ??= this.doClose();
+  /** 幂等关闭：close 是终态；启动期间调用也会等待启动让出并回收资源。 */
+  close(): Promise<void> {
+    if (!this.closePromise) {
+      this.state = "closing";
+      this.closePromise = this.doClose();
+    }
     return this.closePromise;
   }
 
   private async doClose(): Promise<void> {
+    await this.startPromise?.catch(() => undefined);
     const child = this.child;
-    if (!child) {
-      this.queue.end();
-      return;
-    }
-    if (child.exitCode === null && !child.killed) {
+    if (child && child.exitCode === null && !child.killed) {
       if (process.platform === "win32") {
         // win32 无信号语义：关 stdin 请求对端优雅退出（给对端清理自己子进程的机会），超时后强杀。
         try {
@@ -207,6 +251,7 @@ export class JsonlProcess {
     }
     this.child = null;
     this.queue.end();
+    this.state = "closed";
   }
 
   /** 等待进程退出，超时返回 false。 */

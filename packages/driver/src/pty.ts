@@ -1,7 +1,7 @@
 /**
  * @module @x-agent-suite/driver/pty
  * PTY 子进程句柄：分配 TTY 拉起宿主，提供屏幕快照与 waitForScreen。
- * 不变量：start/close 幂等；write 不自动追加换行；关闭时先 SIGTERM 超时后 SIGKILL；
+ * 不变量：start 只能调用一次，close 幂等且为终态；write 不自动追加换行；关闭时先 SIGTERM 超时后 SIGKILL；
  * pty 模块优先加载 node-pty，失败回退 @lydell/node-pty；TTY 尺寸在 profile 中固定。
  * Windows 下保留系统 ConPTY；node-pty 枚举助手无法附着控制台时安静回退 shell PID，
  * 避免清理阶段向宿主 stderr 泄漏辅助进程异常。
@@ -43,6 +43,14 @@ export interface PtyProcessOptions {
   readonly killGraceMs?: number;
 }
 
+/** PTY 进程退出信息：退出码或信号仅用于诊断，不作为业务断言依据。 */
+export interface PtyExitInfo {
+  /** 正常退出码；被信号终止或不可用时为 null。 */
+  readonly exitCode: number | null;
+  /** 终止信号编号；无信号时 null。 */
+  readonly signal: number | null;
+}
+
 /** PTY 子进程句柄。 */
 export interface PtyProcess {
   /** 拉起宿主；就绪判定由调用方用 waitForScreen 完成。 */
@@ -57,9 +65,16 @@ export interface PtyProcess {
   waitForScreen(match: RegExp, timeoutMs: number): Promise<void>;
   /** 订阅屏幕变化；返回取消订阅函数。 */
   onScreenChange(listener: () => void): () => void;
+  /** 最近一次退出信息；未退出时 null。 */
+  exitInfo(): PtyExitInfo | null;
+  /** 等待进程退出；退出信息只解析一次。 */
+  waitForExit(): Promise<PtyExitInfo>;
   /** 幂等关闭。 */
   close(reason?: string): Promise<void>;
 }
+
+type PtyLifecycleState =
+  "new" | "starting" | "running" | "exited" | "closing" | "closed";
 
 /**
  * 加载 PTY 模块：优先 node-pty，失败回退 @lydell/node-pty。
@@ -108,9 +123,13 @@ export class PtyProcess implements PtyProcess {
   private readonly screenBuffer: PtyScreen;
   private pty: IPty | null = null;
   private dataDisposable: IDisposable | null = null;
-  private started = false;
-  private closed = false;
+  private permanentExitDisposable: IDisposable | null = null;
+  private state: PtyLifecycleState = "new";
   private closePromise: Promise<void> | null = null;
+  private startPromise: Promise<void> | null = null;
+  private exitValue: PtyExitInfo | null = null;
+  private exitPromise: Promise<PtyExitInfo> | null = null;
+  private resolveExit: ((info: PtyExitInfo) => void) | null = null;
 
   constructor(options: PtyProcessOptions) {
     if (!options.command) {
@@ -124,53 +143,133 @@ export class PtyProcess implements PtyProcess {
     });
   }
 
-  /** 子进程 pid（未启动为 undefined）。 */
+  /** 子进程 pid（未启动或已关闭为 undefined）。 */
   get pid(): number | undefined {
     return this.pty?.pid;
   }
 
-  /** 拉起子进程；spawn 失败显式抛错，重复 start 显式抛错。 */
-  async start(): Promise<void> {
-    if (this.started) {
-      throw new Error(
-        `PtyProcess: 重复 start（command=${this.options.command}）`,
+  /** 拉起子进程；start 是终态入口，close 后禁止 restart。 */
+  start(): Promise<void> {
+    if (this.state !== "new") {
+      return Promise.reject(
+        new Error(
+          `PtyProcess: 重复 start 或已关闭，禁止 start（command=${this.options.command}，state=${this.state}）`,
+        ),
       );
     }
-    const mod = await loadPtyModule();
+    this.state = "starting";
+    this.startPromise = this.doStart();
+    return this.startPromise;
+  }
+
+  /** start 实现；close 可在异步加载/订阅期间抢占。 */
+  private async doStart(): Promise<void> {
+    let mod: PtyModule;
+    try {
+      mod = await loadPtyModule();
+    } catch (error) {
+      if (this.state === "starting") {
+        this.state = "closed";
+        this.screenBuffer.dispose();
+      }
+      throw error;
+    }
+    if (this.state !== "starting") {
+      throw new Error(
+        `PtyProcess: 启动期间已关闭（command=${this.options.command}）`,
+      );
+    }
     const env: NodeJS.ProcessEnv = {
       ...(this.options.env ?? process.env),
       TERM: this.options.term ?? DEFAULT_TERM,
     };
     const cols = this.options.cols ?? DEFAULT_COLS;
     const rows = this.options.rows ?? DEFAULT_ROWS;
+    let pty: IPty;
     try {
-      this.pty = mod.spawn(
-        this.options.command,
-        [...(this.options.args ?? [])],
-        {
-          name: this.options.term ?? DEFAULT_TERM,
-          cols,
-          rows,
-          cwd: this.options.cwd,
-          env,
-        },
-      );
+      pty = mod.spawn(this.options.command, [...(this.options.args ?? [])], {
+        name: this.options.term ?? DEFAULT_TERM,
+        cols,
+        rows,
+        cwd: this.options.cwd,
+        env,
+      });
     } catch (error) {
+      if (this.state === "starting") {
+        this.state = "closed";
+        this.screenBuffer.dispose();
+      }
       throw new Error(
         `PtyProcess spawn 失败（${this.options.command}）: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-    this.dataDisposable = this.pty.onData((data) =>
-      this.screenBuffer.feed(data),
-    );
-    this.started = true;
+    this.pty = pty;
+    this.exitValue = null;
+    this.exitPromise = new Promise<PtyExitInfo>((resolve) => {
+      this.resolveExit = resolve;
+    });
+    try {
+      // 必须在 spawn 后立即永久注册；close/waitExit 不得成为唯一监听者。
+      this.permanentExitDisposable = pty.onExit(({ exitCode, signal }) => {
+        this.recordExit(exitCode, signal);
+      });
+      this.dataDisposable = pty.onData((data) => this.screenBuffer.feed(data));
+    } catch (error) {
+      try {
+        pty.kill("SIGTERM");
+      } catch {
+        // 订阅失败后的 kill 只是 best-effort；close 仍可继续清理。
+      }
+      if (this.state === "starting") {
+        this.state = "closed";
+      }
+      throw new Error(
+        `PtyProcess 事件订阅失败（command=${this.options.command}）: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    const startupExit = this.exitInfo();
+    if (startupExit) {
+      if (this.state === "starting") this.state = "closed";
+      throw new Error(
+        `PtyProcess 启动期间进程已退出（command=${this.options.command}，exitCode=${startupExit.exitCode}，signal=${startupExit.signal}）`,
+      );
+    }
+    if (this.state !== "starting") {
+      throw new Error(
+        `PtyProcess: 启动期间已关闭（command=${this.options.command}）`,
+      );
+    }
+    this.state = "running";
   }
 
-  /** 写入按键或文本到 PTY；未启动或已关闭显式抛错。 */
+  /** 记录唯一一次退出事件，供 driver 与 close 共同观察。 */
+  private recordExit(exitCode: number, signal?: number): void {
+    if (this.exitValue) return;
+    this.exitValue = { exitCode, signal: signal ?? null };
+    this.resolveExit?.(this.exitValue);
+    this.resolveExit = null;
+    if (this.state === "running") this.state = "exited";
+  }
+
+  /** 最近一次退出信息；未退出时 null。 */
+  exitInfo(): PtyExitInfo | null {
+    return this.exitValue;
+  }
+
+  /** 等待进程退出；未启动时显式拒绝。 */
+  waitForExit(): Promise<PtyExitInfo> {
+    if (this.exitValue) return Promise.resolve(this.exitValue);
+    if (this.exitPromise) return this.exitPromise;
+    return Promise.reject(
+      new Error(`PtyProcess: 进程尚未启动（command=${this.options.command}）`),
+    );
+  }
+
+  /** 写入按键或文本到 PTY；未运行或已退出显式抛错。 */
   write(data: string): void {
-    if (!this.pty || this.closed) {
+    if (this.state !== "running" || !this.pty) {
       throw new Error(
-        `PtyProcess: 进程未运行，无法写入（command=${this.options.command}）`,
+        `PtyProcess: 进程未运行，无法写入（command=${this.options.command}，state=${this.state}）`,
       );
     }
     this.pty.write(data);
@@ -196,73 +295,71 @@ export class PtyProcess implements PtyProcess {
     return this.screenBuffer.onChange(listener);
   }
 
-  /** 幂等关闭：先优雅退出，超时后强杀。 */
-  close(reason?: string): Promise<void> {
-    this.closePromise ??= this.doClose(reason);
+  /** 幂等关闭：close 是终态；启动期间调用也会等待并回收新资源。 */
+  close(_reason?: string): Promise<void> {
+    if (!this.closePromise) {
+      this.state = "closing";
+      this.closePromise = this.doClose();
+    }
     return this.closePromise;
   }
 
-  private async doClose(_reason?: string): Promise<void> {
-    if (this.closed) {
-      return;
-    }
-    this.closed = true;
+  /** 关闭实现：正常退出、SIGTERM、SIGKILL 都汇聚到同一退出观察。 */
+  private async doClose(): Promise<void> {
+    await this.startPromise?.catch(() => undefined);
     this.dataDisposable?.dispose();
     this.dataDisposable = null;
-
     const pty = this.pty;
-    if (!pty) {
-      this.screenBuffer.dispose();
-      return;
-    }
-
-    const grace = this.options.killGraceMs ?? DEFAULT_KILL_GRACE_MS;
-    if (process.platform === "win32") {
-      // Windows 不支持 POSIX 信号语义，直接 kill。
-      // 警告：勿绕过 pty.kill() 自行终止进程（如 taskkill）。kill() 会 fork
-      // conpty_console_list_agent 枚举控制台进程，真实控制台会话下未修复的
-      // node-pty 会崩 AttachConsole——正确修法是升级 node-pty ≥1.2.0 或
-      // 消费者侧 pnpm patch；改写拆卸路径曾因 fork 原生签名差异全线回归
-      // （见 0.3.1 召回记录）。
-      pty.kill();
-      await this.waitExit(grace);
-    } else {
-      pty.kill("SIGTERM");
-      const exited = await this.waitExit(grace);
-      if (!exited) {
-        pty.kill("SIGKILL");
-        await this.waitExit(grace);
+    let failure: unknown;
+    if (pty && !this.exitValue) {
+      const grace = this.options.killGraceMs ?? DEFAULT_KILL_GRACE_MS;
+      try {
+        if (process.platform === "win32") {
+          // Windows 不支持 POSIX 信号语义，直接 kill。
+          // 警告：勿绕过 pty.kill() 自行终止进程（如 taskkill）。kill() 会 fork
+          // conpty_console_list_agent 枚举控制台进程，真实控制台会话下未修复的
+          // node-pty 会崩 AttachConsole——正确修法是升级 node-pty ≥1.2.0 或
+          // 消费者侧 pnpm patch；改写拆卸路径曾因 fork 原生签名差异全线回归
+          // （见 0.3.1 召回记录）。
+          pty.kill();
+          await this.waitExit(grace);
+        } else {
+          pty.kill("SIGTERM");
+          const exited = await this.waitExit(grace);
+          if (!exited) {
+            pty.kill("SIGKILL");
+            await this.waitExit(grace);
+          }
+        }
+      } catch (error) {
+        failure = error;
       }
     }
-
+    this.permanentExitDisposable?.dispose();
+    this.permanentExitDisposable = null;
     this.screenBuffer.dispose();
     this.pty = null;
+    this.state = "closed";
+    if (failure) throw failure;
   }
 
-  /** 等待进程退出，超时返回 false。 */
+  /** 等待已有退出 Promise；超时返回 false，不创建重复监听。 */
   private waitExit(timeoutMs: number): Promise<boolean> {
-    return new Promise((resolve) => {
-      const pty = this.pty;
-      if (!pty) {
-        resolve(true);
-        return;
-      }
-      let resolved = false;
-      const timer = setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          resolve(false);
-        }
-      }, timeoutMs);
+    if (this.exitValue) return Promise.resolve(true);
+    const exitPromise = this.exitPromise;
+    if (!exitPromise) return Promise.resolve(true);
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      let timer: ReturnType<typeof setTimeout>;
+      const finish = (exited: boolean): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(exited);
+      };
+      timer = setTimeout(() => finish(false), timeoutMs);
       timer.unref?.();
-      const disposable = pty.onExit(() => {
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timer);
-          disposable.dispose();
-          resolve(true);
-        }
-      });
+      void exitPromise.then(() => finish(true));
     });
   }
 }

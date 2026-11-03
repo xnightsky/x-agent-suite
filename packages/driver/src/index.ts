@@ -5,7 +5,7 @@
  */
 
 export { JsonlProcess, type SpawnJsonlOptions } from "./proc.ts";
-export { PtyProcess, type PtyProcessOptions } from "./pty.ts";
+export { PtyProcess, type PtyExitInfo, type PtyProcessOptions } from "./pty.ts";
 export {
   createPtyScreen,
   type PtyScreenOptions,

@@ -11,9 +11,10 @@
  * - 轮次内通知经 mapNotification 归当轮 Observation；轮次外通知进 inbound 队列；
  *   轮次外被映射为 round 的通知显式抛错（刻意设计：归一逻辑必须区分轮次内外）；
  * - waitInbound 只等未来事件，无历史回放；超时显式抛错；
- * - close 幂等：先等在飞轮次收尾（roundChain 不 reject，无死锁），
- *   再发 best-effort 告别请求（adapter.closeRequest）后关 peer；
+ * - close 幂等且为终态：活动轮次先关 peer 取消在飞请求，再等 roundChain 收尾；
+ *   空闲关闭先发 best-effort 告别请求；清理错误最终聚合暴露；
  *   关闭后 inject/sendPrompt/waitInbound 显式抛错。
+ * - waitInbound predicate 异常只拒绝该 waiter；falsy session 仍视为已握手。
  */
 import type {
   DriverEvent,
@@ -158,6 +159,7 @@ export class LongLivedJsonRpcDriver implements LongLivedAgentDriver {
   private readonly inboundQueue = new AsyncQueue<InboundEvent>();
   private readonly inboundWaiters: InboundWaiter[] = [];
   private sessionValue: unknown = null;
+  private handshakeCompleted = false;
   private round: RoundState | null = null;
   private roundChain: Promise<unknown> = Promise.resolve();
   private started = false;
@@ -179,14 +181,15 @@ export class LongLivedJsonRpcDriver implements LongLivedAgentDriver {
 
   /** 启动：拉起进程 → 起消费循环 → adapter.handshake；握手失败清理后重抛。 */
   async start(): Promise<void> {
-    if (this.started) {
-      throw new Error("LongLivedJsonRpcDriver: 重复 start");
+    if (this.started || this.closePromise) {
+      throw new Error("LongLivedJsonRpcDriver: 重复 start 或已关闭");
     }
     this.started = true;
     await this.proc.start();
     this.peer.start();
     try {
       this.sessionValue = await this.adapter.handshake(this.peer);
+      this.handshakeCompleted = true;
     } catch (error) {
       await this.peer.close();
       throw error instanceof Error ? error : new Error(String(error));
@@ -250,27 +253,73 @@ export class LongLivedJsonRpcDriver implements LongLivedAgentDriver {
   }
 
   /** 幂等关闭：best-effort 告别请求后关 peer（停消费 → 关进程）。 */
-  async close(_reason?: string): Promise<void> {
-    this.closePromise ??= this.doClose();
+  async close(reason?: string): Promise<void> {
+    this.closePromise ??= this.doClose(reason);
     return this.closePromise;
   }
 
-  /** 关闭实现：等在飞轮次收尾 → 告别请求（best-effort）→ 关 peer → 拒绝残留等待方。 */
-  private async doClose(): Promise<void> {
-    // roundChain 由 enqueuePrompt 兜底 catch，await 它不会在轮次失败时死锁或重抛。
-    await this.roundChain;
-    const closeSpec = this.sessionValue
-      ? (this.adapter.closeRequest?.(this.sessionValue) ?? null)
-      : null;
-    if (closeSpec) {
-      await this.peer
-        .request(closeSpec.method, closeSpec.params, CLOSE_REQUEST_TIMEOUT_MS)
-        .catch(() => {
+  /**
+   * 关闭实现：活动轮次先取消 wire，再等待轮次退出；空闲时 best-effort 告别。
+   * 不论 closeRequest/peer.close 是否失败，都必须尝试清理并拒绝残留等待方。
+   */
+  private async doClose(reason?: string): Promise<void> {
+    const errors: unknown[] = [];
+    const hadActiveRound = this.round !== null;
+
+    if (hadActiveRound) {
+      // 活动轮次下告别请求没有意义，直接停消费/关进程以拒绝在飞 request。
+      try {
+        await this.peer.close();
+      } catch (error) {
+        errors.push(error);
+      }
+    } else {
+      let closeSpec: JsonRpcRequestSpec | null = null;
+      if (this.handshakeCompleted) {
+        try {
+          closeSpec = this.adapter.closeRequest?.(this.sessionValue) ?? null;
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+      if (closeSpec) {
+        try {
+          await this.peer.request(
+            closeSpec.method,
+            closeSpec.params,
+            CLOSE_REQUEST_TIMEOUT_MS,
+          );
+        } catch {
           // best-effort：对端不应答告别请求不阻塞清理。
-        });
+        }
+      }
+      try {
+        await this.peer.close();
+      } catch (error) {
+        errors.push(error);
+      }
     }
-    await this.peer.close();
-    this.rejectInboundWaiters(new Error("LongLivedJsonRpcDriver: 已关闭"));
+
+    // peer.close 会拒绝在飞请求；roundChain 由 enqueuePrompt 兜底 catch，不会重抛。
+    await this.roundChain;
+    this.rejectInboundWaiters(
+      new Error(
+        reason
+          ? `LongLivedJsonRpcDriver: 已关闭（${reason}）`
+          : "LongLivedJsonRpcDriver: 已关闭",
+      ),
+    );
+    this.inboundQueue.end();
+    this.eventQueue.end();
+    if (errors.length === 0) return;
+    throw new AggregateError(
+      errors,
+      `LongLivedJsonRpcDriver close 失败：${errors
+        .map((error) =>
+          error instanceof Error ? error.message : String(error),
+        )
+        .join("；")}`,
+    );
   }
 
   /** 轮次串行化入口：关后显式抛错，未 start 显式抛错。 */
@@ -280,9 +329,9 @@ export class LongLivedJsonRpcDriver implements LongLivedAgentDriver {
         new Error("LongLivedJsonRpcDriver: 已关闭，不能 inject/sendPrompt"),
       );
     }
-    if (!this.sessionValue) {
+    if (!this.handshakeCompleted) {
       return Promise.reject(
-        new Error("LongLivedJsonRpcDriver: start 之前不能 inject/sendPrompt"),
+        new Error("LongLivedJsonRpcDriver: 握手完成之前不能 inject/sendPrompt"),
       );
     }
     const run = this.roundChain.then(() => this.promptRound(text));
@@ -292,6 +341,9 @@ export class LongLivedJsonRpcDriver implements LongLivedAgentDriver {
 
   /** 执行一轮 prompt 请求并聚合当轮 Observation。 */
   private async promptRound(text: string): Promise<Observation> {
+    if (this.closePromise) {
+      throw new Error("LongLivedJsonRpcDriver: 已关闭，不能开始新轮次");
+    }
     const round: RoundState = {
       eventsStart: this.eventLog.length,
       texts: [],
@@ -309,6 +361,9 @@ export class LongLivedJsonRpcDriver implements LongLivedAgentDriver {
         spec.params,
         this.requestTimeoutMs,
       );
+      if (this.closePromise) {
+        throw new Error("LongLivedJsonRpcDriver: 轮次已被 close 取消");
+      }
       this.pushEvent("prompt_result", response);
     } finally {
       this.round = null;
@@ -352,7 +407,19 @@ export class LongLivedJsonRpcDriver implements LongLivedAgentDriver {
     this.inboundQueue.push(event);
     for (let i = this.inboundWaiters.length - 1; i >= 0; i--) {
       const waiter = this.inboundWaiters[i];
-      if (waiter && waiter.match(event)) {
+      if (!waiter) continue;
+      let matched = false;
+      try {
+        matched = waiter.match(event);
+      } catch (error) {
+        this.inboundWaiters.splice(i, 1);
+        clearTimeout(waiter.timer);
+        waiter.reject(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+        continue;
+      }
+      if (matched) {
         this.inboundWaiters.splice(i, 1);
         clearTimeout(waiter.timer);
         waiter.resolve(event);

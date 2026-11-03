@@ -3,7 +3,7 @@
  * PTY 屏幕缓冲：基于 @xterm/headless 虚拟终端，吸收光标移动与重绘，
  * 提供快照与 waitForScreen。
  * 不变量：cols/rows 在构造时固定；snapshot 返回已按行还原的纯文本；
- * waitForScreen 超时显式抛错并附最后一屏；dispose 后不再使用本对象。
+ * waitForScreen 超时显式抛错并附最后一屏；dispose 立即取消全部活动等待并清除定时器。
  */
 import { createRequire } from "node:module";
 
@@ -88,6 +88,7 @@ export function createPtyScreen(options?: PtyScreenOptions): PtyScreen {
 class PtyScreenImpl implements PtyScreen {
   private readonly terminal: XtermTerminal;
   private readonly listeners = new Set<() => void>();
+  private readonly waitCancels = new Set<(error: Error) => void>();
   private disposed = false;
 
   constructor(options: PtyScreenOptions = {}) {
@@ -161,34 +162,46 @@ class PtyScreenImpl implements PtyScreen {
         return;
       }
 
-      let resolved = false;
-      const check = () => match.test(this.snapshot());
-      if (check()) {
-        resolve();
-        return;
-      }
-
-      const interval = setInterval(() => {
-        if (resolved) {
-          return;
-        }
-        if (check()) {
-          resolved = true;
-          clearInterval(interval);
-          clearTimeout(timer);
-          resolve();
-        }
-      }, 50);
-
-      const timer = setTimeout(() => {
-        if (resolved) {
-          return;
-        }
-        resolved = true;
+      let settled = false;
+      let interval: ReturnType<typeof setInterval>;
+      let timer: ReturnType<typeof setTimeout>;
+      const cleanup = (): void => {
         clearInterval(interval);
-        reject(
+        clearTimeout(timer);
+        this.waitCancels.delete(cancel);
+      };
+      const finish = (error?: Error): void => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (error) reject(error);
+        else resolve();
+      };
+      const check = (): void => {
+        try {
+          if (match.test(this.snapshot())) finish();
+        } catch (error) {
+          finish(error instanceof Error ? error : new Error(String(error)));
+        }
+      };
+      const cancel = (error: Error): void => finish(error);
+      this.waitCancels.add(cancel);
+
+      check();
+      if (settled) return;
+
+      interval = setInterval(check, 50);
+      timer = setTimeout(() => {
+        if (settled) return;
+        let screen = "";
+        try {
+          screen = this.snapshot();
+        } catch {
+          // dispose 竞态下取不到快照时仍返回稳定的超时错误。
+        }
+        finish(
           new Error(
-            `等待屏幕内容超时（${timeoutMs}ms），最后一屏：\n${this.snapshot()}`,
+            `等待屏幕内容超时（${timeoutMs}ms），最后一屏：\n${screen}`,
           ),
         );
       }, timeoutMs);
@@ -202,6 +215,11 @@ class PtyScreenImpl implements PtyScreen {
       return;
     }
     this.disposed = true;
+    for (const cancel of [...this.waitCancels]) {
+      cancel(new Error("PtyScreen: 已 dispose，waitForScreen 已取消"));
+    }
+    this.waitCancels.clear();
+    this.listeners.clear();
     this.terminal.dispose();
   }
 }
