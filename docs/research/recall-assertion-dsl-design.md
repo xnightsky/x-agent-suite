@@ -94,7 +94,7 @@ casePass = 所有已声明断言细项均通过
 - OR、否决、阈值与缺席映射相互影响。
 - 内部聚合结构反过来主导作者 DSL。
 
-一期只有逐项判断与求和，不需要这些政策。未来真正需要“部分失败仍可过线”、组合证据或一票否决时，再打开 [Decision 预设计](./recall-decision-pre-design.md)。旧字段只是候选，不是保留成本的理由。
+一期只有逐项判断与求和，不需要这些政策。未来真正需要“部分失败仍可过线”、组合证据或一票否决时，再打开 [Decision 预设计](../spec/future/recall-decision-pre-design.md)。旧字段只是候选，不是保留成本的理由。
 
 **【外部事实】**OpenAI Evals 将受约束裁定与 choice_scores 映射分开，说明“模型裁定、确定性计分”的分层可借鉴；它不要求本仓同时引入评分维度表。[Eval templates](https://github.com/openai/evals/blob/main/docs/eval-templates.md)
 
@@ -103,10 +103,10 @@ casePass = 所有已声明断言细项均通过
 ## 五、后续能力与验证边界
 
 - **Decision：**组合评分政策，不能隐式改变一期全通过规则。
-- **[分类](./recall-classification-pre-design.md)：**只产 choice，不自动计分或控制执行。
-- **[条件分支](./recall-conditional-branching-pre-design.md)：**读取已有结果执行作者内嵌的子步骤，结束后自然继续外层；通过 case 与 repeat 检查覆盖及稳定性。
-- **[轮次级断言](./recall-turn-assertion-pre-design.md)：**明确评价时机、结果身份与未执行轮次，不自动引入跨轮组合政策。
-- **[提前终止](./recall-early-termination-pre-design.md)：**独立记录停止原因，不能把未执行伪造为通过。
+- **[分类](../spec/future/recall-classification-pre-design.md)：**只产 choice，不自动计分或控制执行。
+- **[条件分支](../spec/future/recall-conditional-branching-pre-design.md)：**读取已有结果执行作者内嵌的子步骤，结束后自然继续外层；通过 case 与 repeat 检查覆盖及稳定性。
+- **[轮次级断言](../spec/future/recall-turn-assertion-pre-design.md)：**明确评价时机、结果身份与未执行轮次，不自动引入跨轮组合政策。
+- **[提前终止](../spec/future/recall-early-termination-pre-design.md)：**独立记录停止原因，不能把未执行伪造为通过。
 - **独立 Judge 选择与质量校准：**按实际需求设计，真实调用走显式 token 入口。
 
 本轮未实现上述能力，也未重排代码实施计划。默认零 token 测试应验证作者配置到逐项结果与总分的接线；真实 Judge 质量仍需固定输出、人工标签和独立验收集。

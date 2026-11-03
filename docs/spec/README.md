@@ -2,6 +2,8 @@
 
 本目录记录 x-agent-suite 的设计原则、契约语义与运行机制。
 
+明确延后、不进入当前阶段的方案集中在 [`future/`](./future/README.md)。仅标记待审的当前候选仍留在本目录；归入 future 不等于批准实现。
+
 ## 目录
 
 | 文档                                                             | 内容                                                                  |
@@ -31,6 +33,7 @@
 | [evidence-assertions.md](./evidence-assertions.md)               | 访问痕迹证据：非空工具结果、workspace 路径、引用与组合                |
 | [recall-variables.md](./recall-variables.md)                     | 待审设计：Recall 统一变量、动态 Provider 与判据局部作用域             |
 | [process-execution-evidence.md](./process-execution-evidence.md) | 待审设计：真实进程证据、wrapper/fake CLI、严格顺序与安装矩阵          |
+| [future/README.md](./future/README.md)                           | 未来与延后设计：Recall 分类/分支/停止/组合政策                        |
 | [scoring-aggregation.md](./scoring-aggregation.md)               | 打分聚合机：维度声明、knockout/absent 三态、静态打分出口              |
 | [matrix.md](./matrix.md)                                         | `runMatrix`：变体串行、carrier 并行、对照表与报告                     |
 | [long-lived-driver.md](./long-lived-driver.md)                   | `LongLivedAgentDriver` 与入站事件观测                                 |

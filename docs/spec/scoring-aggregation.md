@@ -171,7 +171,7 @@ provision（铺安装态，消费者写）
 
 - **类型**：`@x-agent-suite/contracts`（与本包「只导出类型」一致，上述接口均为类型声明）。
 - **实现**：`@x-agent-suite/observation` 新增 `resolveAggregate` 纯函数——该包已是「判据结果 → 报告」的汇聚点。
-- **spec 载体**：`ScenarioSpec.aggregate` 是现有通用运行时聚合入口。Recall 一期不暴露 decision 或聚合维度 DSL，只要求独立断言计分、求和与固定全通过；未来组合政策见 [Decision 预设计](../research/recall-decision-pre-design.md)。
+- **spec 载体**：`ScenarioSpec.aggregate` 是现有通用运行时聚合入口。Recall 一期不暴露 decision 或聚合维度 DSL，只要求独立断言计分、求和与固定全通过；未来组合政策见 [Decision 预设计](./future/recall-decision-pre-design.md)。
 
 ## judge 接入面（通用执行器，不内建领域判据）
 

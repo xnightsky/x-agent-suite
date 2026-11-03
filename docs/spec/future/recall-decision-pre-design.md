@@ -2,7 +2,7 @@
 
 > 状态：未来预设计，尚未实现，不属于一期。下文给出可评审的字段、算法与错误语义草案，不代表现有公开 API。
 >
-> 一期仍以 [内置 Judge 与断言计分 DSL](../spec/recall-judge-dsl.md) 为准：score 可选，默认 `{hit: 1, miss: -1}`；逐项判断与计分，全部断言通过才通过。
+> 一期仍以 [内置 Judge 与断言计分 DSL](../recall-judge-dsl.md) 为准：score 可选，默认 `{hit: 1, miss: -1}`；逐项判断与计分，全部断言通过才通过。
 
 ## 1. 目的与非目标
 
@@ -150,7 +150,7 @@ decision.rawScore = Σ dimensionPoints
 - [轮次级断言](./recall-turn-assertion-pre-design.md) 使用 turn.<id>.judge.<name> 等稳定名称保留原始细项。
 - Decision 引用未执行轮次的结果时报评测错误，不把未走分支伪造为 0 分；作者应引用共同必经结果或另行拆 case。
 - when 的条件可见性仍按结构化分支作用域在加载期校验；Decision 的跨轮引用能力不授权条件读取兄弟分支或未来节点。
-- 现有 [通用聚合机](../spec/scoring-aggregation.md) 保持原行为，未来接线由独立实施计划确认。
+- 现有 [通用聚合机](../scoring-aggregation.md) 保持原行为，未来接线由独立实施计划确认。
 
 ## 10. 验收与未验证范围
 

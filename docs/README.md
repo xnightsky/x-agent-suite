@@ -5,6 +5,8 @@ x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenari
 - 行为、协议、使用和验证变化必须同步本目录。
 - 统一术语以根目录 [`CONTEXT.md`](../CONTEXT.md) 为锚；本目录承载详细契约、机制与使用方式。
 - 设计/规格文档写入 [`docs/spec/`](./spec/README.md)。
+- 未来内容先按职责分层，再按阶段归档：字段、算法与执行契约草案归 [`docs/spec/future/`](./spec/future/README.md)；尚待开展或补证的调研可按需归 `docs/research/future/`。不因“未来”字样混合设计与调研，也不预建空目录。
+- 目录层级采用“职责 → 阶段”，不另设 `docs/future/` 总根；如需统一浏览未来事项，通过索引聚合，不为导航重排文档归属。
 - 实施计划按记录价值分流：无记录价值的（中间形态、一次性过程稿、与核心业务无关）写入 `.tmp/plans/`（不入库）；有记录价值的写入 `docs/plans/YYYY-MM-DD-<主题>.md`。
 - 从模块、工具和组合开始使用见 [`tutorial/`](./tutorial/README.md)。
 - 可复用场景仓与真实 Recall 命令见 [`integrations/`](../integrations/README.md)。
@@ -38,6 +40,7 @@ x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenari
 | [`spec/evidence-assertions.md`](./spec/evidence-assertions.md)                     | 访问痕迹证据断言：非空读取、路径、引用与组合                 |
 | [`spec/recall-variables.md`](./spec/recall-variables.md)                           | 待审设计：Recall 统一变量、动态 Provider 与局部作用域        |
 | [`spec/process-execution-evidence.md`](./spec/process-execution-evidence.md)       | 待审设计：脚本/CLI 进程证据、严格顺序与安装矩阵              |
+| [`spec/future/README.md`](./spec/future/README.md)                                 | 未来与延后设计：Recall 分类/分支/停止/组合政策               |
 | [`spec/matrix.md`](./spec/matrix.md)                                               | 同场景多宿主对照表                                           |
 | [`spec/long-lived-driver.md`](./spec/long-lived-driver.md)                         | 长驻会话驱动契约                                             |
 | [`spec/pty-driver.md`](./spec/pty-driver.md)                                       | PTY 驱动层                                                   |

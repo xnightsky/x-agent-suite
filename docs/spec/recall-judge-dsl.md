@@ -216,18 +216,18 @@ casePass = 所有已声明断言细项的 pass 均为 true
 
 ### Decision：组合评分政策
 
-`decision` 移到 [Recall Decision 预设计](../research/recall-decision-pre-design.md)，不属于一期。只有需要“允许部分失败但达到通过线”、组合结果、一票否决或跨阶段评分时再打开；不因机械与 AI 混合计分就引入它。
+`decision` 移到 [Recall Decision 预设计](./future/recall-decision-pre-design.md)，不属于一期。只有需要“允许部分失败但达到通过线”、组合结果、一票否决或跨阶段评分时再打开；不因机械与 AI 混合计分就引入它。
 
 ### 分类、条件分支、逐轮断言与提前终止
 
 后续能力按职责分别设计，不要求先实现 decision：
 
-- [分类预设计](../research/recall-classification-pre-design.md)：choices／else 产出受约束类别。
-- [条件分支预设计](../research/recall-conditional-branching-pre-design.md)：按条件执行内嵌子步骤，结束后自然继续外层，不暴露跳表。
-- [轮次级断言预设计](../research/recall-turn-assertion-pre-design.md)：在哪轮配置就在哪轮评价。
-- [提前终止预设计](../research/recall-early-termination-pre-design.md)：onFail:stop 在明确失败后停止。
+- [分类预设计](./future/recall-classification-pre-design.md)：choices／else 产出受约束类别。
+- [条件分支预设计](./future/recall-conditional-branching-pre-design.md)：按条件执行内嵌子步骤，结束后自然继续外层，不暴露跳表。
+- [轮次级断言预设计](./future/recall-turn-assertion-pre-design.md)：在哪轮配置就在哪轮评价。
+- [提前终止预设计](./future/recall-early-termination-pre-design.md)：onFail:stop 在明确失败后停止。
 
-重要分支通过多个 case 覆盖，模型方差通过 repeat 观察，不要求单次运行走完所有路径。原混合文档已改为 [预设计索引](../research/recall-classification-branching-pre-design.md)。
+重要分支通过多个 case 覆盖，模型方差通过 repeat 观察，不要求单次运行走完所有路径。原混合文档已改为 [预设计索引](./future/recall-classification-branching-pre-design.md)。
 
 ### 独立 Judge 选择
 
