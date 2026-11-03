@@ -59,11 +59,18 @@ export interface PtyProcess {
   write(data: string): void;
   screen(): string;
   waitForScreen(match: RegExp, timeoutMs: number): Promise<void>;
+  exitInfo(): { exitCode: number | null; signal: number | null } | null;
+  waitForExit(): Promise<{ exitCode: number | null; signal: number | null }>;
   close(reason?: string): Promise<void>;
 }
 ```
 
 `PtyProcess` 是 `JsonlProcess` 的兄弟类：复用同一生命周期骨架，仅替换 spawn 与输出解析。
+
+- start 只允许一次；close 是终态，close 后禁止 restart；close 可与 start 并发，close 等待启动让出后回收已创建 PTY。
+- spawn 成功后立即永久注册 `onExit` 并保存 `{exitCode, signal}`；`waitForExit()` 可被 driver 与清理路径共同观察。
+- PTY driver 的 ready/echo/idle 等待必须与退出事件 race；active turn 中进程意外退出按 `[driver-env]` 基础设施失败处理，不返回成功 Observation。退出码在 Windows/ConPTY 仍只作诊断，不作为业务判据。
+- `PtyScreen.dispose()` 必须立即拒绝进行中的 `waitForScreen` 并清理其定时器。
 
 ## Idle 判定维度
 
@@ -74,6 +81,7 @@ export interface PtyProcess {
 3. **光标提示符**：光标所在行匹配 `promptPattern` 且光标稳定。
 4. **FS 变更频率**：可选文件系统 watcher，文件无变更时 reason 提升为 `"fs"`。
 5. **硬超时**：watcher 返回 `"timeout"`，driver 立即以 `[timeout]` 错误拒绝当前轮次，不生成可评分的普通 Observation。
+6. **PTY cleanup 阶段超时**：PTY、sandboxTeardown、backend.stop、sandbox cleanup 每阶段有界等待；某阶段超时后仍尝试后续阶段，并在末尾聚合报告。
 
 `dispose()` 会清除并拒绝全部进行中的 `waitForIdle()`，随后解除屏幕订阅；关闭 driver 不会留下轮询访问已释放 PTY。
 

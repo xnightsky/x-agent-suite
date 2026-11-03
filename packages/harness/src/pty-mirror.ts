@@ -7,7 +7,7 @@
  *   自己的窗格，终端过窄回退纵向堆叠；终端 resize 后下一帧自动按新尺寸排版；
  * - 终端尺寸探测见 detectTerminalSize：测试子进程 stderr 是管道拿不到 columns，
  *   故回退 /dev/tty 的 stty size 拿真实终端尺寸；
- * - 仅建议 verbose 诊断时使用；返回的关闭函数收尾必须调用。
+ * - 仅建议 verbose 诊断时使用；返回的关闭函数收尾必须调用；初始化抛错前已建立的订阅必须回滚。
  */
 import { spawnSync } from "node:child_process";
 import { closeSync, openSync } from "node:fs";
@@ -214,10 +214,20 @@ export function attachScreenMirror(
     pending = setTimeout(paint, wait);
     pending.unref?.();
   };
-  const unsubscribes = sources.map((entry) =>
-    entry.source.onScreenChange(onChange),
-  );
-  paint();
+  const unsubscribes: Array<() => void> = [];
+  try {
+    for (const entry of sources) {
+      unsubscribes.push(entry.source.onScreenChange(onChange));
+    }
+    paint();
+  } catch (error) {
+    if (pending) {
+      clearTimeout(pending);
+      pending = null;
+    }
+    for (const unsubscribe of unsubscribes) unsubscribe();
+    throw error;
+  }
   return () => {
     if (pending) {
       clearTimeout(pending);

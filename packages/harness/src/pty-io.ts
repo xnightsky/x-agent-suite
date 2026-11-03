@@ -22,11 +22,31 @@ export interface StartPtyOptions {
   readonly addDir?: string;
 }
 
-/** 不阻塞进程退出的延时。 */
-export function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(resolve, ms);
+/** 从 AbortSignal 提取稳定错误。 */
+function abortReason(signal: AbortSignal): Error {
+  return signal.reason instanceof Error
+    ? signal.reason
+    : new Error("PTY I/O 等待已取消");
+}
+
+/** 不阻塞进程退出的延时；支持 AbortSignal 取消。 */
+export function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(abortReason(signal));
+      return;
+    }
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      reject(abortReason(signal!));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
     timer.unref?.();
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
 }
 
@@ -59,6 +79,7 @@ export function waitForPtyReady(
   profile: HarnessProfile,
   timeoutMs: number,
   redactor?: Redactor,
+  signal?: AbortSignal,
 ): Promise<void> {
   const readyPattern = profile.ptyReadyPattern!;
   const setupSequence = profile.ptySetupSequence ?? [];
@@ -67,10 +88,17 @@ export function waitForPtyReady(
     let interval: ReturnType<typeof setInterval>;
     let timer: ReturnType<typeof setTimeout>;
     let unsubscribe = () => {};
+    const onAbort = (): void => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(abortReason(signal!));
+    };
     const cleanup = () => {
       clearInterval(interval);
       clearTimeout(timer);
       unsubscribe();
+      signal?.removeEventListener("abort", onAbort);
     };
     const check = () => {
       if (settled) return;
@@ -88,6 +116,11 @@ export function waitForPtyReady(
         }
       }
     };
+    if (signal?.aborted) {
+      reject(abortReason(signal));
+      return;
+    }
+    signal?.addEventListener("abort", onAbort, { once: true });
     interval = setInterval(check, 100);
     timer = setTimeout(() => {
       if (settled) return;
@@ -109,15 +142,18 @@ export async function waitForPtyEcho(
   pty: PtyProcess,
   text: string,
   timeoutMs: number,
+  signal?: AbortSignal,
 ): Promise<boolean | undefined> {
   const marker = (text.split(/\r?\n/)[0] ?? "")
     .replace(/\s+/g, "")
     .slice(0, 12);
   if (!marker) return undefined;
+  if (signal?.aborted) throw abortReason(signal);
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    if (signal?.aborted) throw abortReason(signal);
     if (pty.screen().replace(/\s+/g, "").includes(marker)) return true;
-    await delay(50);
+    await delay(50, signal);
   }
   return false;
 }

@@ -13,6 +13,7 @@
  *   文本与 \r 同一 tick 连写时，5~6 字节输入可提交，而 42~44 字节必失败（回车被丢）；
  *   加 300ms 间隔即成功。与字符集无关（ASCII 44 字节同样失败），是某 TUI 框架需时间消费输入缓冲。 // BOUNDARY-DEBT(harness): 宿主专用注释，迁移遗留
  * - 同一时刻至多一轮 prompt 在飞；injectMode 固定 "followUp"；
+ * - ready/echo/idle 与 PTY 退出事件 race，异常退出不得成为普通 Observation；
  * - close 幂等，先关 PTY，再执行 sandboxTeardown，随后停 backend，最后清 sandbox。
  */
 import type {
@@ -22,10 +23,10 @@ import type {
   Observation,
   Redactor,
 } from "@x-agent-suite/contracts";
-import { PtyProcess } from "@x-agent-suite/driver";
+import { PtyProcess, type PtyExitInfo } from "@x-agent-suite/driver";
 import { redactLiveError, redactValue } from "@x-agent-suite/llm-fixture";
 import type { LlmBackend } from "@x-agent-suite/contracts";
-import { createSandbox } from "@x-agent-suite/sandbox";
+import { cleanupSandbox, createSandbox } from "@x-agent-suite/sandbox";
 import type { SandboxContext } from "@x-agent-suite/contracts";
 import { buildMcpServerSpec } from "./mcp-config";
 import type { PluginInstallSpec } from "./plugin-install";
@@ -80,6 +81,8 @@ export interface PtyAgentDriverOptions {
   readonly promptTimeoutMs?: number;
   /** 等 prompt 文本回显到屏幕的超时毫秒；默认 10000。 */
   readonly echoTimeoutMs?: number;
+  /** @internal 测试注入：close 等待 in-flight start settle 的上界；默认 1000。 */
+  readonly startSettleTimeoutMs?: number;
   /** 屏幕稳定所需毫秒；默认 1500。 */
   readonly screenIdleMs?: number;
   /** I/O 静默所需毫秒；默认 500。 */
@@ -106,6 +109,15 @@ export interface PtyAgentDriver extends LongLivedAgentDriver {
 const DEFAULT_READY_TIMEOUT_MS = 60_000;
 const DEFAULT_PROMPT_TIMEOUT_MS = 180_000;
 const DEFAULT_ECHO_TIMEOUT_MS = 10_000;
+const DEFAULT_START_SETTLE_TIMEOUT_MS = 1_000;
+
+type PtyDriverLifecycle =
+  "idle" | "starting" | "started" | "closing" | "closed";
+
+interface ActivePtyExitWaiter {
+  readonly resolve: (info: PtyExitInfo) => void;
+  readonly reject: (error: unknown) => void;
+}
 
 /**
  * 回显确认后到写提交键的附加稳定间隔。
@@ -156,7 +168,15 @@ class PtyAgentDriverImpl implements PtyAgentDriver {
   private sandboxValue: SandboxContext | null = null;
   private pty: PtyProcess | null = null;
   private watcher: PtyScreenWatcher | null = null;
+  private lifecycle: PtyDriverLifecycle = "idle";
+  private startPromise: Promise<void> | null = null;
   private closePromise: Promise<void> | null = null;
+  private cleanupPromise: Promise<void> | null = null;
+  private closingEventPushed = false;
+  private readonly closeAbort = new AbortController();
+  private readonly activePtyExitWaiters = new Set<ActivePtyExitWaiter>();
+  private ptyExitInfo: PtyExitInfo | null = null;
+  private ptyExitObservation: Promise<void> | null = null;
   private roundChain: Promise<unknown> = Promise.resolve();
   private lastScreen = "";
 
@@ -176,35 +196,57 @@ class PtyAgentDriverImpl implements PtyAgentDriver {
     return this.sandboxValue;
   }
 
-  /** 启动完整 PTY 生命周期；任一阶段失败都先完成清理再抛错。 */
-  async start(): Promise<void> {
-    if (this.sandboxValue || this.closePromise) {
-      throw new Error(`PtyAgentDriver(${this.profile.name}): 重复 start`);
-    }
-    if (!this.profile.ptyArgs) {
-      throw new Error(
-        `PtyAgentDriver(${this.profile.name}): profile 未声明 ptyArgs，不支持 PTY 模式`,
+  /** 启动完整 PTY 生命周期；start 单飞，任一阶段失败都完成一次清理再抛错。 */
+  start(): Promise<void> {
+    if (this.lifecycle !== "idle" || this.startPromise) {
+      return Promise.reject(
+        new Error(
+          `PtyAgentDriver(${this.profile.name}): 重复 start 或已关闭（state=${this.lifecycle}）`,
+        ),
       );
     }
+    if (!this.profile.ptyArgs) {
+      return Promise.reject(
+        new Error(
+          `PtyAgentDriver(${this.profile.name}): profile 未声明 ptyArgs，不支持 PTY 模式`,
+        ),
+      );
+    }
+    this.lifecycle = "starting";
+    this.startPromise = this.doStart();
+    return this.startPromise;
+  }
 
+  /** start 实现；每个可取消 await 后检查生命周期，close 抢占时由本方法完成清理。 */
+  private async doStart(): Promise<void> {
     let stage = "backend";
     try {
-      const backend = await startHarnessBackend(this.backend, this.profile);
+      const backend = await this.awaitStartStep(
+        "backend.start 完成",
+        startHarnessBackend(this.backend, this.profile),
+        () => this.backend.stop(),
+      );
+      this.assertStartActive("backend.start 完成");
       stage = "sandbox";
       const sandbox = await this.prepareSandbox(backend, (next) => {
         stage = next;
       });
+      this.assertStartActive("sandbox 准备完成");
       stage = "spawn";
       await this.launchPty(sandbox, (next) => {
         stage = next;
       });
+      this.assertStartActive("PTY launch 完成");
+      this.lifecycle = "started";
     } catch (error) {
+      this.lifecycle = "closing";
       let cleanupError: unknown;
       try {
-        await this.close(`start[${stage}] failed`);
+        await this.ensureCleanup(`start[${stage}] failed`);
       } catch (closeError) {
         cleanupError = closeError;
       }
+      this.lifecycle = "closed";
       throw createLifecycleError(
         `PtyAgentDriver(${this.profile.name})`,
         stage,
@@ -215,19 +257,33 @@ class PtyAgentDriverImpl implements PtyAgentDriver {
     }
   }
 
+  /** 启动阶段在每次 await 后验证 close 未抢占。 */
+  private assertStartActive(stage: string): void {
+    if (this.lifecycle !== "starting") {
+      throw new Error(
+        `PtyAgentDriver(${this.profile.name}): start 已被 close 取消（stage=${stage}，state=${this.lifecycle}）`,
+      );
+    }
+  }
+
   /** 创建并配置 sandbox，最后执行 spawn 前准备。 */
   private async prepareSandbox(
     backend: StartedHarnessBackend,
     setStage: (stage: string) => void,
   ): Promise<SandboxContext> {
     const live = this.backend.mode === "live";
-    const sandbox = await createSandbox({
-      ...this.profile.sandbox,
-      stripEnv: live ? [] : this.profile.stripEnv,
-      runtimeDir: true,
-      env: backend.env,
-    });
+    const sandbox = await this.awaitStartStep(
+      "sandbox 创建完成",
+      createSandbox({
+        ...this.profile.sandbox,
+        stripEnv: live ? [] : this.profile.stripEnv,
+        runtimeDir: true,
+        env: backend.env,
+      }),
+      (lateSandbox) => cleanupSandbox(lateSandbox),
+    );
     this.sandboxValue = sandbox;
+    this.assertStartActive("sandbox 创建后");
     this.applyConfigDir(sandbox);
 
     setStage("config");
@@ -238,28 +294,44 @@ class PtyAgentDriverImpl implements PtyAgentDriver {
       ...(backend.liveChannel ? { live: backend.liveChannel } : {}),
     };
     if (this.options.injectServer === false) {
-      await this.profile.writeConfig(sandbox, {
-        ...configBase,
-        injectServer: false,
-      });
+      await this.awaitStartStep(
+        "writeConfig 完成",
+        this.profile.writeConfig(sandbox, {
+          ...configBase,
+          injectServer: false,
+        }),
+      );
+      this.assertStartActive("writeConfig 完成");
     } else {
       if (!this.options.serverEntry) {
         throw new Error(
           `PtyAgentDriver(${this.profile.name}): 启用 reference MCP 时必须提供 serverEntry`,
         );
       }
-      await this.profile.writeConfig(sandbox, {
-        ...configBase,
-        server: buildMcpServerSpec(
-          this.options.serverEntry,
-          this.options.serverEnv,
-        ),
-      });
+      await this.awaitStartStep(
+        "writeConfig 完成",
+        this.profile.writeConfig(sandbox, {
+          ...configBase,
+          server: buildMcpServerSpec(
+            this.options.serverEntry,
+            this.options.serverEnv,
+          ),
+        }),
+      );
+      this.assertStartActive("writeConfig 完成");
     }
     setStage("install");
     await this.installPlugins(sandbox);
+    this.assertStartActive("plugins 安装完成");
     setStage("setup");
-    await this.options.sandboxSetup?.(sandbox);
+    const sandboxSetup = this.options.sandboxSetup;
+    if (sandboxSetup) {
+      await this.awaitStartStep(
+        "sandboxSetup 完成",
+        Promise.resolve().then(() => sandboxSetup(sandbox)),
+      );
+    }
+    this.assertStartActive("sandboxSetup 完成");
     return sandbox;
   }
 
@@ -285,7 +357,10 @@ class PtyAgentDriverImpl implements PtyAgentDriver {
         `PtyAgentDriver(${this.profile.name}): profile 未声明 installPlugins，不支持插件安装`,
       );
     }
-    await this.profile.installPlugins(sandbox, plugins);
+    await this.awaitStartStep(
+      "plugins 安装完成",
+      this.profile.installPlugins(sandbox, plugins),
+    );
   }
 
   /** 解析命令、拉起 PTY、等待 ready 并创建轮次 watcher。 */
@@ -293,20 +368,31 @@ class PtyAgentDriverImpl implements PtyAgentDriver {
     sandbox: SandboxContext,
     setStage: (stage: string) => void,
   ): Promise<void> {
-    this.pty = await startPtyProcess({
-      profile: this.profile,
-      sandbox,
-      commandOverride: this.options.commandOverride,
-      addDir: this.options.addDir,
-    });
+    this.pty = await this.awaitStartStep(
+      "PTY 进程启动后",
+      startPtyProcess({
+        profile: this.profile,
+        sandbox,
+        commandOverride: this.options.commandOverride,
+        addDir: this.options.addDir,
+      }),
+      (latePty) => latePty.close("start 被 close 取消"),
+    );
+    this.assertStartActive("PTY 进程启动后");
+    this.throwIfPtyExited("进程启动后");
+    this.armPtyExitObservation();
     setStage("ready");
     if (this.profile.ptyReadyPattern) {
-      await waitForPtyReady(
-        this.pty,
-        this.profile,
-        this.options.readyTimeoutMs ?? DEFAULT_READY_TIMEOUT_MS,
-        this.redactor,
+      await this.raceWithPtyExit("等待就绪", (signal) =>
+        waitForPtyReady(
+          this.pty!,
+          this.profile,
+          this.options.readyTimeoutMs ?? DEFAULT_READY_TIMEOUT_MS,
+          this.redactor,
+          signal,
+        ),
       );
+      this.assertStartActive("PTY ready 完成后");
     }
     this.watcher = createPtyScreenWatcher({
       pty: this.pty,
@@ -326,15 +412,15 @@ class PtyAgentDriverImpl implements PtyAgentDriver {
 
   /** 向存活 TUI 会话注入 prompt；轮次串行。 */
   inject(text: string): Promise<Observation> {
-    if (this.closePromise) {
+    if (this.lifecycle === "closing" || this.lifecycle === "closed") {
       return Promise.reject(
         new Error(`PtyAgentDriver(${this.profile.name}): 已关闭，不能 inject`),
       );
     }
-    if (!this.pty || !this.watcher) {
+    if (this.lifecycle !== "started" || !this.pty || !this.watcher) {
       return Promise.reject(
         new Error(
-          `PtyAgentDriver(${this.profile.name}): start 之前不能 inject`,
+          `PtyAgentDriver(${this.profile.name}): start 未完成，不能 inject（state=${this.lifecycle}）`,
         ),
       );
     }
@@ -376,27 +462,43 @@ class PtyAgentDriverImpl implements PtyAgentDriver {
     return this.pty;
   }
 
-  /** 幂等关闭：关 PTY → sandboxTeardown → 停 backend → 清 sandbox。 */
+  /** 幂等关闭：设置 closing 后等待 start settle，再执行一次完整资源清理。 */
   close(reason?: string): Promise<void> {
-    this.closePromise ??= this.doClose(reason);
+    if (this.closePromise) return this.closePromise;
+    this.lifecycle = "closing";
+    this.closeAbort.abort(
+      new Error(`PtyAgentDriver(${this.profile.name}): close 已请求`),
+    );
+    this.closePromise = this.doClose(reason);
     return this.closePromise;
   }
 
   /** 执行一轮 prompt 注入并等待 idle。 */
   private async promptRound(text: string): Promise<Observation> {
+    this.assertStarted("轮次开始");
     const pty = this.pty!;
     const watcher = this.watcher!;
     const eventsStart = this.eventLog.length;
 
+    this.throwIfPtyExited("轮次开始时");
     this.pushEvent("prompt", { text });
     pty.write(text);
     await this.waitForEcho(text);
+    this.assertStarted("prompt 回显完成");
+    this.throwIfPtyExited("提交 prompt 前");
     pty.write("\r");
     // 提交后先等宿主真正开始本轮，再交给 watcher：否则屏幕尚未变化，watcher 会立即
     // 判定 idle（实测 waitedMs=0）而把未开始的一轮误当已完成。
-    await delay(SUBMIT_SETTLE_MS);
+    await this.raceWithPtyExit("等待提交稳定", (signal) =>
+      delay(SUBMIT_SETTLE_MS, signal),
+    );
+    this.assertStarted("提交稳定等待完成");
 
-    const idle = await watcher.waitForIdle();
+    const idle = await this.raceWithPtyExit("等待轮次 idle", () =>
+      watcher.waitForIdle(),
+    );
+    this.assertStarted("idle 等待完成");
+    this.throwIfPtyExited("轮次完成前");
     this.lastScreen = idle.screen;
     this.pushEvent("idle", {
       reason: idle.reason,
@@ -410,6 +512,7 @@ class PtyAgentDriverImpl implements PtyAgentDriver {
       );
     }
 
+    this.assertStarted("轮次返回前");
     return redactValue(
       {
         text: idle.screen,
@@ -428,15 +531,204 @@ class PtyAgentDriverImpl implements PtyAgentDriver {
    * 回显超时不报错，仅记事件后照常提交（宽容不回显的宿主），但稳定间隔仍会等。
    */
   private async waitForEcho(text: string): Promise<void> {
-    const echoed = await waitForPtyEcho(
-      this.pty!,
-      text,
-      this.options.echoTimeoutMs ?? DEFAULT_ECHO_TIMEOUT_MS,
+    const echoed = await this.raceWithPtyExit("等待 prompt 回显", (signal) =>
+      waitForPtyEcho(
+        this.pty!,
+        text,
+        this.options.echoTimeoutMs ?? DEFAULT_ECHO_TIMEOUT_MS,
+        signal,
+      ),
     );
     if (echoed !== undefined) {
       this.pushEvent(echoed ? "echo" : "echoTimeout", { text });
     }
-    await delay(SUBMIT_SETTLE_MS);
+    await this.raceWithPtyExit("等待回显稳定", (signal) =>
+      delay(SUBMIT_SETTLE_MS, signal),
+    );
+  }
+
+  /** 轮次关键 await 后确认 driver 仍处于 started，close 不得产出成功 Observation。 */
+  private assertStarted(stage: string): void {
+    if (this.lifecycle !== "started") {
+      throw new Error(
+        `PtyAgentDriver(${this.profile.name}): close 已取消当前轮次（stage=${stage}，state=${this.lifecycle}）`,
+      );
+    }
+  }
+
+  /** 构造包含 exitCode/signal 的基础设施错误，不把崩溃伪装成普通输出。 */
+  private ptyExitError(stage: string, info: PtyExitInfo): Error {
+    return new Error(
+      `[driver-env] PtyAgentDriver(${this.profile.name}) ${stage}期间进程退出` +
+        `（exitCode=${info.exitCode}，signal=${info.signal}）`,
+    );
+  }
+
+  /** 进程已退出时立即失败，避免写入已死 PTY。 */
+  private throwIfPtyExited(stage: string): void {
+    const info = this.pty?.exitInfo();
+    if (info) throw this.ptyExitError(stage, info);
+  }
+
+  /** 构造统一的 start 取消错误。 */
+  private startCancelledError(stage: string, cause?: unknown): Error {
+    return new Error(
+      `PtyAgentDriver(${this.profile.name}): start 已被 close 取消（stage=${stage}）`,
+      cause === undefined ? undefined : { cause },
+    );
+  }
+
+  /**
+   * 等待一个 start 阶段，并允许 close 立即取消等待；若外部 Promise 迟到 settle，
+   * 通过 lateCleanup 回收其资源。operation 的后续 rejection 始终有处理器，不逃逸。
+   */
+  private async awaitStartStep<T>(
+    stage: string,
+    operation: Promise<T>,
+    lateCleanup?: (value: T) => Promise<void> | void,
+  ): Promise<T> {
+    let abortListener: (() => void) | undefined;
+    const aborted = new Promise<never>((_resolve, reject) => {
+      abortListener = () => reject(this.startCancelledError(stage));
+      if (this.closeAbort.signal.aborted) abortListener();
+      else {
+        this.closeAbort.signal.addEventListener("abort", abortListener, {
+          once: true,
+        });
+      }
+    });
+    const tracked = operation.then(
+      async (value) => {
+        if (this.lifecycle !== "starting") {
+          if (lateCleanup) {
+            try {
+              await lateCleanup(value);
+            } catch (error) {
+              this.pushEvent("late_cleanup_error", {
+                stage,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          }
+          throw this.startCancelledError(stage);
+        }
+        return value;
+      },
+      (error: unknown) => {
+        if (this.lifecycle !== "starting") {
+          throw this.startCancelledError(stage, error);
+        }
+        throw error;
+      },
+    );
+    try {
+      return await Promise.race([tracked, aborted]);
+    } finally {
+      if (abortListener) {
+        this.closeAbort.signal.removeEventListener("abort", abortListener);
+      }
+    }
+  }
+
+  /** close 等待 start settle 的有界兜底；超时后仍进入唯一 cleanup。 */
+  private async waitForStartSettle(): Promise<void> {
+    const start = this.startPromise;
+    if (!start) return;
+    const timeoutMs =
+      this.options.startSettleTimeoutMs ?? DEFAULT_START_SETTLE_TIMEOUT_MS;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        start.then(
+          () => undefined,
+          () => undefined,
+        ),
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  }
+
+  /** 启动时只挂接一次永久退出观察；后续操作只注册可移除 waiter。 */
+  private armPtyExitObservation(): void {
+    if (this.ptyExitObservation) return;
+    const pty = this.pty;
+    if (!pty) return;
+    this.ptyExitObservation = pty.waitForExit().then(
+      (info) => {
+        this.ptyExitInfo = info;
+        const waiters = [...this.activePtyExitWaiters];
+        this.activePtyExitWaiters.clear();
+        for (const waiter of waiters) waiter.resolve(info);
+      },
+      (error: unknown) => {
+        const waiters = [...this.activePtyExitWaiters];
+        this.activePtyExitWaiters.clear();
+        for (const waiter of waiters) waiter.reject(error);
+      },
+    );
+  }
+
+  /** 注册一个可移除的退出 waiter；不直接向 PtyProcess 的永久 Promise 追加闭包。 */
+  private addPtyExitWaiter(): {
+    readonly promise: Promise<PtyExitInfo>;
+    readonly dispose: () => void;
+  } {
+    let waiter!: ActivePtyExitWaiter;
+    const promise = new Promise<PtyExitInfo>((resolve, reject) => {
+      waiter = { resolve, reject };
+      this.activePtyExitWaiters.add(waiter);
+    });
+    return {
+      promise,
+      dispose: () => {
+        this.activePtyExitWaiters.delete(waiter);
+      },
+    };
+  }
+
+  /** 让任意 PTY 操作与唯一永久退出观察 race；完成/失败都移除本操作 waiter。 */
+  private async raceWithPtyExit<T>(
+    stage: string,
+    run: (signal: AbortSignal) => Promise<T>,
+  ): Promise<T> {
+    const pty = this.pty;
+    if (!pty) {
+      throw new Error(
+        `PtyAgentDriver(${this.profile.name}): PTY 未启动，无法${stage}`,
+      );
+    }
+    const existing = this.ptyExitInfo ?? pty.exitInfo();
+    if (existing) throw this.ptyExitError(stage, existing);
+
+    const controller = new AbortController();
+    const combinedSignal = AbortSignal.any([
+      controller.signal,
+      this.closeAbort.signal,
+    ]);
+    const exitWaiter = this.addPtyExitWaiter();
+    let exitError: Error | null = null;
+    const exitPromise = exitWaiter.promise.then((info) => {
+      exitError = this.ptyExitError(stage, info);
+      controller.abort(exitError);
+      throw exitError;
+    });
+    try {
+      return await Promise.race([run(combinedSignal), exitPromise]);
+    } catch (error) {
+      if (exitError) {
+        this.watcher?.dispose();
+        this.watcher = null;
+        throw exitError;
+      }
+      throw error;
+    } finally {
+      exitWaiter.dispose();
+      controller.abort();
+    }
   }
 
   /** 盖戳一条 DriverEvent 入日志。 */
@@ -454,26 +746,42 @@ class PtyAgentDriverImpl implements PtyAgentDriver {
     return this.redactor?.(text) ?? text;
   }
 
-  /** 关闭实现：释放 watcher 后委托固定顺序的聚合资源清理。 */
+  /** 关闭实现：等待 start settle 后委托唯一一次资源清理。 */
   private async doClose(reason?: string): Promise<void> {
-    this.pushEvent("closing", { reason });
+    try {
+      await this.waitForStartSettle();
+      await this.ensureCleanup(reason);
+    } finally {
+      this.lifecycle = "closed";
+    }
+  }
+
+  /**
+   * 单飞清理：start 失败和 close 可同时到达，只允许一次完整清理。
+   * watcher/pty 在这里移交给 cleanup，后续 start 不可能再持有它们。
+   */
+  private ensureCleanup(reason?: string): Promise<void> {
+    if (this.cleanupPromise) return this.cleanupPromise;
+    if (!this.closingEventPushed) {
+      this.closingEventPushed = true;
+      this.pushEvent("closing", { reason });
+    }
     this.watcher?.dispose();
     this.watcher = null;
     const pty = this.pty;
     this.pty = null;
-    try {
-      await cleanupPtyDriverResources({
-        profileName: this.profile.name,
-        pty,
-        backend: this.backend,
-        sandbox: this.sandboxValue,
-        ...(this.options.sandboxTeardown
-          ? { sandboxTeardown: this.options.sandboxTeardown }
-          : {}),
-      });
-    } catch (error) {
+    this.cleanupPromise = cleanupPtyDriverResources({
+      profileName: this.profile.name,
+      pty,
+      backend: this.backend,
+      sandbox: this.sandboxValue,
+      ...(this.options.sandboxTeardown
+        ? { sandboxTeardown: this.options.sandboxTeardown }
+        : {}),
+    }).catch((error: unknown) => {
       throw redactLiveError(error, this.redactor);
-    }
+    });
+    return this.cleanupPromise;
   }
 }
 
