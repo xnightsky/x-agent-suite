@@ -4,9 +4,10 @@
  * 不变量：
  * - baseUrl 含版本前缀（如 "https://host/v1"），builder 只拼接端点尾段；
  * - 默认 transport 基于全局 fetch，可注入替身以便单元测试（零 token）；
- * - 本模块不解析响应体（解析见 live-parse），不做任何脱敏（脱敏见 live-config）。
+ * - 本模块不解析响应体（解析见 live-parse）；默认 transport 在抛出网络错误前按本请求秘密脱敏。
  */
 import type { WireProtocol } from "@x-agent-suite/contracts";
+import { createSecretRedactor, redactLiveError } from "./redact.ts";
 
 /** assistant 消息里的一次工具调用（回喂历史用）。 */
 export interface LiveToolCallReq {
@@ -65,16 +66,38 @@ export interface LiveResponse {
 /** 可注入 transport：便于测试用 FakeProviderBackend 或桩替代真实网络。 */
 export type LiveTransport = (req: LiveRequest) => Promise<LiveResponse>;
 
-/** 默认 transport：全局 fetch。 */
+/** 收集 transport 请求中可能进入网络错误文本的秘密。 */
+function requestSecrets(req: LiveRequest): string[] {
+  const secrets = [req.url];
+  const authorization = req.headers.authorization;
+  if (authorization) {
+    secrets.push(authorization);
+    const separator = authorization.indexOf(" ");
+    if (separator >= 0) secrets.push(authorization.slice(separator + 1));
+  }
+  for (const name of ["x-api-key", "x-goog-api-key"] as const) {
+    const value = req.headers[name];
+    if (value) secrets.push(value);
+  }
+  return secrets;
+}
+
+/** 默认 transport：全局 fetch；禁止重定向并在抛出前脱敏请求秘密。 */
 export function createFetchTransport(): LiveTransport {
   return async (req) => {
-    const response = await fetch(req.url, {
-      method: req.method,
-      headers: { "content-type": "application/json", ...req.headers },
-      body: JSON.stringify(req.body),
-      signal: req.signal,
-    });
-    return { status: response.status, text: await response.text() };
+    const redactor = createSecretRedactor(requestSecrets(req));
+    try {
+      const response = await fetch(req.url, {
+        method: req.method,
+        headers: { "content-type": "application/json", ...req.headers },
+        body: JSON.stringify(req.body),
+        signal: req.signal,
+        redirect: "error",
+      });
+      return { status: response.status, text: await response.text() };
+    } catch (error) {
+      throw redactLiveError(error, redactor);
+    }
   };
 }
 

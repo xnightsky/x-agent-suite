@@ -125,6 +125,33 @@ test("空字符串 runtime 覆盖不得回退认证文件或发送请求", async
   }
 });
 
+test("sniff 对 model-config 显式缺失的内联凭据不发请求", async (t) => {
+  const root = await workspace(t);
+  for (const override of [
+    { apiKeyEnv: "MISSING_INLINE_KEY" },
+    { apiKey: "" },
+  ] as const) {
+    let calls = 0;
+    const result = await sniffLiveChannel(
+      "carrier-a",
+      channel({ ...override }),
+      {
+        repoRoot: root,
+        homeDir: root,
+        env: {},
+        transport: async () => {
+          calls += 1;
+          return { status: 200, text: TOOL_RESPONSE };
+        },
+      },
+    );
+    assert.equal(result.ok, false);
+    if (result.ok) continue;
+    assert.equal(result.stage, "auth");
+    assert.equal(calls, 0);
+  }
+});
+
 test("sniff 将认证文件错误收敛为脱敏 auth 失败", async (t) => {
   const root = await workspace(t);
   const secret = "synthetic-malformed-auth-secret";

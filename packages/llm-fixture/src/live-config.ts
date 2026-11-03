@@ -22,6 +22,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
+import { yamlErrorPosition } from "./yaml-error.ts";
 import { expandCarrier, hasExpandedCarrierFormat } from "./live-targets.ts";
 import {
   parseCarrierMetadata,
@@ -101,7 +102,7 @@ function envOverride(
   return out as Partial<LiveChannel>;
 }
 
-/** 读取并解析一份配置文件；不存在返回 null，解析失败返回原因。carriers 保持原始声明（from: harness 在 load 阶段才合并借用）。 */
+/** 读取并解析一份配置文件；不存在返回 notFound，读取/解析失败返回安全原因。carriers 保持原始声明（from: harness 在 load 阶段才合并借用）。 */
 async function readConfigFile(
   path: string,
 ): Promise<
@@ -110,15 +111,26 @@ async function readConfigFile(
   let raw: string;
   try {
     raw = await readFile(path, "utf8");
-  } catch {
-    return { notFound: true };
+  } catch (error) {
+    const code =
+      typeof error === "object" && error !== null && "code" in error
+        ? (error as { readonly code?: unknown }).code
+        : undefined;
+    if (code === "ENOENT") return { notFound: true };
+    return {
+      reason: `无法读取 live 配置文件（${path}）：${typeof code === "string" ? code : "读取失败"}`,
+    };
   }
   let parsed: unknown;
   try {
     parsed = parseYaml(raw);
   } catch (error) {
+    const position = yamlErrorPosition(error);
     return {
-      reason: `配置文件 YAML 解析失败（${path}）：${error instanceof Error ? error.message : String(error)}`,
+      reason:
+        `配置文件 YAML 解析失败（${path}` +
+        (position ? `，第 ${position.line} 行第 ${position.column} 列` : "") +
+        "）",
     };
   }
   const carriers = (parsed as Record<string, unknown>)?.carriers;

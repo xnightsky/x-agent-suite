@@ -255,13 +255,88 @@ test("HTTP 5xx → stage=connectivity；sniff 超时也归 connectivity", async 
   assert.equal(server5xx.ok, false);
   if (!server5xx.ok) assert.equal(server5xx.stage, "connectivity");
 
+  let signalSeen: AbortSignal | undefined;
+  let abortEvents = 0;
   const hung = await sniffLiveChannel("kimi", channel, {
     timeoutMs: 50,
-    transport: () => new Promise(() => {}),
+    transport: (request) => {
+      signalSeen = request.signal;
+      request.signal?.addEventListener(
+        "abort",
+        () => {
+          abortEvents += 1;
+        },
+        { once: true },
+      );
+      return new Promise(() => {});
+    },
   });
   assert.equal(hung.ok, false);
   if (!hung.ok) {
     assert.equal(hung.stage, "connectivity");
     assert.match(hung.reason, /超时/);
   }
+  assert.ok(signalSeen, "transport 必须收到 AbortSignal");
+  assert.equal(signalSeen.aborted, true, "超时后 signal 必须已中止");
+  assert.equal(abortEvents, 1, "底层 transport 必须收到 abort 事件");
+});
+
+test("sniff 整体 deadline 覆盖凭据解析，超时后不发起 transport", async () => {
+  let releaseBorrow = () => {};
+  const borrowGate = new Promise<void>((resolve) => {
+    releaseBorrow = resolve;
+  });
+  let transportCalls = 0;
+  const attempt = sniffLiveChannel(
+    "borrowed-carrier",
+    {
+      wire: "openai-chat",
+      baseUrl: "https://borrowed.example.com/v1",
+      model: "m",
+      from: "harness",
+      credential: "harness",
+    },
+    {
+      timeoutMs: 20,
+      borrowChannel: async () => {
+        await borrowGate;
+        return {
+          kind: "resolved" as const,
+          wire: "openai-chat" as const,
+          baseUrl: "https://borrowed.example.com/v1",
+          model: "m",
+          source: "synthetic",
+        };
+      },
+      borrowCredential: async () => ({
+        kind: "resolved" as const,
+        apiKey: "synthetic-secret",
+        source: "synthetic",
+      }),
+      transport: async () => {
+        transportCalls += 1;
+        return { status: 200, text: "{}" };
+      },
+    },
+  );
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const pending = new Promise<"pending">((resolve) => {
+    timer = setTimeout(() => resolve("pending"), 200);
+  });
+  const outcome = await Promise.race([attempt, pending]);
+  if (timer) clearTimeout(timer);
+  releaseBorrow();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  await new Promise<void>((resolve) => setTimeout(resolve, 20));
+
+  assert.notEqual(
+    outcome,
+    "pending",
+    "凭据解析也必须受 sniff 整体 deadline 约束",
+  );
+  if (outcome === "pending") return;
+  assert.equal(outcome.ok, false);
+  if (!outcome.ok) assert.match(outcome.reason, /超时/);
+  assert.equal(transportCalls, 0, "整体超时后不得再发请求");
 });
