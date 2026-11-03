@@ -1,7 +1,7 @@
 /**
  * @module @x-agent-suite/harness/pty-cleanup
  * PTY driver 的资源清理阶段：PTY → sandbox teardown → backend → sandbox。
- * 不变量：所有阶段都尝试；任一失败时最终抛 AggregateError，禁止首错中断造成残留。
+ * 不变量：所有阶段都有界等待并尝试；任一失败/超时后继续后续阶段，最终抛 AggregateError。
  */
 import type { PtyProcess } from "@x-agent-suite/driver";
 import type { LlmBackend } from "@x-agent-suite/contracts";
@@ -15,16 +15,33 @@ export interface PtyCleanupOptions {
   readonly backend: LlmBackend;
   readonly sandbox: SandboxContext | null;
   readonly sandboxTeardown?: (sandbox: SandboxContext) => Promise<void>;
+  /** 单阶段清理超时（毫秒）；默认 10000。超时后仍继续后续阶段。 */
+  readonly stageTimeoutMs?: number;
 }
 
+const DEFAULT_STAGE_TIMEOUT_MS = 10_000;
+
 async function cleanupStep(
+  label: string,
+  timeoutMs: number,
   run: () => void | Promise<void>,
   errors: unknown[],
 ): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    await run();
+    await Promise.race([
+      Promise.resolve().then(run),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`${label} 超时（${timeoutMs}ms）`)),
+          timeoutMs,
+        );
+      }),
+    ]);
   } catch (error) {
     errors.push(error);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
   }
 }
 
@@ -33,15 +50,37 @@ export async function cleanupPtyDriverResources(
   options: PtyCleanupOptions,
 ): Promise<void> {
   const errors: unknown[] = [];
+  const stageTimeoutMs = options.stageTimeoutMs ?? DEFAULT_STAGE_TIMEOUT_MS;
   await cleanupStep(
+    "pty.close",
+    stageTimeoutMs,
     () => options.pty?.close(`PtyAgentDriver(${options.profileName}) 关闭`),
     errors,
   );
   const sandbox = options.sandbox;
   const teardown = options.sandboxTeardown;
-  if (sandbox && teardown) await cleanupStep(() => teardown(sandbox), errors);
-  await cleanupStep(() => options.backend.stop(), errors);
-  if (sandbox) await cleanupStep(() => cleanupSandbox(sandbox), errors);
+  if (sandbox && teardown) {
+    await cleanupStep(
+      "sandboxTeardown",
+      stageTimeoutMs,
+      () => teardown(sandbox),
+      errors,
+    );
+  }
+  await cleanupStep(
+    "backend.stop",
+    stageTimeoutMs,
+    () => options.backend.stop(),
+    errors,
+  );
+  if (sandbox) {
+    await cleanupStep(
+      "cleanupSandbox",
+      stageTimeoutMs,
+      () => cleanupSandbox(sandbox),
+      errors,
+    );
+  }
   if (errors.length === 0) return;
   const detail = errors
     .map((error) => (error instanceof Error ? error.message : String(error)))

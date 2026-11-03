@@ -10,7 +10,7 @@
  */
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { delimiter, dirname, join } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 
 /** CLI 不可用错误：preflight 捕获后应 skip 对应 harness 而非判红。 */
 export class HarnessUnavailableError extends Error {
@@ -41,7 +41,7 @@ export interface HarnessCommandSpec {
 
 /** 可直接传给 spawn 的解析结果。 */
 export interface ResolvedCommand {
-  /** spawn 的 command（posix 为 shim 名，win32 为绝对路径）。 */
+  /** spawn 的 command（POSIX 默认 shim 名；pathOverride 与 win32 为绝对路径）。 */
   readonly command: string;
   /** 需要前置到业务参数之前的参数（win32 node shim 时为入口 js 路径）。 */
   readonly argsPrefix: readonly string[];
@@ -77,7 +77,7 @@ export async function resolveHarnessCommand(
   spec: HarnessCommandSpec,
 ): Promise<ResolvedCommand> {
   const dirs = spec.pathOverride
-    ? [spec.pathOverride]
+    ? [resolve(spec.pathOverride)]
     : (process.env.PATH ?? "").split(delimiter);
 
   // PTY 模式优先使用显式命令名（如 win32 的 "kimi.cmd"），node-pty 可直接 spawn 脚本 shim。 // BOUNDARY-DEBT(harness): 示例命令名，由 profile 注册时声明
@@ -96,7 +96,10 @@ export async function resolveHarnessCommand(
     throw new HarnessUnavailableError(`CLI "${spec.name}" 不在 PATH 中`);
   }
   if (process.platform !== "win32") {
-    return { command: spec.name, argsPrefix: [] };
+    return {
+      command: spec.pathOverride ? shim.path : spec.name,
+      argsPrefix: [],
+    };
   }
   if (shim.ext === ".exe") {
     return { command: shim.path, argsPrefix: [] };

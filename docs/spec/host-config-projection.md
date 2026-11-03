@@ -76,7 +76,7 @@ const profiles = {
 
 - 单轮保持 `--no-session` 与一次性 `sendPrompt`；多轮 spec 在同一 Driver/隔离工作区内使用 Driver 专属 `session-id` 与 `piHome/sessions` 的 `session-dir`，由每次独立 Pi 进程恢复真实上下文，不拼接历史，也不触碰用户最近会话。
 - 多轮逐轮隔离文本、工具调用、事件、完成标记、usage 与 `workspaceCwd`，不复用上一轮 `agent_end` 或累计用量；每轮必须重新收到 `agent_end` 与正数原生 `totalTokens`，缺失或为零时显式失败。单轮缺少 usage 仍只省略、不编造；并发调用显式拒绝。
-- 调用方仍在 `close/finally` 收尾，session/HOME/cwd 一并清理；`close` 在 stdout 消费、最终进程收尾或文件证据读取中发生都取消当前轮，不得在 sandbox 清理后返回成功 Observation。
+- 调用方仍在 `close/finally` 收尾，session/HOME/cwd 一并清理；`close` 在 stdout 消费、最终进程收尾或文件证据读取中发生都取消当前轮，不得在 sandbox 清理后返回成功 Observation。该终态取消语义适用于通用 `AgentDriver`：close 可并发于 start/send，迟到结果不得成为 Observation；清理错误必须与 primary error 一并保留。
 - `executionParams` 只支持 `thinkingLevel`，默认继承原生配置。
 - `contextFiles` 与 `skills` 是受信任 Profile 选项，均默认 `off`；显式 `project` 后分别启用隔离工作区的 AGENTS/CLAUDE 与 Skill 原生发现，不把正文拼进追加系统提示词。场景资源仍只来自 `spec.provision`，不复制真实 HOME 的规则或 Skill；扩展发现、MCP 与提示模板保持关闭。Skill 正文由模型通过显式只读工具权限读取。
 - `appendSystemPrompt` 只接受受信任调用方显式提供的字符串，不自动读取消费者提示词；`commandOverride` 仅为零 token 测试注入。

@@ -124,3 +124,21 @@ test("attachScreenMirror：挂载即绘一帧，变化经节流重绘，关闭�
     process.stderr.write = originalWrite;
   }
 });
+
+test("attachScreenMirror：初始 paint 抛错时也解除已建立的订阅", () => {
+  let unsubscribed = 0;
+  const source: ScreenMirrorSource = {
+    screen: () => "screen",
+    onScreenChange: () => () => {
+      unsubscribed += 1;
+    },
+  };
+  assert.throws(
+    () =>
+      attachScreenMirror([{ label: "a", source }], () => {
+        throw new Error("REDACT_BOOM");
+      }),
+    /REDACT_BOOM/,
+  );
+  assert.equal(unsubscribed, 1, "失败路径必须调用对应 source 的 unsubscribe");
+});
