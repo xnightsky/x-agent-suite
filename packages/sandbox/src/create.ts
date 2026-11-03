@@ -9,12 +9,13 @@
  * 2. 按需创建 configDirs 与 runtimeDir，均位于 homeDir 下；
  * 3. 合并 process.env 与调用方 env；
  * 4. 剥离内置代理变量与 stripEnv 声明的变量；
- * 5. 最后设置 HOME，win32 额外设置 USERPROFILE / APPDATA / LOCALAPPDATA。
+ * 5. 最后设置 HOME，win32 额外设置 USERPROFILE / APPDATA / LOCALAPPDATA；
+ * 6. 任一阶段失败时回滚本次已创建的 homeDir/cwd 临时目录。
  *
  * 代理变量剥离是硬要求：部分 CLI 会把对本地端点的请求发往 http_proxy。
  */
 import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type {
@@ -73,53 +74,71 @@ export async function createSandbox(
   }
 
   const id = randomUUID();
-  const homeDir = await realpath(
-    await mkdtemp(join(tmpdir(), `xas-sandbox-home-${id}-`)),
-  );
-  const cwd = await realpath(
-    await mkdtemp(join(tmpdir(), `xas-sandbox-cwd-${id}-`)),
-  );
+  const createdRoots: string[] = [];
+  try {
+    const homeTemp = await mkdtemp(join(tmpdir(), `xas-sandbox-home-${id}-`));
+    createdRoots.push(homeTemp);
+    const homeDir = await realpath(homeTemp);
+    const cwdTemp = await mkdtemp(join(tmpdir(), `xas-sandbox-cwd-${id}-`));
+    createdRoots.push(cwdTemp);
+    const cwd = await realpath(cwdTemp);
 
-  const configDirs: Record<string, string> = {};
-  if (configDirNames.length > 0) {
+    const configDirs: Record<string, string> = {};
     for (const name of configDirNames) {
       const dir = resolveSafeConfigDir(homeDir, name);
       await mkdir(dir, { recursive: true });
       configDirs[name] = dir;
     }
-  }
 
-  let runtimeDir: string | undefined;
-  if (options.runtimeDir) {
-    runtimeDir = join(homeDir, "runtime");
-    await mkdir(runtimeDir, { recursive: true });
-  }
+    let runtimeDir: string | undefined;
+    if (options.runtimeDir) {
+      runtimeDir = join(homeDir, "runtime");
+      await mkdir(runtimeDir, { recursive: true });
+    }
 
-  const env: Record<string, string | undefined> = {
-    ...process.env,
-    ...options.env,
-  };
-  for (const name of PROXY_ENV_VARS) delete env[name];
-  for (const name of options.stripEnv ?? []) delete env[name];
-  env.HOME = homeDir;
-  if (process.platform === "win32") {
-    env.USERPROFILE = homeDir;
-    env.APPDATA = join(homeDir, "AppData", "Roaming");
-    env.LOCALAPPDATA = join(homeDir, "AppData", "Local");
-  }
-  let configFilePath: string | undefined;
-  if (options.configFile) {
-    configFilePath = join(homeDir, "config.json");
-    await writeFile(configFilePath, "");
-  }
+    const env: Record<string, string | undefined> = {
+      ...process.env,
+      ...options.env,
+    };
+    for (const name of PROXY_ENV_VARS) delete env[name];
+    for (const name of options.stripEnv ?? []) delete env[name];
+    env.HOME = homeDir;
+    if (process.platform === "win32") {
+      env.USERPROFILE = homeDir;
+      env.APPDATA = join(homeDir, "AppData", "Roaming");
+      env.LOCALAPPDATA = join(homeDir, "AppData", "Local");
+    }
+    let configFilePath: string | undefined;
+    if (options.configFile) {
+      configFilePath = join(homeDir, "config.json");
+      await writeFile(configFilePath, "");
+    }
 
-  return {
-    homeDir,
-    cwd,
-    configDirs: Object.keys(configDirs).length > 0 ? configDirs : undefined,
-    configFilePath,
-    runtimeDir,
-    env,
-    id,
-  };
+    return {
+      homeDir,
+      cwd,
+      configDirs: Object.keys(configDirs).length > 0 ? configDirs : undefined,
+      configFilePath,
+      runtimeDir,
+      env,
+      id,
+    };
+  } catch (error) {
+    const rollbackErrors = await Promise.all(
+      createdRoots.map((dir) =>
+        rm(dir, { recursive: true, force: true }).then(
+          () => undefined,
+          (rollbackError: unknown) => rollbackError,
+        ),
+      ),
+    );
+    const rollbackError = rollbackErrors.find((item) => item !== undefined);
+    if (rollbackError !== undefined) {
+      throw new AggregateError(
+        [error, rollbackError],
+        `createSandbox 失败且回滚不完整：${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    throw error;
+  }
 }

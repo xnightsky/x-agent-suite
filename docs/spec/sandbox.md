@@ -82,6 +82,16 @@ export interface HarnessProfile {
 
 调用方注入的 `env` 不能恢复已剥离变量，也不能覆盖临时 HOME；这是安全优先级，不是普通配置优先级。
 
+## provision 铺设
+
+`provisionSandbox` 把消费者声明的来源铺进 `home` 或 `cwd` 基准下的相对目标；目标仍必须通过词法 containment 校验。实现额外执行物理节点校验：
+
+- 来源缺失/不可访问显式失败；
+- `copy` 来源树递归 `lstat`，任一条目为符号链接即失败；复制完成后再复核目标树，防止复制窗口内引入链接；
+- 目标每级已存在父目录必须经 `lstat` 证实为真实目录，既有目标叶或目标树内出现符号链接即失败；
+- `mode: "symlink"` 显式保留，但挂载点创建后，后续任何等于或位于该挂载点之下的 target 都拒绝，避免 copy 穿过挂载点写外部来源；
+- 这些检查不提供对抗持续并发替换的操作系统级原子隔离；调用方仍须独占 provision 目标和来源树。
+
 ## 配置写入
 
 每个 `HarnessProfile.writeConfig` 负责把 MCP / 模型配置写到 sandbox，并写入该宿主的**门槛放行项**（如关闭 folder trust、允许工具列表等）。
