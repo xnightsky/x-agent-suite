@@ -92,7 +92,10 @@ export interface JsonRpcLongLivedAdapter {
 分工与不变量：
 
 - `JsonRpcPeer`（协议无关）：请求 id 自增配对、超时显式拒绝并附 stderr 诊断；响应配对严格按 id 类型与值——只有数值 id 命中待完成请求，字符串 `"1"` / `"01"` / `"1e0"` 不做数值归一、不命中数值 `1`，未知 id 的应答直接丢弃；消费循环三态路由——响应归位（error 显式 reject）/ 反向请求分发 / 通知回调；未注册 handler 的反向请求回 `-32601` 防止对端挂起；流断或解析失败时显式拒绝所有悬挂请求；close 幂等且先停消费再关进程。**本层不出现任何具体协议方法名。**
-- `LongLivedJsonRpcDriver`（LongLivedAgentDriver 骨架）：轮次串行化（roundChain，前一轮失败不阻塞后续）；轮次内通知经 `mapNotification` 聚合进当轮 `Observation`（`{kind:"round"}`），轮次外通知进 `inbound()`（`{kind:"inbound"}`），`{kind:"ignore"}` 丢弃；`sendPrompt` 委托首次 `inject` 语义；`waitInbound` 只等未来事件、超时显式抛错；close 幂等，先 best-effort 告别请求（`closeRequest`）再关 peer。
+- `LongLivedJsonRpcDriver`（LongLivedAgentDriver 骨架）：轮次串行化（roundChain，前一轮失败不阻塞后续）；轮次内通知经 `mapNotification` 聚合进当轮 `Observation`（`{kind:"round"}`），轮次外通知进 `inbound()`（`{kind:"inbound"}`），`{kind:"ignore"}` 丢弃；`sendPrompt` 委托首次 `inject` 语义；`waitInbound` 只等未来事件、超时显式抛错。
+- `waitInbound` 的 match 回调是单个 waiter 的局部谓词；它抛错只拒绝该 waiter，不得让异常进入 wire 消费循环。
+- handshake 返回 `0`、`false`、空串等 falsy 值仍是合法 session；是否已握手必须由独立状态位记录，不能用 truthiness 判断。
+- close 幂等且是终态：存在活动轮次时先取消/关闭 peer 以拒绝在飞 request，再等待 roundChain 收尾；仅在空闲关闭时 best-effort 发送 `closeRequest`。`closeRequest` 同步抛错或 peer 关闭失败不得跳过后续 peer/进程清理，最终以聚合错误暴露。
 - sandbox / 宿主编排不进骨架：`spawn.command/args` 由消费者直接给出。
 - adapter 可持有跨调用状态（如工具调用合并器）；`buildPrompt` 每轮调用一次，可作为轮次边界重置时机。adapter 抛错显式失败，不静默吞错。
 

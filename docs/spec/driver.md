@@ -49,7 +49,9 @@ export interface JsonlProcess {
 ### 关键纪律
 
 - `closeStdinAfterStart`：某些 CLI 在 stdin 为 pipe 且 prompt 已作 argv 传入时仍会阻塞等 stdin EOF，需要启动后即关闭 stdin。
-- 重复 start 显式抛错；send 到已关闭进程抛错。
+- start 是一次性生命周期入口；进入 `starting/running/closing/closed` 后重复 start 显式抛错；close 是终态，close 后禁止 restart。
+- close 可与 start 并发；启动方在每个异步边界检查 closing，close 等待启动 settle 后回收已创建资源。
+- send 到已关闭进程抛错。
 - stdin 在启动时绑定 `error` 监听；`send()` 的异步写入失败（如对端关闭输入后的 `EPIPE`）经 write callback 与流错误事件统一进入异步队列，保留首次错误并附命令上下文，由 `lines()` 迭代方捕获，不产生未处理的流错误事件。沿用队列结束语义：stdout EOF 已结束队列后，迟到的写入错误不再改变迭代结果。
 - 隔离 Node 进程回归覆盖两种时序：对端 `process.stdin.destroy()` 后写入 128 KiB，即使错误迟于 EOF 也正常退出；对端显式关闭输入 fd 后发送就绪消息，调用者写入 128 KiB，必须通过 `lines()` 捕获 `EPIPE`、关闭子进程并正常退出。两种情况均无需全局异常处理。
 
@@ -70,9 +72,16 @@ export interface PtyProcess {
   write(data: string): void;
   screen(): string;
   waitForScreen(match: RegExp, timeoutMs: number): Promise<void>;
+  exitInfo(): { exitCode: number | null; signal: number | null } | null;
+  waitForExit(): Promise<{ exitCode: number | null; signal: number | null }>;
   close(reason?: string): Promise<void>;
 }
 ```
+
+- start 与 close 同 JSONL 基座一样是一次性状态机：close 后禁止 restart，并发 start 只允许一个启动者，close 可与 start 并发并回收已创建 PTY。
+- spawn 成功后必须立即永久注册 `onExit`，保存唯一一次 `exitCode/signal`；`close()` 额外注册的临时监听不得成为唯一退出观察者。
+- 进程已退出后 `write()` 必须显式拒绝；PTY driver 必须把 active turn 期间的意外退出转换为基础设施失败，不得返回普通 Observation。
+- `waitForScreen` 的进行中等待必须由 `dispose()` 立即取消，并清除 interval/timeout。
 
 ### 屏幕断言纪律
 
