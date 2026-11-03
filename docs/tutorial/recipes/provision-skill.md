@@ -1,3 +1,10 @@
+---
+title: "provision 安装态：能力包铺入沙箱并被宿主读取"
+type: tutorial
+status: active
+tags: [tutorial, provision-skill]
+---
+
 # provision 安装态：能力包铺入沙箱并被宿主读取
 
 这一条演示 P4：评测「安装后的能力」——能力包在 driver 启动前铺进沙箱的宿主可见位置，

@@ -1,3 +1,10 @@
+---
+title: "资源安装开关与目标位置调研"
+type: research
+status: active
+tags: [research, resource-install-state-location]
+---
+
 # 资源安装开关与目标位置调研
 
 > 日期：2026-10-28。范围：Skill 的发现位置、资源铺设与原生包安装的区别，以及这些事实对 `resources` DSL 的影响。本文是调研笔记，不构成已实现的契约。

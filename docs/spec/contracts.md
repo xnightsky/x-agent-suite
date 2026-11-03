@@ -1,3 +1,10 @@
+---
+title: "通用契约"
+type: spec
+status: active
+tags: [spec, contracts]
+---
+
 # 通用契约
 
 x-agent-suite 通过 `@x-agent-suite/contracts` 暴露框架与 consumer 之间的全部接缝。本包不依赖任何运行时，只导出类型与轻量契约类型。

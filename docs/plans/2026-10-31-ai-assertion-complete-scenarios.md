@@ -1,3 +1,10 @@
+---
+title: "Recall 内置 Judge 与断言直接计分实施计划"
+type: plan
+status: active
+tags: [plan, 2026-10-31-ai-assertion-complete-scenarios]
+---
+
 # Recall 内置 Judge 与断言直接计分实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 本轮由当前会话 inline 执行；按任务授权不 commit、不 push、不拉队友。

@@ -1,3 +1,10 @@
+---
+title: "Agent 测试框架能力面调研：收编三件之后，我们迁了「点」还是齐了「面」"
+type: research
+status: active
+tags: [research, harness-capability-surface]
+---
+
 # Agent 测试框架能力面调研：收编三件之后，我们迁了「点」还是齐了「面」
 
 > 日期：2026-09-07。触发：从 pi-bus / pi-intercom 收编 win32 命令解析兜底、JSON 播种、

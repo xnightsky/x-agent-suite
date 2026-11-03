@@ -1,3 +1,10 @@
+---
+title: "宿主 CLI 适配笔记"
+type: index
+status: active
+tags: [index, notes]
+---
+
 # 宿主 CLI 适配笔记
 
 x-agent-suite 本身是通用框架，不认识任何具体 CLI。但这些笔记记录我们在真实 CLI 上踩过的坑，供实现 `HarnessProfile` 时参考。

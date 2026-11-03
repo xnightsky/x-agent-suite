@@ -1,3 +1,10 @@
+---
+title: "x-agent-suite 使用教程"
+type: index
+status: active
+tags: [index, tutorial]
+---
+
 # x-agent-suite 使用教程
 
 这套框架的玩法不是“运行一个万能命令”，而是按测试目标组合基础模块：消费者提供被测宿主的适配与领域判断，x-agent-suite 提供驱动、隔离、观测、矩阵和报告机制。

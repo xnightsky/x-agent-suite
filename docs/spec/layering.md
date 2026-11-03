@@ -1,3 +1,10 @@
+---
+title: "分层与依赖选型"
+type: spec
+status: active
+tags: [spec, layering]
+---
+
 # 分层与依赖选型
 
 > 工具型库用，平台不用；失效方式是假阴/假阳性，不是报错。

@@ -1,3 +1,10 @@
+---
+title: "版本治理与发布准备"
+type: spec
+status: active
+tags: [spec, versioning]
+---
+
 # 版本治理与发布准备
 
 本规范管理 lockstep 版本、发布准备、固定版本重打和消费者升级；制品构建与安装方式见 [packaging.md](./packaging.md)。

@@ -1,3 +1,10 @@
+---
+title: "Pi `models.json` 与 `auth.json` 的关联及凭据解析"
+type: research
+status: active
+tags: [research, pi-models-auth-resolution]
+---
+
 # Pi `models.json` 与 `auth.json` 的关联及凭据解析
 
 > 研究对象：本机安装的 `@earendil-works/pi-coding-agent@1.4.0` 与同版本 `@earendil-works/pi-ai@1.4.0`。

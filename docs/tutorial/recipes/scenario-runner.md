@@ -1,3 +1,10 @@
+---
+title: "Scenario Runner：一条命令跑完整考卷"
+type: tutorial
+status: active
+tags: [tutorial, scenario-runner]
+---
+
 # Scenario Runner：一条命令跑完整考卷
 
 这一条演示 P3 的端到端形态：把 3 个场景声明进一个 config 模块，

@@ -1,3 +1,10 @@
+---
+title: "架构总览"
+type: index
+status: active
+tags: [index, architecture]
+---
+
 # 架构总览
 
 x-agent-suite 处于「被测 Agent 宿主」与「被测系统」之间：它不认识任何具体被测系统，只提供观测、驱动、评分、报告四类基础设施。

@@ -1,3 +1,10 @@
+---
+title: "模块组合手册"
+type: tutorial
+status: active
+tags: [tutorial, combinations]
+---
+
 # 模块组合手册
 
 “穷举组合”不是把所有模块机械做笛卡尔积，而是枚举每种有意义的测试目标，并给出支持状态、前提和落点。机器可读版本在 [`catalog.json`](./catalog.json) 的 `combinations` 字段。

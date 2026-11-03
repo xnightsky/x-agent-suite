@@ -1,3 +1,10 @@
+---
+title: "Headless Profile + Fixture + HarnessDriver"
+type: tutorial
+status: active
+tags: [tutorial, headless-fixture]
+---
+
 # Headless Profile + Fixture + HarnessDriver
 
 这一条把合成 headless CLI、`HarnessProfile`、`FakeProviderBackend`、sandbox 和 `createHarnessDriver` 全部接通。它证明框架机制；真实宿主仍由消费者注册。

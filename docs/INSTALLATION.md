@@ -1,3 +1,10 @@
+---
+title: "安装指南"
+type: guide
+status: active
+tags: [guide, INSTALLATION]
+---
+
 # 安装指南
 
 > **⚠️ 重要提示**

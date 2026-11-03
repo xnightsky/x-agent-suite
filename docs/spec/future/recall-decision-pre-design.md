@@ -1,3 +1,10 @@
+---
+title: Recall Decision 预设计
+type: pre-design
+status: future
+tags: [recall, decision]
+---
+
 # Recall Decision 预设计
 
 > 状态：未来预设计，尚未实现，不属于一期。下文给出可评审的字段、算法与错误语义草案，不代表现有公开 API。

@@ -1,3 +1,10 @@
+---
+title: "Pi PTY 真实宿主集成"
+type: tutorial
+status: active
+tags: [tutorial, pi-pty-integration]
+---
+
 # Pi PTY 真实宿主集成
 
 这条教程把合成 PTY 机制升级为真正的宿主证据：启动已安装的 Pi CLI，但把模型端点固定到本机 `FakeProviderBackend`，因此验证真实 TUI 路径而不消耗 token。

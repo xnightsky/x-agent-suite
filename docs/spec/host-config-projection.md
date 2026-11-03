@@ -1,3 +1,10 @@
+---
+title: "宿主配置保真与单次运行参数"
+type: spec
+status: active
+tags: [spec, host-config-projection]
+---
+
 # 宿主配置保真与单次运行参数
 
 ## 结论与边界

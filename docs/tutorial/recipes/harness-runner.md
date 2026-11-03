@@ -1,3 +1,10 @@
+---
+title: "HarnessDriver → runScenarioSpec 主链"
+type: tutorial
+status: active
+tags: [tutorial, harness-runner]
+---
+
 # HarnessDriver → runScenarioSpec 主链
 
 这一条演示 P7 的核心接线：把 `createHarnessDriver` 产出的 harness driver 直接交给

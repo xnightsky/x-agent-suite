@@ -1,3 +1,10 @@
+---
+title: "Gemini CLI 适配笔记"
+type: note
+status: active
+tags: [note, gemini]
+---
+
 # Gemini CLI 适配笔记
 
 > 探测版本：Gemini CLI 0.42.0 / 0.56.0

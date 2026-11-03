@@ -1,3 +1,10 @@
+---
+title: "Fake Provider 工具轮教程"
+type: tutorial
+status: active
+tags: [tutorial, fixture-backend]
+---
+
 # Fake Provider 工具轮教程
 
 这一条只验证模型 wire：本机 loopback 假端点按脚本先返回工具调用，再在收到 tool result 后返回最终文本。

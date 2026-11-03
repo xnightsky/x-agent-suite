@@ -1,3 +1,10 @@
+---
+title: "通用 AI Judge"
+type: spec
+status: active
+tags: [spec, judge]
+---
+
 # 通用 AI Judge
 
 ## 目的与边界

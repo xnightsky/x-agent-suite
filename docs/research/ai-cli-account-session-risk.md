@@ -1,3 +1,10 @@
+---
+title: "AI CLI 自动化风险与上游依据"
+type: research
+status: active
+tags: [research, ai-cli-account-session-risk]
+---
+
 # AI CLI 自动化风险与上游依据
 
 - 评估日期：2026-08-28

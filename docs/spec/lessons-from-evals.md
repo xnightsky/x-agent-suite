@@ -1,3 +1,10 @@
+---
+title: "从评测实践借鉴的模式"
+type: spec
+status: active
+tags: [spec, lessons-from-evals]
+---
+
 # 从评测实践借鉴的模式
 
 > 本页记录两套内部 evals 实践中摸出的、可直接用于 x-agent-suite 的设计模式与教训。

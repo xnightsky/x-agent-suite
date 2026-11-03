@@ -1,3 +1,10 @@
+---
+title: "pi 适配笔记"
+type: note
+status: active
+tags: [note, pi]
+---
+
 # pi 适配笔记
 
 > RPC/MCP 探测版本：pi 0.84.2，pi-mcp-adapter 2.6.1；PTY 回归版本：pi 0.84.3

@@ -1,3 +1,10 @@
+---
+title: "Agent 消息通信的两层拆分"
+type: research
+status: active
+tags: [research, agent-messaging-layers]
+---
+
 # Agent 消息通信的两层拆分
 
 > 把 Agent 之间的消息通信拆成**传输层**与**入站触达层**，两层职责正交、独立演进。

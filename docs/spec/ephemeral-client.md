@@ -1,3 +1,10 @@
+---
+title: "Ephemeral Client Carrier"
+type: spec
+status: active
+tags: [spec, ephemeral-client]
+---
+
 # Ephemeral Client Carrier
 
 > 状态：已实现 Carrier 配置解析与 Recall 执行接线；真实 Provider 验证不属于默认测试。

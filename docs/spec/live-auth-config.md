@@ -1,3 +1,10 @@
+---
+title: "可选 live 认证配置"
+type: spec
+status: active
+tags: [spec, live-auth-config]
+---
+
 # 可选 live 认证配置
 
 > 状态：已实现。

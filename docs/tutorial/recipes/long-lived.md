@@ -1,3 +1,10 @@
+---
+title: "LongLivedAgentDriver 多轮与入站教程"
+type: tutorial
+status: active
+tags: [tutorial, long-lived]
+---
+
 # LongLivedAgentDriver 多轮与入站教程
 
 这一条演示消费者如何实现长驻 driver：同一会话连续 `inject` 两轮，并等待一条匹配的入站事件。

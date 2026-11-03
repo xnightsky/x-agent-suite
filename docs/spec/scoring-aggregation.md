@@ -1,3 +1,10 @@
+---
+title: "打分聚合机：静态打分出口"
+type: spec
+status: active
+tags: [spec, scoring-aggregation]
+---
+
 # 打分聚合机：静态打分出口
 
 > 判据负责判定，聚合机负责算分。AI 只产具名裁定，分数恒由静态机出口。

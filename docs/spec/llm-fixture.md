@@ -1,3 +1,10 @@
+---
+title: "自研 Fake Provider 与 HarnessProfile"
+type: spec
+status: active
+tags: [spec, llm-fixture]
+---
+
 # 自研 Fake Provider 与 HarnessProfile
 
 ## 目标

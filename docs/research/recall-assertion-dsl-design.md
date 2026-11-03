@@ -1,3 +1,10 @@
+---
+title: "第一阶段断言 DSL 作者体验调研与决策记录"
+type: research
+status: active
+tags: [research, recall-assertion-dsl-design]
+---
+
 # 第一阶段断言 DSL 作者体验调研与决策记录
 
 > 历史基线：`docs/recall-expect-decision-dsl`，`ff64e56`。

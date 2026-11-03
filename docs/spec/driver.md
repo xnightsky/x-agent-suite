@@ -1,3 +1,10 @@
+---
+title: "子进程与 PTY 基座"
+type: spec
+status: active
+tags: [spec, driver]
+---
+
 # 子进程与 PTY 基座
 
 `@x-agent-suite/driver` 提供两类进程驱动能力：

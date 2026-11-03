@@ -1,3 +1,10 @@
+---
+title: "Scenario Runner：Registry 运行时、DSL 执行与 CLI"
+type: spec
+status: active
+tags: [spec, scenario-runner]
+---
+
 # Scenario Runner：Registry 运行时、DSL 执行与 CLI
 
 > P3 设计稿。成功标准：声明 3+ 场景，一条命令出全部出口分。

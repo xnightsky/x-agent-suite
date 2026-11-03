@@ -1,3 +1,10 @@
+---
+title: "调研笔记"
+type: index
+status: active
+tags: [index, research]
+---
+
 # 调研笔记
 
 本目录存放与框架设计相关的协议、机制与宿主能力调研。它们帮助消费者理解「为什么 x-agent-suite 这样设计」，但本身不构成框架契约。

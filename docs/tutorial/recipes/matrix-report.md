@@ -1,3 +1,10 @@
+---
+title: "Driver × Variant → Matrix → Report"
+type: tutorial
+status: active
+tags: [tutorial, matrix-report]
+---
+
 # Driver × Variant → Matrix → Report
 
 这一条把两个 driver 标识与两个 prompt 变体做有意义的组合，得到四行对照结果和统一报告。

@@ -1,3 +1,10 @@
+---
+title: "边界纪律"
+type: spec
+status: active
+tags: [spec, boundary-discipline]
+---
+
 # 边界纪律
 
 > 分层腐化是常态，设计目标是**可见**与**可回收**。

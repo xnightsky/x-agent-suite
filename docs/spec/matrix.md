@@ -1,3 +1,10 @@
+---
+title: "Matrix：同 Scenario 多宿主对照"
+type: spec
+status: active
+tags: [spec, matrix]
+---
+
 # Matrix：同 Scenario 多宿主对照
 
 > 借鉴评测实践的矩阵脚本：把一个场景的全部宿主变体跑成一张对照表。

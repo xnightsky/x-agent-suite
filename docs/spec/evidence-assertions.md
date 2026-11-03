@@ -1,3 +1,10 @@
+---
+title: "访问痕迹证据断言"
+type: spec
+status: active
+tags: [spec, evidence-assertions]
+---
+
 # 访问痕迹证据断言
 
 ## 目标与边界
@@ -178,6 +185,6 @@ citation:
 `integrations/itrepos/evidence/.recall.yaml` 原样保留字面量基线；`integrations/itrepos/evidence/variables/.recall.yaml` 以两个单轮 case 独立覆盖三层 `vars`、整值数组、多变量嵌入、转义、单次展开、逻辑身份和 `turn.index=0`；`turn.index=1` 与跨轮隔离由零 token Runner repeat 覆盖。两个配置测试在默认单元回归中核对声明形态，并经真实消费者工厂与独立 fake 观察验证；真实 provider 验证使用两个精确入口：
 
 ```bash
-pnpm ittest:token:evidence --carrier pi --provider co --model default/deepseek-v4-flash --approve-live
-pnpm ittest:token:evidence-variables --carrier pi --provider co --model default/deepseek-v4-flash --approve-live
+pnpm ittest:token:evidence --carrier <carrier> --provider <provider> --model <model> --approve-live
+pnpm ittest:token:evidence-variables --carrier <carrier> --provider <provider> --model <model> --approve-live
 ```

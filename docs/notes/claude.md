@@ -1,3 +1,10 @@
+---
+title: "Claude Code 适配笔记"
+type: note
+status: active
+tags: [note, claude]
+---
+
 # Claude Code 适配笔记
 
 > 探测版本：Claude Code 2.1.220 / 2.1.224

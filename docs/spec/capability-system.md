@@ -1,3 +1,10 @@
+---
+title: "能力体系：x-agent-suite 能力账本与路线"
+type: spec
+status: active
+tags: [spec, capability-system]
+---
+
 # 能力体系：x-agent-suite 能力账本与路线
 
 > 本文是框架能力的**唯一系统视图**：每个能力件只有三种归宿——**内核 / 一等子包 / 明确不做**。
@@ -179,38 +186,15 @@ flowchart TD
 - 通用 eval/Runner 是否还需要内置配置文件，还是完全通过代码注册；Recall 已明确采用独立 registry + effects-only Plan。
 - 报告输出格式优先级。
 - 「从 wire 请求重建 ToolCall 序列」是否沉淀为框架工具函数：首个 runner 消费者的复合 driver 已自证可行（PTY 面 `Observation.toolCalls` 恒空时的适配），按边界纪律等第二个消费者出现再立项。
-- CLI 是否需要「行为失败门禁」旗标（如 `--fail-on-behavior`）：第二个消费者（内部 KB 评测库，v0.4.0 消费中）提出的四个缺口中唯一未补项——当前设计为退出码只反映基础设施失败（刻意分歧），替代路径是读 JSON 报告 hardPass 自行 gate。若其确认需要内建旗标，即凑齐两消费者论证，可立项。
+- CLI 是否需要「行为失败门禁」旗标（如 `--fail-on-behavior`）：第二个消费者提出的四个缺口中唯一未补项——当前设计为退出码只反映基础设施失败（刻意分歧），替代路径是读 JSON 报告 hardPass 自行 gate。若其确认需要内建旗标，即凑齐两消费者论证，可立项。
 
 ## 消费者验证记录
 
-按反馈回路设计登记真实消费者的验证结论与缺口反馈（匿名化，只记需求模式）。
+仅保留匿名需求模式，不记录消费者项目、版本快照、真实模型、repeat/hardPassRate、耗时、token/费用或内部测试数量。
 
-**2026-09-13 · 首个 runner 消费者（双会话 Agent 协作评测，dev 快照 0.5.0-dev.20260913.1162fbc）**
-
-- 验证通过：子路径导入、ScenarioSpec 执行、判据调度、聚合出口、knockout/threshold 语义、
-  metadata 透传（d82261e）、负向 FAIL 点名未命中维度；真实双 PTY 复合 driver（fake 端点零
-  token）满足 AgentDriver 契约，跨端投递证据经 metadata 断言通过，聚合 1.0。
-- 反馈一（已闭环）：expect 块键名是 metric 名（kebab-case）而非导出名，recipe 已强调。
-- 反馈二（进未决事项）：PTY 面 toolCalls 恒空的「wire 重建 ToolCall」适配件，候选框架能力。
-- 未验证：token 车道（双真实模型）——验证 skill 措辞本身，消费者侧发版后接入。
-
-**2026-09-13 · 同一消费者 · 正式 0.5.0 制品收口**
-
-- file: 切至 artifacts/0.5.0 正式 tgz：395 单测 + typecheck + 19 ittest（真实 PTY 零 token）全绿；
-  runner 消费路径与双 PTY 复合 driver 真实场景在正式版复跑通过，聚合 1.0。
-
-**2026-09-13 · 同一消费者 · 正式 0.6.0 制品收口**
-
-- file: 切至 artifacts/0.6.0 正式 tgz：395 单测 + typecheck + 19 ittest 全绿；两条 scratch
-  （runner 消费路径、双 PTY 复合 driver）复跑通过。repeat 稳定率与报告 diff 已被标记为
-  token 车道验证 skill 措辞的成套工具，待实战回传。
-- 收尾：切至 GitHub Release HTTPS tarball 消费（与本地制品逐字节 diff 一致），全门禁绿；
-  runner 场景车道转正为正式测试资产（复合 driver + 单测层消费路径锁定 + 集成层场景用例）。
-  **HTTPS tarball 交付路径经真实消费者跨机器验证可行，不再依赖本机路径。**
-- token 车道首跑（真实模型、live 复合 driver、无假端点）：`runScenarioRepeat` repeat=3
-  全部 PASS（hardPassRate=1，score 均值/极值 1），约 28s/次全隔离编排成本可接受；
-  确认「每次重新 createDriver」的隔离语义与文档一致。**runner 的 live/token 层路径经真实
-  消费者验证。**报告 diff 待首次 A/B 措辞实验回传。
+- 已验证的通用能力：子路径导入、ScenarioSpec 执行、判据调度、聚合出口、metadata 透传、隔离 Driver 生命周期、制品安装与 HTTPS 交付。
+- 已闭环的作者体验：`expect` 块键名是 metric 名（kebab-case）而非导出名，recipe 已强调；wire 重建 ToolCall 仍是需第二个消费者证明的候选能力。
+- 未覆盖：真实模型下的 Skill 措辞效果与 A/B 报告 diff，由消费者按自身授权验证，不在本库保留运行台账。
 
 ## 专题权威索引
 

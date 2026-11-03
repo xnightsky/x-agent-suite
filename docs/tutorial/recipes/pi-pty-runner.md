@@ -1,3 +1,10 @@
+---
+title: "Pi PTY driver → runScenarioSpec（真实宿主）"
+type: tutorial
+status: active
+tags: [tutorial, pi-pty-runner]
+---
+
 # Pi PTY driver → runScenarioSpec（真实宿主）
 
 这一条是 [harness-runner](./harness-runner.md) 的真实宿主版：同一套 ScenarioSpec 与判据，

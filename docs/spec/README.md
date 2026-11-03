@@ -1,3 +1,10 @@
+---
+title: 设计规格
+type: index
+status: active
+tags: [spec]
+---
+
 # 设计规格
 
 本目录记录 x-agent-suite 的设计原则、契约语义与运行机制。

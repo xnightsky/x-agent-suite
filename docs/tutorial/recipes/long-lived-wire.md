@@ -1,3 +1,10 @@
+---
+title: "JSON-RPC 长驻 wire 层教程"
+type: tutorial
+status: active
+tags: [tutorial, long-lived-wire]
+---
+
 # JSON-RPC 长驻 wire 层教程
 
 这一条演示框架内建的长驻 JSON-RPC wire 基座：`LongLivedJsonRpcDriver` 组合 `JsonlProcess` + `JsonRpcPeer`，拉起一个脚本化假 peer 子进程，在同一会话完成两轮 `inject` 并等待一条轮次外入站事件。协议专有语义（握手序列、prompt 报文、通知归一）全部落在消费者注入的 adapter 里——框架不认识任何具体协议。

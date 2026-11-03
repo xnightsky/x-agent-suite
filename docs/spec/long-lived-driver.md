@@ -1,3 +1,10 @@
+---
+title: "长驻会话驱动"
+type: spec
+status: active
+tags: [spec, long-lived-driver]
+---
+
 # 长驻会话驱动
 
 ## 问题：一次性 headless 只覆盖一半语义

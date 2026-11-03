@@ -1,3 +1,10 @@
+---
+title: "Sandbox → JsonlProcess"
+type: tutorial
+status: active
+tags: [tutorial, sandbox-jsonl]
+---
+
 # Sandbox → JsonlProcess
 
 这一条演示如何在临时 HOME/cwd 中启动一个输出 JSONL 的通用子进程，并保证进程与目录都被清理。

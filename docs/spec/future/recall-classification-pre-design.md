@@ -1,3 +1,10 @@
+---
+title: Recall 分类预设计
+type: pre-design
+status: future
+tags: [recall, classification]
+---
+
 # Recall 分类预设计
 
 > 状态：未来预设计，尚未实现，不进入一期。本文只规定受约束分类，不定义跳转、停止或组合评分。

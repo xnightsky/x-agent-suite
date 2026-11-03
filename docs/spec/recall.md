@@ -1,3 +1,10 @@
+---
+title: "原生 Recall 声明式评测"
+type: spec
+status: active
+tags: [spec, recall]
+---
+
 # 原生 Recall 声明式评测
 
 ## 目的与信任边界

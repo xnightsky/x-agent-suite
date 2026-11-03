@@ -1,3 +1,10 @@
+---
+title: "Scenario DSL 设计原则"
+type: spec
+status: active
+tags: [spec, scenario-dsl]
+---
+
 # Scenario DSL 设计原则
 
 > 可比性是唯一的表达力轴；控制流是声明，不是判定。

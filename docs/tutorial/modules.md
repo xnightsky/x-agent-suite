@@ -1,3 +1,10 @@
+---
+title: "模块与工具手册"
+type: tutorial
+status: active
+tags: [tutorial, modules]
+---
+
 # 模块与工具手册
 
 本页按“做什么、何时用、与谁组合”解释各包。[`catalog.json`](./catalog.json) 记录组合并指向公开工具真相源 [`tools.json`](./tools.json)；新增或删除导出时，教程测试会要求同步分类。

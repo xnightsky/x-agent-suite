@@ -1,3 +1,10 @@
+---
+title: "AI 断言如何测试：确定性接线、Agent 评估与 Judge 质量分层"
+type: research
+status: active
+tags: [research, model-graded-assertion-testing]
+---
+
 # AI 断言如何测试：确定性接线、Agent 评估与 Judge 质量分层
 
 > 调研日期：2026-10-31

@@ -1,3 +1,10 @@
+---
+title: "Kimi Code 适配笔记"
+type: note
+status: active
+tags: [note, kimi]
+---
+
 # Kimi Code 适配笔记
 
 > 日期：2026-08-26

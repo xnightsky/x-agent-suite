@@ -1,3 +1,10 @@
+---
+title: Recall 后续能力预设计索引
+type: pre-design
+status: future
+tags: [recall, pre-design]
+---
+
 # Recall 后续能力预设计索引
 
 > 状态：后续预设计索引，不是已实现契约，不进入一期实施范围。

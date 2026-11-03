@@ -1,3 +1,10 @@
+---
+title: "PTY 驱动层"
+type: spec
+status: active
+tags: [spec, pty-driver]
+---
+
 # PTY 驱动层
 
 > 仅用于覆盖长驻通道**测不到**的 TUI 交互路径。主干路线见 [long-lived-driver.md](./long-lived-driver.md)。

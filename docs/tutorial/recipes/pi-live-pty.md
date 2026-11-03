@@ -1,3 +1,10 @@
+---
+title: "Pi Live PTY（真实 provider/model）"
+type: tutorial
+status: active
+tags: [tutorial, pi-live-pty]
+---
+
 # Pi Live PTY（真实 provider/model）
 
 把 [Pi PTY 集成](./pi-pty-integration.md) 的 fake provider 换成真实渠道：PtyAgentDriver 的 live 分支把借用渠道（baseUrl 原值 + 借用 token）写进沙盒 `models.json`，真实 Pi TUI 按声明的 provider/model 打真实端点。会产生真实 token、费用与数据出站。
@@ -25,10 +32,10 @@ pnpm ittest:token:pi-pty
 
 ```bash
 XAS_TUTORIAL_LIVE_AUTHORIZATION=I_ACCEPT_LIVE_COST_AND_DATA_EGRESS \
-pnpm ittest:token:pi-pty -- --model k3-256k
+pnpm ittest:token:pi-pty -- --model <model>
 ```
 
-模型 ID 自身包含 `/` 时，也可通过完整 `provider/model` 精确选择，例如 `--model co/default/glm5-3-flash`。
+模型 ID 自身包含 `/` 时，也可通过完整 `provider/model` 精确选择，例如 `--model <provider/model>`。
 
 ## 执行链
 

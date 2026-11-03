@@ -1,3 +1,10 @@
+---
+title: "Recall 内置 Judge 与断言计分 DSL"
+type: spec
+status: active
+tags: [spec, recall-judge-dsl]
+---
+
 # Recall 内置 Judge 与断言计分 DSL
 
 > 状态：第一阶段已实现，并通过默认 fake 回归与真实 Pi headless + loopback fake provider 集成验证；本文按断言直接计分的一期范围收口。

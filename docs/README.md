@@ -1,3 +1,10 @@
+---
+title: 文档
+type: index
+status: active
+tags: [documentation]
+---
+
 # 文档
 
 x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenario、criterion、report 等基础设施，让不同宿主（CLI、TUI、长驻协议、mock）都能被同一套评估语义驱动。
@@ -20,6 +27,7 @@ x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenari
 | ---------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | [`tutorial/README.md`](./tutorial/README.md)                                       | 可执行教程：模块、工具、组合方式与安全停点                   |
 | [`spec/suite-design.md`](./spec/suite-design.md)                                   | 框架总览与三层验证体系                                       |
+| [`document-research.md`](./document-research.md)                                   | 重要任务最小检索、future 转正与 Markdown metadata            |
 | [`spec/boundary-discipline.md`](./spec/boundary-discipline.md)                     | 边界纪律：四条守卫、三个合法出口、边界债务                   |
 | [`spec/layering.md`](./spec/layering.md)                                           | 分层与依赖选型：工具型库 vs 平台                             |
 | [`spec/packaging.md`](./spec/packaging.md)                                         | 包分发、安装方式、版本管理与原生依赖分层                     |

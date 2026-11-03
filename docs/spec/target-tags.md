@@ -1,3 +1,10 @@
+---
+title: "TargetTags：四层实例与访问决策"
+type: spec
+status: active
+tags: [spec, target-tags]
+---
+
 # TargetTags：四层实例与访问决策
 
 ## 目标与边界

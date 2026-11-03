@@ -1,3 +1,10 @@
+---
+title: Recall 轮次级断言预设计
+type: pre-design
+status: future
+tags: [recall, turn-assertion]
+---
+
 # Recall 轮次级断言预设计
 
 > 状态：未来预设计，尚未实现，不进入一期。本文只扩展“在哪一轮评价”，不隐含条件分支或提前停止。

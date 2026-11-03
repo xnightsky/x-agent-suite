@@ -1,0 +1,53 @@
+version: 1
+id: docs-research
+plans:
+  research:
+    resources:
+      - source: AGENTS.md
+        destination: AGENTS.md
+      - source: AGENTS.ai.md
+        destination: AGENTS.ai.md
+      - source: docs
+        destination: docs
+        kind: directory
+context:
+  plan: research
+cases:
+  - id: future-pre-design
+    turns:
+      - send: >-
+          准备实施 Recall 多轮与外部取消能力。先按 AGENTS.md 完成最小文档检索：
+          用 grep 在 docs 搜索“提前终止|外部取消”，读取命中目录的 README 和预设计，
+          最后只输出一行，包含 DOC_RESEARCH_OK 与实际读取的预设计路径。不要修改文件。
+        expect:
+          evidence:
+            allOf:
+              - name: search
+                toolResult:
+                  tool: grep
+                  args: { pattern: 提前终止|外部取消 }
+                  contains: [recall-early-termination-pre-design.md]
+              - name: mechanism
+                toolResult:
+                  tool: read
+                  path: { arg: path, resource: docs/document-research.md }
+                  contains:
+                    [最小文档检索机制, Markdown metadata, 正文与路径检索]
+              - name: index
+                toolResult:
+                  tool: read
+                  path: { arg: path, resource: docs/spec/future/README.md }
+                  contains: [Recall 提前终止]
+              - name: pre-design
+                toolResult:
+                  tool: read
+                  path:
+                    arg: path
+                    resource: docs/spec/future/recall-early-termination-pre-design.md
+                  contains: ["type: pre-design", "status: future", 外部取消]
+              - name: cite
+                citation:
+                  tool: read
+                  pathArg: path
+                  path: docs/spec/future/recall-early-termination-pre-design.md
+          text-contains: [DOC_RESEARCH_OK]

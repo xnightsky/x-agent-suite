@@ -1,3 +1,10 @@
+---
+title: Recall 条件分支预设计
+type: pre-design
+status: future
+tags: [recall, conditional-branching]
+---
+
 # Recall 条件分支预设计
 
 > 状态：未来预设计，尚未实现，不进入一期。作者使用结构化条件树：子步骤嵌在所选分支中，结束后自然继续外层流程。

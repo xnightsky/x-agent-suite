@@ -1,3 +1,10 @@
+---
+title: "Codex CLI 适配笔记"
+type: note
+status: active
+tags: [note, codex]
+---
+
 # Codex CLI 适配笔记
 
 > 探测版本：Codex CLI 0.147.0 / 0.149.0

@@ -1,3 +1,10 @@
+---
+title: "PTY / TUI 专项教程"
+type: tutorial
+status: active
+tags: [tutorial, pty]
+---
+
 # PTY / TUI 专项教程
 
 PTY 只用于 headless 或结构化长驻协议无法触达的 TUI 门槛，例如首次信任、审批框或只能在终端输入的流程。

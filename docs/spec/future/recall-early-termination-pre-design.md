@@ -1,3 +1,10 @@
+---
+title: Recall 提前终止预设计
+type: pre-design
+status: future
+tags: [recall, early-termination]
+---
+
 # Recall 提前终止预设计
 
 > 状态：未来预设计，尚未实现，不进入一期。首版只讨论显式 onFail:stop，不预先增加完整护栏／规则引擎。

@@ -1,3 +1,10 @@
+---
+title: "测试分层规范"
+type: spec
+status: active
+tags: [spec, testing]
+---
+
 # 测试分层规范
 
 本规范统一全仓所有 `*test*` 文件的命名、位置和默认回归范围。核心判断只有两个：**验证对象是否为真实宿主 CLI**，以及**是否会访问真实 provider 并消耗 token**；不是按是否起子进程分类。

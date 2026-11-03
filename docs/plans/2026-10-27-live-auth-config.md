@@ -1,3 +1,10 @@
+---
+title: "Live Auth Config Implementation Plan"
+type: plan
+status: active
+tags: [plan, 2026-10-27-live-auth-config]
+---
+
 # Live Auth Config Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

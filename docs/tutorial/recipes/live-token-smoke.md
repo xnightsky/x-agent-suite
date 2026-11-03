@@ -1,3 +1,10 @@
+---
+title: "Live Token Smoke"
+type: tutorial
+status: active
+tags: [tutorial, live-token-smoke]
+---
+
 # Live Token Smoke
 
 这是教程目录中真正访问 provider 的最小证据，不是 guard 模拟。源码：[`examples/tutorial/10-live-smoke.token.ittest.ts`](../../../examples/tutorial/10-live-smoke.token.ittest.ts)，唯一入口是：

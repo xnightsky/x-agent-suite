@@ -1,3 +1,10 @@
+---
+title: "按需安装是否需要 pip extras 式制品矩阵"
+type: research
+status: active
+tags: [research, on-demand-install-artifact-matrix]
+---
+
 # 按需安装是否需要 pip extras 式制品矩阵
 
 > 调研日期：2026-09-13

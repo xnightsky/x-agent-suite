@@ -1,3 +1,10 @@
+---
+title: "发布指南"
+type: guide
+status: active
+tags: [guide, PUBLISHING]
+---
+
 # 发布指南
 
 ## 🚀 快速发布（推荐）

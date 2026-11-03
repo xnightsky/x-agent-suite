@@ -1,3 +1,10 @@
+---
+title: "MCP 是否支持服务端主动推送（push vs pull）调研"
+type: research
+status: active
+tags: [research, mcp-push-vs-pull]
+---
+
 # MCP 是否支持服务端主动推送（push vs pull）调研
 
 - 日期：2026-08-23

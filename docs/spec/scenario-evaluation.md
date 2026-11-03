@@ -1,3 +1,10 @@
+---
+title: "Scenario 评分与报告"
+type: spec
+status: active
+tags: [spec, scenario-evaluation]
+---
+
 # Scenario 评分与报告
 
 ## 目标

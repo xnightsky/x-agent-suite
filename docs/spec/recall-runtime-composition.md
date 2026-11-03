@@ -1,3 +1,10 @@
+---
+title: "Assertions 模型断言装配与 Recall 接线（实现定稿）"
+type: spec
+status: active
+tags: [spec, recall-runtime-composition]
+---
+
 # Assertions 模型断言装配与 Recall 接线（实现定稿）
 
 > 状态：已实现并验收（2026-10-30）。本文中的类型、字段和调用形状即当前公开 API；第 10 节列出已验证项、未验证项与剩余风险。

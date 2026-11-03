@@ -1,3 +1,10 @@
+---
+title: "Mock → Observation → Checks → Report"
+type: tutorial
+status: active
+tags: [tutorial, mock-report]
+---
+
 # Mock → Observation → Checks → Report
 
 这是最短的完整闭环：不启动子进程，不访问网络，先把框架的输入、观测、评分和报告关系跑通。

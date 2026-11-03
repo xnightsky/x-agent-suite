@@ -1,3 +1,10 @@
+---
+title: "Criteria → Aggregation → Report"
+type: tutorial
+status: active
+tags: [tutorial, criteria-aggregation]
+---
+
 # Criteria → Aggregation → Report
 
 这一条演示判定与打分的完整闭环：用 MockDriver 产出 Observation，经 `runCriteria` 调度判据，

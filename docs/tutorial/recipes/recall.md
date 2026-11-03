@@ -1,3 +1,10 @@
+---
+title: "Recall：显式 target、场景 plans 与 effects-only Plan"
+type: tutorial
+status: active
+tags: [tutorial, recall]
+---
+
 # Recall：显式 target、场景 plans 与 effects-only Plan
 
 这一教程用临时 live 配置、独立 registry 和 MockDriver 跑通“target 选择 → 文件内 plans → borrowed profile → 单 Runner → 双格式报告”，零真实 token。

@@ -1,3 +1,10 @@
+---
+title: "无 Docker 隔离环境"
+type: spec
+status: active
+tags: [spec, sandbox]
+---
+
 # 无 Docker 隔离环境
 
 跑真实 CLI 时，必须做到**一个 harness 一个隔离沙箱**，不能互相污染配置、缓存或 API key。本方案不使用 Docker，依赖进程级隔离 + 临时文件系统 + 可选 bubblewrap。

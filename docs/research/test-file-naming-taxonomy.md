@@ -1,3 +1,10 @@
+---
+title: "测试文件命名是否需要继续细化"
+type: research
+status: active
+tags: [research, test-file-naming-taxonomy]
+---
+
 # 测试文件命名是否需要继续细化
 
 > 调研日期：2026-08-28

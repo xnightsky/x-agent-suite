@@ -1,3 +1,10 @@
+---
+title: "Live 安全门与 token 测试停点"
+type: tutorial
+status: active
+tags: [tutorial, live-guard]
+---
+
 # Live 安全门与 token 测试停点
 
 这一条只演示 live 前的授权判断与诊断脱敏，默认且始终不发真实网络请求。它不是“live 已验收”的证据。

@@ -1,3 +1,10 @@
+---
+title: "x-agent-suite 框架总览"
+type: spec
+status: active
+tags: [spec, suite-design]
+---
+
 # x-agent-suite 框架总览
 
 > 目标：在不消耗真实 API token 的前提下，验证 Agent 宿主能否正确加载并调用被测系统；同时保留一套可扩展的 driver 接口，供不同宿主接入。

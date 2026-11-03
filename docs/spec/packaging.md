@@ -1,3 +1,10 @@
+---
+title: "包分发、安装与版本管理"
+type: spec
+status: active
+tags: [spec, packaging]
+---
+
 # 包分发、安装与版本管理
 
 > 消费者在 `package.json` 中使用稳定包名，只切换依赖来源；框架维护同一版本和构建产物，同时支持本地包、远程下载、git 源码自构建与 npm registry。
