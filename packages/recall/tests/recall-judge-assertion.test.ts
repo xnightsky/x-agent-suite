@@ -96,14 +96,14 @@ test("两轮四细项直接计分：总分 3 但 case 未通过，CLI=0", async 
       score: -1,
     },
     {
-      name: "ai-a",
+      name: "judge.ai-a",
       source: "ai",
       pass: true,
       reason: "AI A 通过",
       score: 3,
     },
     {
-      name: "ai-b",
+      name: "judge.ai-b",
       source: "ai",
       pass: false,
       reason: "AI B 未通过",

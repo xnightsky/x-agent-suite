@@ -10,6 +10,7 @@ tags: [spec, recall-runtime-composition]
 > 状态：已实现并验收（2026-10-30）。本文中的类型、字段和调用形状即当前公开 API；第 10 节列出已验证项、未验证项与剩余风险。
 > 历史：设计定稿后按第 10 节顺序实施，每步先写失败测试再实现。
 > 后续设计（2026-10-31）：标准 AI 断言升级为内置 `expect.judge`，见 [`recall-judge-dsl.md`](./recall-judge-dsl.md)。本文记录的通用工厂继续用于自定义扩展判据。
+> 现行补充：线性逐轮内置 Judge 与即时评价顺序见 [`recall-turn-assertion.md`](./recall-turn-assertion.md)；本文第 2 节仅记录当时核对基线，不作为当前评价范围的上限。
 
 ## 1. 结论与目标
 
@@ -37,7 +38,7 @@ tags: [spec, recall-runtime-composition]
 | Recall registry 当前只有静态 Criterion，`runCase` 把同一数组交给所有 target                                           | `packages/recall/src/registry.ts`、`run.ts`   | 缺少的是官方执行域的通用判据装配入口                                                                                   |
 | 加载链已持有 config，TargetTagCatalog 目前只在 `resolveExecutions` 局部作用域内加载                                   | `packages/recall/src/load.ts`                 | 内部运行加载结果需要保留 catalog，公开加载形状不必扩大                                                                 |
 | `--approve-live` CLI 开关已存在，并经 `loadRecall` 归一化后进入 `resolveRecallExecution`                              | `packages/recall/src/cli.ts`、`load.ts`       | 第 6 节是同一 boolean 的透传接线，不是新增批准开关                                                                     |
-| Recall DSL 只有 turn 级 `expect`，无 session 级 expect                                                                | `packages/recall/src/schema.ts`、`compile.ts` | 引用收集只扫 `turn.expect`；session scope 工厂声明合法但当前不会被引用装配                                             |
+| 当时 Recall DSL 只有 turn 级 `expect`，尚无 case 级内置 Judge                                                         | `packages/recall/src/schema.ts`、`compile.ts` | 该事实仅用于说明当时的装配切口；现行 turn/case 引用与评价语义以轮次级断言规格为准                                      |
 | 编译期 `assertRegisteredMetrics` 只按 `scope === "turn"` 过滤判据名验证引用                                           | `packages/recall/src/compile.ts`              | 编译器只需 name/scope 描述符，判据描述符化即可兼容工厂                                                                 |
 | `runCriteria` 已按 scope + name 和字段存在分派已有 Observation                                                        | `packages/observation/src/criteria-runner.ts` | 不新增断言调度器，也不用 truthy 判断是否启用判据                                                                       |
 | `JudgeAssertionOptions` 当前是含必填 `client` 的导出 interface                                                        | `packages/assertions/src/judge/assertion.ts`  | 改为判别联合 `type`；包为 0.0.0 private，类型层破坏可接受，但须在 README 记录                                          |

@@ -74,10 +74,10 @@ export interface RecallCaseDefinition {
   readonly expect?: RecallCaseExpectDefinition;
 }
 
-/** 单轮声明。 */
+/** 单轮声明；Judge 与 case 共用断言 DSL，按数组位置归因。 */
 export interface RecallTurnDefinition {
   readonly send: string;
-  readonly expect?: Record<string, unknown>;
+  readonly expect?: RecallCaseExpectDefinition;
   readonly timeoutMs?: number;
 }
 
@@ -274,14 +274,13 @@ function parseTurn(
   if (typeof value.send !== "string" || value.send.length === 0) {
     throw schemaError(filePath, at + ".send 不得为空字符串");
   }
-  if (value.expect !== undefined && !isRecord(value.expect)) {
-    throw schemaError(filePath, at + ".expect 必须是对象");
-  }
   const timeoutMs = optionalTimeout(value.timeoutMs, filePath, at);
   return {
     send: value.send,
-    ...(value.expect
-      ? { expect: value.expect as Record<string, unknown> }
+    ...(value.expect !== undefined
+      ? {
+          expect: parseRecallCaseExpect(value.expect, filePath, at + ".expect"),
+        }
       : {}),
     ...(timeoutMs ? { timeoutMs } : {}),
   };
@@ -307,11 +306,12 @@ function parseCase(
   if (value.metadata !== undefined && !isRecord(value.metadata)) {
     throw schemaError(filePath, at + ".metadata 必须是对象");
   }
+  const turns = value.turns.map((turn, turnIndex) =>
+    parseTurn(turn, filePath, at, turnIndex),
+  );
   return {
     id,
-    turns: value.turns.map((turn, turnIndex) =>
-      parseTurn(turn, filePath, at, turnIndex),
-    ),
+    turns,
     ...(value.timeoutMs !== undefined
       ? { timeoutMs: optionalTimeout(value.timeoutMs, filePath, at) }
       : {}),

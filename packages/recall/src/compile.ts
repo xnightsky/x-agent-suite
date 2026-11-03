@@ -71,7 +71,7 @@ function assertRegisteredMetrics(
   for (const item of definition.cases) {
     for (const turn of item.turns) {
       for (const metric of Object.keys(turn.expect ?? {})) {
-        assertRegistered("turn", metric, item.id);
+        if (metric !== "judge") assertRegistered("turn", metric, item.id);
       }
     }
     for (const metric of Object.keys(item.expect ?? {})) {
@@ -204,6 +204,13 @@ export async function compileRecallFile(
     const context = item.context ?? definition.context;
     const provision = await compileProvision(context, plans, options);
     const caseExpect = compileRecallCaseExpect(item.expect);
+    const turns = item.turns.map((turn) => ({
+      definition: turn,
+      compiled: compileRecallCaseExpect(turn.expect),
+    }));
+    const turnAssertions = turns.map(({ compiled }) => ({
+      ...(compiled.judge ? { judge: compiled.judge } : {}),
+    }));
     const metadata = {
       ...item.metadata,
       recall: {
@@ -212,6 +219,7 @@ export async function compileRecallFile(
         caseId: item.id,
         provision: provision.attribution,
         ...(caseExpect.judge ? { judge: caseExpect.judge } : {}),
+        turnAssertions,
       },
     };
     attachRecallVariableContext(
@@ -220,7 +228,13 @@ export async function compileRecallFile(
     );
     scenarios.push({
       id: definition.id + "/" + item.id,
-      turns: item.turns.map((turn) => ({ ...turn })),
+      turns: turns.map(({ definition, compiled }) => ({
+        send: definition.send,
+        ...(compiled.expect ? { expect: compiled.expect } : {}),
+        ...(definition.timeoutMs !== undefined
+          ? { timeoutMs: definition.timeoutMs }
+          : {}),
+      })),
       ...(item.timeoutMs !== undefined ? { timeoutMs: item.timeoutMs } : {}),
       ...(caseExpect.expect ? { expect: caseExpect.expect } : {}),
       ...(provision.value !== undefined ? { provision: provision.value } : {}),

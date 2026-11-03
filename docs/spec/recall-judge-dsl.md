@@ -7,18 +7,18 @@ tags: [spec, recall-judge-dsl]
 
 # Recall 内置 Judge 与断言计分 DSL
 
-> 状态：第一阶段已实现，并通过默认 fake 回归与真实 Pi headless + loopback fake provider 集成验证；本文按断言直接计分的一期范围收口。
+> 状态：现行契约。case 级第一阶段已有验证；线性逐轮扩展的评价时机、归因和验收以 [Recall 轮次级断言](./recall-turn-assertion.md) 为准，新增行为须完成对应验证后再宣称落地。
 >
 > 一期不提供 `decision` DSL。机械断言与 AI 断言各自产生判断和独立贡献，所有已声明断言通过，测试才通过；真实 token、Judge 质量校准与消费者迁移不在默认验证范围内。
 
 ## 目标与一期范围
 
-- `turns` 描述主 Agent 的执行过程，case 级 `expect` 声明断言。
+- `turns` 描述主 Agent 的执行过程；`turns[].expect` 声明当前轮断言，`case.expect` 声明最终断言。
 - `expect.judge` 提供具名 AI 裁定池；机械断言继续由消费者注册 Criterion。
 - 每项机械判断、每个 AI rubric 都保留独立名称、是否通过、原因与得分。
 - 分值写在各断言自己的声明里，不再单独维护一张评分维度表。
 - 框架只做固定计分与求和，不提供阈值、分数组合补偿或一票否决配置。
-- 首版内置 Judge 只评 case 最后一轮文本；既有自定义判据的调度契约不因本设计批量改写。
+- 内置 Judge 在每个配置的评价点只读对应轮次文本；逐轮评价在下一次 `send` 前完成，case 最终评价单独执行。
 
 本设计不提供缺席计分机制。评测错误与被测内容未通过必须区分，但不为此增加第三种作者计分状态。
 
@@ -51,25 +51,26 @@ cases:
 
 执行顺序：
 
-1. 主 Agent 执行全部 send。
-2. 标准 Judge 只接收最后一轮文本，一次批量返回各 rubric 的 boolean verdict。
-3. 机械判据与每个 AI rubric 分别产生具名判断结果。
-4. 按各断言自己的 hit／miss 分值计算贡献，再求和。
+1. 主 Agent 执行当前 send，形成当前轮观测。
+2. 当前轮声明了 `turn.expect` 时，先完成本轮机械断言与一次批量 Judge，再发送下一轮。
+3. 全部轮次完成后执行 `case.expect`；其标准 Judge 只接收最后一轮文本，一次批量返回各 rubric 的 boolean verdict。
+4. 机械判据与每个 AI rubric 分别产生具名判断结果，按各自 hit／miss 分值计算贡献并统一求和。
 5. 所有已声明断言通过，case 才通过；报告同时保留总分与失败明细。
 
-## case 级 `expect`
+## `turn.expect` 与 `case.expect`
 
 ```text
 case
 ├── turns                 执行：发送什么、按什么顺序发送
-└── expect                断言：期望什么、各项如何计分
+│   └── turn.expect        当前轮断言，下一次 send 前完成
+└── expect                最终断言：全部轮次后执行
     ├── judge             AI rubric 与各项可选分值
     └── <custom-metric>   消费者注册的机械或其他判据输入
 ```
 
 不增加 `decision / dimensions / verdict / outcome` 作者引用层。已有 Criterion 与通用判据工厂仍是机械判断、产物检查和特殊证据的扩展入口；不把旧 decision 的 `eq / one_of / from` 改名后塞进新的框架 DSL。
 
-`expect.judge` 只出现在 case 级；首版不向 `turns[].expect` 开放内置 Judge。既有自定义逐轮判据保持原契约。
+`expect.judge` 可出现在 `turns[].expect` 与 case 级 `expect`，两种位置使用同一作者形状。逐轮 turnIndex、评价时机、完整命名、错误与树状设计空间见 [Recall 轮次级断言](./recall-turn-assertion.md)。
 
 ## `judge`：具名裁定池
 
@@ -126,9 +127,9 @@ expect:
 
 ### 输入与会话边界
 
-- 每个含 judge 的 case 对最后一轮 `turn.text` 执行一次批量裁定。
-- 标准 Judge 不读取主对话历史、中间答案、文件、工具状态或 workspace。
-- 缺失最终输出等执行错误在 Judge 前终止，不转换成内容不通过。
+- 每个含 judge 的 turn 对该轮 `turn.text` 执行一次批量裁定；case 级 judge 对最后一轮文本另执行一次。
+- 标准 Judge 不读取主对话历史、其他轮答案、文件、工具状态或 workspace。
+- 缺失所配置轮次输出等执行错误在 Judge 前终止，不转换成内容不通过。
 - 默认复用主执行同源的 target、config、TargetTags、live 批准、mode、cliRef、profile 与 transport。
 - 每次 attempt 创建独立 backend／Driver；borrowed 使用独立单轮 spec、`effects: none` 和空执行参数。
 - 支持同步／异步 profile 工厂；创建受 abort 管理，取消后迟到的 Driver 仍须关闭。
@@ -179,7 +180,7 @@ casePass = 所有已声明断言细项的 pass 均为 true
 
 - `@x-agent-suite/assertions` 负责把 `JudgeOutcome` 展开为逐 rubric 的原始 name/pass/reason/0..1 结果，并提供 score 封闭校验、独立默认值与 `pass ? hit : miss` 贡献计算。既有 `createJudgeAssertion` 复用同一适配，公开行为不变。
 - `@x-agent-suite/observation` 的 `runCriteria` 在结果源校验机械与 AI 判据的 boolean pass、字符串 reason 和 0..1 有限 score；缺结果或畸形结果是评测错误。
-- Recall 只负责作者 YAML、最后文本选择、registry 装配、resolver 预检缓存和报告投影。静态 Criterion 与工厂都可在注册项声明 `assertionScore`；只对实际引用在装配期同步解析一次，按 execution、scenario 与判据出现位置缓存，运行/重试/报告阶段不再调用。
+- Recall 只负责作者 YAML、各评价位置的文本选择、registry 装配、resolver 预检缓存和报告投影。静态 Criterion 与工厂都可在注册项声明 `assertionScore`；只对实际引用在装配期同步解析一次，按 execution、scenario 与判据出现位置缓存，运行/重试/报告阶段不再调用。
 - resolver 返回值必须是同步普通对象，只允许 hit/miss；Promise、null、数组、额外字段、非有限数和 resolver 抛错均为定义错误 CLI=2，在主 Driver 前拒绝。resolver 不进入 ScenarioSpec 或报告，不得启动 Driver 或联网。
 - 报告 `result.artifact.outcomes` 原样保留既有 0..1 标准分；`result.artifact.assertions` 另存 name/source/pass/reason/score 贡献，`result.artifact.rawScore` 为贡献之和。贡献不会回写 CriterionOutcome。
 
@@ -202,11 +203,11 @@ casePass = 所有已声明断言细项的 pass 均为 true
 
 通用 Judge、独立 Assertions 与既有聚合机的合法公开调用保持兼容；通用裁定/分值原语归 Assertions，CriterionResult 形状校验归 Observation，Recall 不再维护第二套断言引擎。
 
-## 第一阶段验收
+## 默认验收
 
 默认使用 fake transport、合成 registry 与 Driver，保持零 token：
 
-- 多轮 case 只把最后一轮文本送入标准 Judge。
+- 每个配置的 turn 与 case 评价点只把对应文本送入标准 Judge；当前轮评价先于下一次 send。
 - 简写／完整 judge 均支持各 rubric 的可选 score，评分配置不进入 Judge prompt。
 - 每个机械结果与 AI rubric 独立保留名称、pass、reason 和得分。
 - score 可省略，默认 hit=1／miss=-1；只写 hit、只写 miss、hit=0、显式 miss=0 与其他有限分值均按声明加减分。
@@ -217,7 +218,7 @@ casePass = 所有已声明断言细项的 pass 均为 true
 - 旧 decision DSL 与非法 score 在预检拒绝，不启动主执行或 Judge。
 - 同源批准、独立会话、取消与清理保持既有安全要求。
 
-上述一期行为已由默认 fake transport、合成 registry/Driver 与官方 CLI 子进程回归验证。另经 `E2E_PI_RECALL=1 E2E_PI_PTY=1 pnpm ittest` 验证真实宿主：既有 Pi PTY 两项与新 Recall headless 一项均通过，覆盖两次主单轮请求、一次独立 Judge、rawScore=3、case FAIL/CLI=0、权限隔离和现场清理，零 token。另经 `pnpm ittest:token:cedar-judge --carrier pi --approve-live` 完成真实 provider/token 的 Cedar 单轮 smoke：机械 answer-contract 与 AI ready 通过、AI forbidden 未通过，rawScore=4、case FAIL/CLI=0，现场已清理。共享 PTY 对话历史、其他消费者迁移及 Judge 质量校准仍未验证。
+线性逐轮行为已由默认 fake transport、合成 registry/Driver 与官方 CLI 子进程回归验证，覆盖逐轮文本、下一次 send 前评价、turn/case 独立调用、完整命名、跨轮计分和错误后停止；既有 case 级历史真实宿主证据不替代这些新增用例。真实 provider/token、其他消费者迁移及 Judge 质量校准仍不属于默认证据。
 
 ## 后续设计
 
@@ -225,13 +226,12 @@ casePass = 所有已声明断言细项的 pass 均为 true
 
 `decision` 移到 [Recall Decision 预设计](./future/recall-decision-pre-design.md)，不属于一期。只有需要“允许部分失败但达到通过线”、组合结果、一票否决或跨阶段评分时再打开；不因机械与 AI 混合计分就引入它。
 
-### 分类、条件分支、逐轮断言与提前终止
+### 分类、条件分支与提前终止
 
-后续能力按职责分别设计，不要求先实现 decision：
+线性 [轮次级断言](./recall-turn-assertion.md) 已转为现行契约，其文档第 9 节保留树状 turn 设计空间，但不把树状执行提前变成当前能力。其他后续能力按职责分别设计，不要求先实现 decision：
 
 - [分类预设计](./future/recall-classification-pre-design.md)：choices／else 产出受约束类别。
 - [条件分支预设计](./future/recall-conditional-branching-pre-design.md)：按条件执行内嵌子步骤，结束后自然继续外层，不暴露跳表。
-- [轮次级断言预设计](./future/recall-turn-assertion-pre-design.md)：在哪轮配置就在哪轮评价。
 - [提前终止预设计](./future/recall-early-termination-pre-design.md)：onFail:stop 在明确失败后停止。
 
 重要分支通过多个 case 覆盖，模型方差通过 repeat 观察，不要求单次运行走完所有路径。原混合文档已改为 [预设计索引](./future/recall-classification-branching-pre-design.md)。

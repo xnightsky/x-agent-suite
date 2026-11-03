@@ -340,7 +340,48 @@ test("机械判据与原型属性同名时仍使用机械来源和预检分值",
     })),
     [
       { name: "toString", source: "mechanical", score: 7 },
-      { name: "accurate", source: "ai", score: 1 },
+      { name: "judge.accurate", source: "ai", score: 1 },
     ],
   );
+});
+
+test("turn 机械 resolver 预检一次并进入完整归因与 rawScore", async () => {
+  const input = { score: { hit: 7 } };
+  const calls: unknown[] = [];
+  const current: ScenarioSpec = {
+    id: "suite/turn-score",
+    turns: [{ send: "main", expect: { scored: input } }],
+    metadata: { recall: { turnAssertions: [{}] } },
+  };
+  const scored = {
+    name: "scored",
+    scope: "turn" as const,
+    assertionScore: (expect: unknown) => {
+      calls.push(expect);
+      return { hit: 7 };
+    },
+    evaluate: () => booleanResult(true),
+  };
+  preflightRecallAssertionScores({
+    registry: registry([scored]),
+    scenarios: [current],
+    execution: EXECUTION,
+  });
+  const raw = await runScenarioSpec(current, {
+    createDriver: driver,
+    criteria: [scored],
+  });
+  const result = adaptRecallAssertionResult(current, raw, EXECUTION);
+  assert.deepEqual(calls, [input]);
+  assert.equal(result.artifact.outcomes[0]!.name, "scored");
+  assert.deepEqual(result.artifact.assertions, [
+    {
+      name: "scored",
+      source: "mechanical",
+      pass: true,
+      reason: "通过",
+      score: 7,
+    },
+  ]);
+  assert.equal(result.artifact.rawScore, 7);
 });

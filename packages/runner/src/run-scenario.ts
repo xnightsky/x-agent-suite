@@ -1,6 +1,6 @@
 /**
  * @module @x-agent-suite/runner/run-scenario
- * ScenarioSpec 执行器：逐轮驱动 → 会话观测 → 判据调度 → 可选聚合 → ScenarioResult。
+ * ScenarioSpec 执行器：逐轮驱动与即时判据 → 会话判据 → 可选聚合 → ScenarioResult。
  *
  * 不变量：
  * - 基础设施失败（启动失败、超时、driver 报错）显式抛错；评分不达标只进 Result；
@@ -66,6 +66,22 @@ async function sendWithTimeout(
   }
 }
 
+/** 按当前已执行轮次构造会话观测；逐轮判据不能看到未来输出。 */
+function createSessionObservation(
+  spec: ScenarioSpec,
+  turns: TurnObservation[],
+): SessionObservation {
+  return {
+    driver: spec.id,
+    turns: [...turns],
+    text: turns.map((turn) => turn.text).join("\n"),
+    toolCalls: turns.flatMap((turn) => turn.toolCalls),
+    commands: [],
+    exhausted: false,
+    metadata: spec.metadata ?? {},
+  };
+}
+
 /** 执行一个 ScenarioSpec，返回结构化结果（含判定明细与可选聚合）。 */
 export async function runScenarioSpec(
   spec: ScenarioSpec,
@@ -77,6 +93,7 @@ export async function runScenarioSpec(
   const driver = await deps.createDriver(spec);
   const turns: TurnObservation[] = [];
   const observations: Observation[] = [];
+  const outcomes: CriterionOutcome[] = [];
   const startedAt = Date.now();
 
   try {
@@ -97,26 +114,28 @@ export async function runScenarioSpec(
         endedAt: Date.now(),
         metadata: observation.metadata ?? {},
       });
+      outcomes.push(
+        ...(await runCriteria({
+          session: createSessionObservation(spec, turns),
+          criteria: deps.criteria,
+          turnExpects: turns.map((_, current) =>
+            current === index ? turn.expect : undefined,
+          ),
+        })),
+      );
     }
   } finally {
     await driver.close("runScenarioSpec 完成");
   }
 
-  const session: SessionObservation = {
-    driver: spec.id,
-    turns,
-    text: turns.map((turn) => turn.text).join("\n"),
-    toolCalls: turns.flatMap((turn) => turn.toolCalls),
-    commands: [],
-    exhausted: false,
-    metadata: spec.metadata ?? {},
-  };
-  const outcomes = await runCriteria({
-    session,
-    criteria: deps.criteria,
-    turnExpects: spec.turns.map((turn) => turn.expect),
-    sessionExpect: spec.expect,
-  });
+  const session = createSessionObservation(spec, turns);
+  outcomes.push(
+    ...(await runCriteria({
+      session,
+      criteria: deps.criteria,
+      sessionExpect: spec.expect,
+    })),
+  );
   const aggregate = spec.aggregate
     ? resolveAggregate(outcomes, spec.aggregate)
     : undefined;

@@ -9,19 +9,18 @@ tags: [recall, pre-design]
 
 > 状态：后续预设计索引，不是已实现契约，不进入一期实施范围。
 >
-> 原文同时讨论分类、分支、逐轮断言和提前停止，现已按职责拆分并统一归档至 `docs/spec/future/`。本文保留专题组合导航，不重复定义字段与算法。
+> 原文同时讨论分类、分支、逐轮断言和提前停止，现已按职责拆分。线性轮次断言已转为 [现行规格](../recall-turn-assertion.md)，本文只为其余 future 专题保留组合导航，不重复定义字段与算法。
 >
 > 一期以 [内置 Judge 与断言计分 DSL](../recall-judge-dsl.md) 为准；score 可省略，默认 `{hit: 1, miss: -1}`，机械与 boolean AI 判断相同。
 
 ## 统一命名与职责
 
-独立文档统一使用 `recall-<主题>-pre-design.md`：
+本目录独立预设计文档统一使用 `recall-<主题>-pre-design.md`：
 
 | 文档                                                                  | 只回答的问题                         | 核心作者字段                                |
 | --------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------- |
 | [Recall 分类预设计](./recall-classification-pre-design.md)            | 当前输出属于哪个已声明类别？         | judge 项内的 choices／else。                |
 | [Recall 条件分支预设计](./recall-conditional-branching-pre-design.md) | 读取已有结果后，执行哪组子步骤？     | branch.cases／when／turns／else。           |
-| [Recall 轮次级断言预设计](./recall-turn-assertion-pre-design.md)      | 在哪一轮评价、如何保留各轮结果？     | turns[].expect 与 case.expect。             |
 | [Recall 提前终止预设计](./recall-early-termination-pre-design.md)     | 哪种明确失败应停止剩余轮次？         | onFail:stop。                               |
 | [Recall Decision 预设计](./recall-decision-pre-design.md)             | 如何对已产生的判断执行组合通过政策？ | decision.dimensions、threshold 等未来草案。 |
 

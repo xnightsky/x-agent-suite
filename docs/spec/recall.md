@@ -125,7 +125,7 @@ export default registry;
 
 ### 考卷侧驱动：expect 即判据输入
 
-> 以下内置 Judge 与断言直接计分为第一阶段已确认的目标契约，尚未实现；decision 已移到未来，实施计划需按收缩范围重排。
+> 内置 Judge 与断言直接计分是现行契约；case 与线性逐轮评价位置分别见 [Judge DSL](./recall-judge-dsl.md) 和 [轮次级断言](./recall-turn-assertion.md)，decision 仍留在未来。
 >
 > case 的执行过程与断言配置分离，`expect` 是断言根：
 
@@ -143,16 +143,16 @@ cases:
           rubric: 不确定的内容必须明说
 ```
 
-首版标准 Judge 只评最后一轮回答，默认使用主流程的 AI 配置，每次裁定创建独立会话。机械断言与每个 AI rubric 在自己的声明中配置分值：score 可选，默认 hit=1／miss=-1；命中配 3 就加 3，miss 不写默认扣 1，显式配 0 才不扣分，hit=0 可只累计失败扣分。框架统一求和，所有已声明断言通过测试才通过，正总分不能抵消失败。一期不提供 decision、评分维度、阈值、否决、归一分或缺席映射。Judge 缺少必需裁定或评测失败仍报错，不伪装成正常零分。完整作者接口见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
+标准 Judge 在 `turn.expect` 配置时只评当前轮、并在下一次 send 前完成；在 `case.expect` 配置时只评最后一轮。默认使用主流程的 AI 配置，每次裁定创建独立会话。机械断言与每个 AI rubric 在自己的声明中配置分值：score 可选，默认 hit=1／miss=-1；命中配 3 就加 3，miss 不写默认扣 1，显式配 0 才不扣分，hit=0 可只累计失败扣分。框架统一求和，所有已声明断言通过测试才通过，正总分不能抵消失败。不提供 decision、评分维度、阈值、否决、归一分或缺席映射。Judge 缺少必需裁定或评测失败仍报错，不伪装成正常零分。完整作者接口见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
 
-其他 expect 键继续按名称引用 registry 自定义判据，值原样透传给对应 `evaluate`。标准 Judge 与自定义判据可以在同一 case 级 `expect` 组合。
+其他 expect 键继续按名称引用 registry 自定义判据，值原样透传给对应 `evaluate`。标准 Judge 与自定义判据可以在同一 turn 或 case 级 `expect` 组合。
 
-| 谁            | 能决定什么                                                            | 在哪写         |
-| ------------- | --------------------------------------------------------------------- | -------------- |
-| 考卷作者      | 最终回答的 rubric、各断言分值、是否启用标准 Judge、引用哪些自定义判据 | 考卷 YAML      |
-| 命令行调用方  | 主执行与默认 Judge 同源使用的 target 与 live 批准                     | CLI 参数       |
-| registry 作者 | 自定义判据、执行 profile、transport 与其他扩展实现                    | TS 模块        |
-| 框架          | 标准 Judge 装配、独立裁定会话与结果映射                               | Recall / Judge |
+| 谁            | 能决定什么                                                              | 在哪写         |
+| ------------- | ----------------------------------------------------------------------- | -------------- |
+| 考卷作者      | 各评价位置的 rubric、各断言分值、是否启用标准 Judge、引用哪些自定义判据 | 考卷 YAML      |
+| 命令行调用方  | 主执行与默认 Judge 同源使用的 target 与 live 批准                       | CLI 参数       |
+| registry 作者 | 自定义判据、执行 profile、transport 与其他扩展实现                      | TS 模块        |
+| 框架          | 标准 Judge 装配、独立裁定会话与结果映射                                 | Recall / Judge |
 
 ## 单次运行参数
 
@@ -239,7 +239,7 @@ cases:
       - send: 改用文件资源
 ```
 
-- 顶层字段为 `version/id/context/plans/cases/vars`；plan 与 case 也可声明 `vars`，按 case > 选中 plan > 文档浅合并。case 可另含 `context` 与 `expect`，与 `id/turns/timeoutMs/metadata/vars` 并列。变量仅用于显式 opt-in 的判据字段，详见 [Recall 变量机制](./recall-variables.md)。内置 Judge 与逐项计分目标契约见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
+- 顶层字段为 `version/id/context/plans/cases/vars`；plan 与 case 也可声明 `vars`，按 case > 选中 plan > 文档浅合并。case 可另含 `context` 与 `expect`，与 `id/turns/timeoutMs/metadata/vars` 并列。线性 turn 不需要额外标识字段，逐轮评价与位置归因见 [Recall 轮次级断言](./recall-turn-assertion.md)。变量仅用于显式 opt-in 的判据字段，详见 [Recall 变量机制](./recall-variables.md)。内置 Judge 与逐项计分目标契约见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
 - `plans.<name>.resources` 只是**当前 Recall YAML 文档内部**的资源别名注册表；禁止覆盖内置 `none`，不支持 extends、继承、深合并或跨 YAML 引用。
 - 全局 `context.plan` 是所有 case 的默认；case 未声明 context 时继承，声明时整块覆盖。`context.plan: none` 清空全局资源；case 也可改用 `context.files`。
 - 同一 context 的 `files` 与 `plan` 互斥。未注册 plan 或跨文件引用在 Driver 前失败。

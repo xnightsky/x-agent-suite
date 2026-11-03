@@ -1,0 +1,22 @@
+version: 1
+id: turn-assertion-example
+cases:
+  - id: linear
+    turns:
+      - send: 准备回答
+        expect:
+          judge:
+            ai-a:
+              rubric: 准备标准
+      - send: 给出结论
+        expect:
+          text-contains: [最终答案]
+          judge:
+            ai-b:
+              rubric: 失败标准
+              score: { miss: 0 }
+    expect:
+      judge:
+        ai-a:
+          rubric: 最终标准
+          score: { hit: 3 }

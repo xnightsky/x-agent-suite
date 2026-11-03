@@ -112,7 +112,7 @@ casePass = 所有已声明断言细项均通过
 - **Decision：**组合评分政策，不能隐式改变一期全通过规则。
 - **[分类](../spec/future/recall-classification-pre-design.md)：**只产 choice，不自动计分或控制执行。
 - **[条件分支](../spec/future/recall-conditional-branching-pre-design.md)：**读取已有结果执行作者内嵌的子步骤，结束后自然继续外层；通过 case 与 repeat 检查覆盖及稳定性。
-- **[轮次级断言](../spec/future/recall-turn-assertion-pre-design.md)：**明确评价时机、结果身份与未执行轮次，不自动引入跨轮组合政策。
+- **[轮次级断言](../spec/recall-turn-assertion.md)：**明确评价时机、结果身份与未执行轮次，不自动引入跨轮组合政策。
 - **[提前终止](../spec/future/recall-early-termination-pre-design.md)：**独立记录停止原因，不能把未执行伪造为通过。
 - **独立 Judge 选择与质量校准：**按实际需求设计，真实调用走显式 token 入口。
 

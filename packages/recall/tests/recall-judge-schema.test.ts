@@ -172,3 +172,52 @@ test("__proto__ 是合法 rubric/机械名，不得被内部对象原型吞掉",
   assert.deepEqual(Object.keys(compiled.expect ?? {}), ["__proto__"]);
   assert.deepEqual(compiled.expect?.["__proto__"], { raw: true });
 });
+
+test("线性 turn Judge 复用 case DSL", () => {
+  const definition = parseRecallYaml(
+    stringify({
+      version: 1,
+      id: "turn-schema",
+      cases: [
+        {
+          id: "case",
+          turns: [
+            {
+              send: "准备",
+              expect: {
+                judge: { ready: { rubric: "是否就绪", score: { hit: 0 } } },
+              },
+            },
+          ],
+        },
+      ],
+    }),
+    "suite.yaml",
+  );
+  assert.deepEqual(definition.cases[0]!.turns[0]!.expect?.judge, {
+    rubrics: { ready: { rubric: "是否就绪", score: { hit: 0 } } },
+  });
+});
+
+test("turn Judge 的非法 score 与 rubric 不绕过封闭校验", () => {
+  for (const judge of [
+    { ok: { rubric: "x", score: { hit: null } } },
+    { "bad.name": { rubric: "x" } },
+  ]) {
+    assert.throws(() =>
+      parseRecallYaml(
+        stringify({
+          version: 1,
+          id: "invalid-turn-judge",
+          cases: [
+            {
+              id: "case",
+              turns: [{ send: "a", expect: { judge } }],
+            },
+          ],
+        }),
+        "suite.yaml",
+      ),
+    );
+  }
+});

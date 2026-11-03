@@ -230,7 +230,7 @@ test("工厂异常包装为只含 scope:name 与阶段，cause 保留且不回�
   );
 });
 
-test("session scope 工厂声明合法，但当前 DSL 无 session 引用入口，装配期不调用", async () => {
+test("仅有 turn 引用时 session scope 工厂不调用", async () => {
   const calls: RecallCriterionFactoryContext[] = [];
   const criteria = await assemble(
     {

@@ -24,7 +24,6 @@ tags: [future, pre-design]
 | [Recall 后续能力预设计总览](./recall-classification-branching-pre-design.md) | 下列 Recall 候选能力的职责与组合关系      | 只作导航，不作为整包上线计划                   |
 | [Recall 分类](./recall-classification-pre-design.md)                         | choices／else 与受约束类别                | boolean 判断不能表达需要记录的有限类别         |
 | [Recall 条件分支](./recall-conditional-branching-pre-design.md)              | 条件树、内嵌子步骤与自然汇合              | 有明确条件执行需求，并先解决可比性原则冲突     |
-| [Recall 轮次级断言](./recall-turn-assertion-pre-design.md)                   | 评价时机、结果身份与汇总                  | 当前 Recall 作者层需要逐轮评价                 |
 | [Recall 提前终止](./recall-early-termination-pre-design.md)                  | onFail:stop、报告与清理                   | 明确失败后继续执行的成本或风险不可接受         |
 | [Recall Decision](./recall-decision-pre-design.md)                           | 组合计分、阈值、否决与结果引用            | 固定全通过不再满足具体消费者政策               |
 

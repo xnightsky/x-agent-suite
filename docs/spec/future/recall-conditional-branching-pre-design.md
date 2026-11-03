@@ -31,8 +31,7 @@ tags: [recall, conditional-branching]
 ```yaml
 # PRE-DESIGN ONLY
 turns:
-  - id: route
-    send: 判断当前信息是否足够回答
+  - send: 判断当前信息是否足够回答
     expect:
       judge:
         route:
@@ -43,10 +42,10 @@ turns:
 
   - branch:
       cases:
-        - when: turn.route.judge.route == answer
+        - when: turn.0.judge.route == answer
           turns:
             - send: 给出最终答案
-        - when: turn.route.judge.route == clarify
+        - when: turn.0.judge.route == clarify
           turns:
             - send: 请求补充缺失信息
       else: []
@@ -60,10 +59,10 @@ answer、clarify 的步骤是各自分支的子节点，不是全局标签。oth
 
 根 turns 和每个分支内的 turns 都是顺序步骤数组，元素恰好是以下一种：
 
-| 节点      | 形状与规则                                                    |
-| --------- | ------------------------------------------------------------- |
-| 普通 turn | 延续 send、expect、可选 id／onFail 等轮次字段。               |
-| 分支节点  | 恰含 branch；不能与 send、expect、id、onFail 等轮次字段混用。 |
+| 节点      | 形状与规则                                                |
+| --------- | --------------------------------------------------------- |
+| 普通 turn | 延续 send、expect、onFail 等轮次字段。                    |
+| 分支节点  | 恰含 branch；不能与 send、expect、onFail 等轮次字段混用。 |
 
 branch 对象只有：
 
@@ -81,8 +80,8 @@ branch 对象只有：
 when 只接受：
 
 ```text
-turn.<id>.judge.<name> == <类别名或 true/false>
-turn.<id>.outcome.<name> == <true/false>
+turn.<path>.judge.<name> == <类别名或 true/false>
+turn.<path>.outcome.<name> == <true/false>
 ```
 
 - Judge 引用可以是分类或 boolean，按来源类型解释右值；分类精确匹配声明类别，boolean 只接受 true／false。
@@ -93,7 +92,7 @@ turn.<id>.outcome.<name> == <true/false>
 - 运行时应有结果缺失或无效是评测错误，不使用 else 恢复。
 - 不读取分数、case 最终裁定或 Decision，不支持 &&、||、!、数值比较、插值、函数或自由脚本。
 
-被引用的 turn 需要稳定 id，所有已声明 turn id 在同一 case 内唯一，不含点号、空白或等号；它仅用于证据身份和结果引用，不是可跳转目标。branch 本身不需要作者命名。
+被引用的 turn 使用由作者树字段和数组位置生成的结构路径，不需要作者维护 id；它仅用于证据身份和结果引用，不是可跳转目标。branch 本身也不需要作者命名。
 
 结果作用域只限制条件可读取什么，不删除报告中的逐轮证据。
 
@@ -102,8 +101,7 @@ turn.<id>.outcome.<name> == <true/false>
 ```yaml
 # PRE-DESIGN ONLY
 turns:
-  - id: prepare
-    send: 确认执行前提
+  - send: 确认执行前提
     expect:
       judge:
         ready:
@@ -111,10 +109,9 @@ turns:
 
   - branch:
       cases:
-        - when: turn.prepare.judge.ready == true
+        - when: turn.0.judge.ready == true
           turns:
-            - id: answer
-              send: 给出答案并说明是否需要核对
+            - send: 给出答案并说明是否需要核对
               expect:
                 judge:
                   needs_check:
@@ -123,7 +120,7 @@ turns:
                     else: no
             - branch:
                 cases:
-                  - when: turn.answer.judge.needs_check == yes
+                  - when: turn.1.cases.0.turns.0.judge.needs_check == yes
                     turns:
                       - send: 只进行一次额外核对
                 else: []
@@ -182,9 +179,9 @@ turns:
 
 - 分类各路径、boolean 条件、首命中顺序、必填空 else 与空命中子序列。
 - 嵌套返回、公共后续只执行一次、不误执行相邻分支、线性场景兼容。
-- 父结果继承、分支局部结果、越作用域／未来引用拒绝与全 case id 唯一。
+- 父结果继承、分支局部结果、结构路径唯一与越作用域／未来引用拒绝。
 - 缺结果不走 else，未选择子树零调用、不计分。
 - 默认继续、onFail 停止整个 case、外层后续被停止、最终评价时机及清理。
 - 两个 YAML 示例在固定脚本结果下的路径、逐项得分和最终实际文本。
 
-本文未实现运行接缝、生产执行器或真实模型路径实验；文档算例验证不等于宿主集成验证。相关职责继续见 [轮次级断言](./recall-turn-assertion-pre-design.md) 与 [提前终止](./recall-early-termination-pre-design.md)。
+本文未实现运行接缝、生产执行器或真实模型路径实验；文档算例验证不等于宿主集成验证。相关职责继续见 [轮次级断言](../recall-turn-assertion.md) 与 [提前终止](./recall-early-termination-pre-design.md)。

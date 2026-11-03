@@ -22,8 +22,7 @@ tags: [recall, early-termination]
 ```yaml
 # PRE-DESIGN ONLY
 turns:
-  - id: prepare
-    send: 先读取规则并确认前提
+  - send: 先读取规则并确认前提
     expect:
       judge:
         ready:
@@ -32,8 +31,7 @@ turns:
             hit: 0
     onFail: stop
 
-  - id: act
-    send: 执行任务
+  - send: 执行任务
 
 expect:
   judge:
@@ -46,13 +44,13 @@ expect:
 ## 3. 字段与触发条件
 
 - onFail 只允许出现在 turn 上，首版唯一值为 stop。
-- 配置该字段的 turn 必须有稳定 id，且至少有一项 boolean 断言；仅有分类项不能触发它。
+- 配置该字段的 turn 必须至少有一项 boolean 断言；仅有分类项不能触发它。
 - 当前 turn 的所有机械／AI 断言完成后，只要有一项明确 pass=false，就触发停止。
 - 不以本轮总分、分数正负、某个分类类别或 Judge reason 文本推断失败。
 - 显式 miss=0 的失败仍触发；其他细项正分也不抵消它。
 - 不在一个批量 Judge 内遇到首项 false 就丢弃剩余裁定；保留本轮完整证据后停止后续 send。
 
-非法值、错误位置、缺少断言或非法 turn id 都在主 Driver 前拒绝。
+非法值、错误位置或缺少断言都在主 Driver 前拒绝。
 
 ## 4. 与条件分支、最终评价的顺序
 
@@ -91,7 +89,7 @@ expect:
 | 调用、超时、裁定／结果缺失等错误 | 基础设施／评测错误，CLI=1，不生成正常通过结论。  |
 | onFail DSL 非法                  | 定义错误，CLI=2，主 Driver 前拒绝。              |
 
-至少记录 terminal turn、触发的失败项、已执行路径、skipped 轮次、case 最终评价是否运行、总分与清理结果。不把正常分支返回、内容失败停止和错误终止混成一个 completed 布尔。
+至少记录 terminal turn 的结构位置、触发的失败项、已执行路径、skipped 轮次、case 最终评价是否运行、总分与清理结果。不把正常分支返回、内容失败停止和错误终止混成一个 completed 布尔。
 
 这些是报告语义草案，不预先发布新的公共枚举。
 

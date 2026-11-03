@@ -4,6 +4,14 @@
 
 ## Unreleased
 
+## 0.12.0 - 2026-11-03
+
+### Added
+
+- Pi Recall Driver 支持在同一 Driver 与隔离 sandbox 中通过专属 session-id/session-dir 恢复原生多轮历史，逐轮隔离事件与 usage；单轮保持 no-session，并发 sendPrompt 显式拒绝，close 覆盖进程与文件证据收尾取消窗口。
+- Recall 支持线性 `turns[].expect` 与 `case.expect`：当前轮评价在下一次 send 前完成，turn/case 内置 Judge 独立批量调用，逐轮 AI 按 turnIndex 归因，rawScore 跨轮汇总；内容失败默认继续，评测错误停止并清理。
+- 新增逐轮断言教程、实际 `.recall.yaml` 官方 CLI 验收和全仓 Recall YAML schema 守卫；树状 turn 仅保留 future 设计空间，不新增作者维护的 turn 标识字段。
+
 ## 0.11.0 - 2026-11-02
 
 ### Added

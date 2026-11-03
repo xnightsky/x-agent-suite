@@ -154,7 +154,7 @@ decision.rawScore = Σ dimensionPoints
 
 - [分类](./recall-classification-pre-design.md) 产 choice，不直接产分。
 - [条件分支](./recall-conditional-branching-pre-design.md) 只读作用域内已产生结果，执行内嵌子序列后继续外层；不读取尚未计算的 Decision 总分。
-- [轮次级断言](./recall-turn-assertion-pre-design.md) 使用 turn.<id>.judge.<name> 等稳定名称保留原始细项。
+- [轮次级断言](../recall-turn-assertion.md) 使用 turn.<index>.judge.<name> 等位置名称保留原始细项。
 - Decision 引用未执行轮次的结果时报评测错误，不把未走分支伪造为 0 分；作者应引用共同必经结果或另行拆 case。
 - when 的条件可见性仍按结构化分支作用域在加载期校验；Decision 的跨轮引用能力不授权条件读取兄弟分支或未来节点。
 - 现有 [通用聚合机](../scoring-aggregation.md) 保持原行为，未来接线由独立实施计划确认。

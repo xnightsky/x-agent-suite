@@ -1,6 +1,6 @@
 /**
  * @module @x-agent-suite/recall/assertion-dsl
- * case 级断言 DSL 与内部 Judge rubric 展开；作者分值不进入 Judge 裁定输入。
+ * turn/case 断言 DSL 与内部 Judge rubric 展开；作者分值不进入 Judge 裁定输入。
  */
 import type { ExpectBlock } from "@x-agent-suite/contracts";
 import {
@@ -24,7 +24,7 @@ export interface RecallJudgeRubricDefinition {
   readonly score?: RecallAssertionScore;
 }
 
-/** case 级内置 Judge 配置；简写与完整形态统一归一为 rubrics + 执行参数。 */
+/** turn/case 内置 Judge 配置；简写与完整形态统一归一为 rubrics + 执行参数。 */
 export interface RecallJudgeDefinition {
   readonly rubrics: Readonly<Record<string, RecallJudgeRubricDefinition>>;
   readonly timeoutMs?: number;
@@ -136,7 +136,7 @@ function parseJudge(
   };
 }
 
-/** 解析 case 级 expect；机械判据声明不包装、不改写。 */
+/** 解析 turn/case expect；机械判据声明不包装、不改写。 */
 export function parseRecallCaseExpect(
   value: unknown,
   filePath: string,
@@ -160,7 +160,7 @@ export function recallJudgeCriterionName(name: string): string {
   return "__recall_judge__:" + name;
 }
 
-/** 将 case expect 展开为 Runner 可调度形状，并保留私有 Judge 元数据。 */
+/** 将 turn/case expect 展开为 Runner 可调度形状，并保留私有 Judge 元数据。 */
 export function compileRecallCaseExpect(
   definition: RecallCaseExpectDefinition | undefined,
 ): CompiledRecallCaseExpect {

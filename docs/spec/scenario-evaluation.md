@@ -56,7 +56,7 @@ export interface ScenarioResult {
 | **Fuzzy**        | 返回文本包含 `done=true`                                              | regex / contains                                   |
 | **LLM judge**    | 模型回复是否满足自然语言 rubric                                       | `createJudgeAssertion`；Recall 内置 `expect.judge` |
 
-确定性检查与判据实现在 `@x-agent-suite/assertions`；`criteria` 与 observation 的旧检查入口只作兼容重导出。AI 判据只有显式启用后才执行模型调用。Recall 一期的 case 级 expect.judge、机械与 AI 断言直接计分见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)：逐项得分求和，全部断言通过才通过，不提供 decision。
+确定性检查与判据实现在 `@x-agent-suite/assertions`；`criteria` 与 observation 的旧检查入口只作兼容重导出。AI 判据只有显式启用后才执行模型调用。Recall 的 turn/case 级 `expect.judge`、机械与 AI 断言直接计分见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)：逐项得分求和，全部断言通过才通过，不提供 decision。
 
 通用 `evidence` 判据提供成功非空工具结果、workspace 路径、引用关联与 `not/allOf` 组合；它复用同一 Observation/Criterion 调度，错误与内容失败分离，详见 [访问痕迹证据断言](./evidence-assertions.md)。
 
@@ -64,7 +64,7 @@ export interface ScenarioResult {
 
 通用 AI 裁定执行、absent 与 not-evaluated 分层见 [judge.md](./judge.md)；Judge 只产具名布尔 verdict，不替代上述确定性层或静态聚合。
 
-`createJudgeAssertion({ name, client, timeoutMs?, maxRetries? })` 返回 `TurnCriterion`，该名称对应的每轮 `expect` 为 `JudgeRubric[]`。全部显式 verdict 为 true 才通过；真实 false 才映射为失败与 0 分；`not-evaluated` 与缺 verdict 分别抛带 `[not-evaluated:<kind>]` / `[absent]` 前缀的错误。`judgeAssertionResults` 向需要细项的调用方展开同一裁定，Recall 一期复用该接缝。`runCriteria` 统一拒绝缺结果、非 boolean pass、非字符串 reason 和越出 0..1/非有限 score。Recall case 级 KV 裁定池、各 rubric 可选 score 与完整执行配置已实现，只评最后一轮回答；每个 rubric 独立计分并与机械结果求和，正总分不能抵消失败，详见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
+`createJudgeAssertion({ name, client, timeoutMs?, maxRetries? })` 返回 `TurnCriterion`，该名称对应的每轮 `expect` 为 `JudgeRubric[]`。全部显式 verdict 为 true 才通过；真实 false 才映射为失败与 0 分；`not-evaluated` 与缺 verdict 分别抛带 `[not-evaluated:<kind>]` / `[absent]` 前缀的错误。`judgeAssertionResults` 向需要细项的调用方展开同一裁定，Recall 复用该接缝。`runCriteria` 统一拒绝缺结果、非 boolean pass、非字符串 reason 和越出 0..1/非有限 score。Recall turn/case 级 KV 裁定池、各 rubric 可选 score 与完整执行配置使用同一作者形状；逐轮评价只读当前轮并在下一次 send 前完成，case 评价只读最后一轮。每个 rubric 独立计分并与机械结果求和，正总分不能抵消失败，详见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
 
 ## 执行不变量
 

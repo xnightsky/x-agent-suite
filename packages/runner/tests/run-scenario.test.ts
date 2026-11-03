@@ -9,6 +9,7 @@ import type {
   Criterion,
   Observation,
   ScenarioSpec,
+  SessionObservation,
 } from "@x-agent-suite/contracts";
 import { MockDriver } from "@x-agent-suite/driver";
 import { runScenarioSpec, type RunnerArtifact } from "../src/run-scenario.ts";
@@ -242,4 +243,111 @@ test("空轮次场景显式抛错", async () => {
       }),
     /未声明任何轮次/,
   );
+});
+
+test("逐轮判据先于下一次 send，且 session 不含未来轮次", async () => {
+  const log: string[] = [];
+  let firstSession: SessionObservation | undefined;
+  const driver: AgentDriver = {
+    start: async () => {
+      log.push("start");
+    },
+    sendPrompt: async (text) => {
+      log.push("send:" + text);
+      return { text, toolCalls: [], toolCallsCount: 0, events: [] };
+    },
+    events: () => ({
+      [Symbol.asyncIterator]: () => ({
+        next: () => Promise.resolve({ done: true, value: undefined }),
+      }),
+    }),
+    close: async () => {
+      log.push("close");
+    },
+  };
+  const record: Criterion = {
+    name: "record",
+    scope: "turn",
+    evaluate: (turn, context) => {
+      if (turn.index === 0) firstSession = context.session;
+      const history = context.session.turns.map((item) => item.text).join(",");
+      log.push("eval:" + turn.text + ":" + history);
+      return { pass: true, score: 1, reason: "" };
+    },
+  };
+  const sessionRecord: Criterion = {
+    name: "session-record",
+    scope: "session",
+    evaluate: (session) => {
+      log.push("case:" + session.turns.map((item) => item.text).join(","));
+      return { pass: true, score: 1, reason: "" };
+    },
+  };
+  await runScenarioSpec(
+    makeSpec({
+      turns: [
+        { send: "first", expect: { record: true } },
+        { send: "second", expect: { record: true } },
+      ],
+      expect: { "session-record": true },
+    }),
+    { createDriver: () => driver, criteria: [record, sessionRecord] },
+  );
+  assert.equal(
+    firstSession?.turns.length,
+    1,
+    "首轮 session 不得随后续 push 增长",
+  );
+  assert.equal(firstSession?.text, "first");
+  assert.deepEqual(log, [
+    "start",
+    "send:first",
+    "eval:first:first",
+    "send:second",
+    "eval:second:first,second",
+    "close",
+    "case:first,second",
+  ]);
+});
+
+test("逐轮评测错误停止后续 send 并关闭 Driver", async () => {
+  const log: string[] = [];
+  const driver: AgentDriver = {
+    start: async () => {
+      log.push("start");
+    },
+    sendPrompt: async (text) => {
+      log.push("send:" + text);
+      return { text, toolCalls: [], toolCallsCount: 0, events: [] };
+    },
+    events: () => ({
+      [Symbol.asyncIterator]: () => ({
+        next: () => Promise.resolve({ done: true, value: undefined }),
+      }),
+    }),
+    close: async () => {
+      log.push("close");
+    },
+  };
+  const broken: Criterion = {
+    name: "broken",
+    scope: "turn",
+    evaluate: () => {
+      log.push("eval:first");
+      throw new Error("评测失败");
+    },
+  };
+  await assert.rejects(
+    runScenarioSpec(
+      makeSpec({
+        turns: [
+          { send: "first", expect: { broken: true } },
+          { send: "second" },
+        ],
+      }),
+      { createDriver: () => driver, criteria: [broken] },
+    ),
+    /评测失败/,
+  );
+  assert.deepEqual(log, ["start", "send:first", "eval:first", "close"]);
 });

@@ -52,6 +52,35 @@ cases:
 
 全局 `context.plan` 默认作用于全部 case；case context 可整块覆盖，`plan: none` 清空，`files` 与 `plan` 互斥。不得跨 YAML 引用 plans，也没有执行级 ProvisionPlan。
 
+## 逐轮断言与位置归因
+
+线性 turn 不需要额外的节点标识字段。直接在各轮声明 `expect` 即可，框架用 0-based `turnIndex` 归因：
+
+```yaml
+cases:
+  - id: linear-turns
+    turns:
+      - send: 准备回答
+        expect:
+          judge:
+            ready:
+              rubric: 是否准确说明准备结果
+      - send: 给出最终结论
+        expect:
+          text-contains: [最终答案]
+          judge:
+            grounded:
+              rubric: 是否使用了本轮证据
+    expect:
+      judge:
+        final_quality:
+          rubric: 最终答案是否满足任务要求
+```
+
+当前轮断言在下一次 `send` 前完成。上例产生 `turn.0.judge.ready`、`turn.1.judge.grounded`、机械判据原名 `text-contains` 和 `judge.final_quality`；各评价点独立调用和计分。既有旧考卷不需要补任何标识字段。
+
+可直接验收的落盘考卷是 [`packages/recall/tests/fixtures/turn-assertion/.recall.yaml`](../../../packages/recall/tests/fixtures/turn-assertion/.recall.yaml)，由 `packages/recall/tests/recall-turn-assertion.test.ts` 经官方 CLI 验证位置归因、调用顺序和 rawScore。完整契约见 [Recall 轮次级断言](../../spec/recall-turn-assertion.md)。
+
 ## 控制资源安装状态与位置
 
 `resources` 的 `install` 控制是否将资源复制到隔离现场，`destination` 控制隔离工作区内的位置：
