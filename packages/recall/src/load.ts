@@ -24,7 +24,14 @@ import {
   type RecallResolvedExecution,
 } from "./execution.ts";
 import { loadRecallRegistry, type RecallRegistry } from "./registry.ts";
-import { isNonEmptyString, isPositiveInteger, isRecord } from "./validation.ts";
+import {
+  assertOptionalBoolean,
+  assertOptionalNonEmptyString,
+  encodeSafePathSegment,
+  isNonEmptyString,
+  isPositiveInteger,
+  isRecord,
+} from "./validation.ts";
 import { copyExecutionParams } from "./execution-params.ts";
 
 /** Recall 装载选项；selection 至少包含 carrier/provider/model 之一。 */
@@ -118,11 +125,11 @@ function liveConfigOptions(
   homeDir?: string,
 ): LiveConfigOptions {
   const env = { ...process.env };
-  if (liveConfigPath) env[LIVE_CONFIG_PATH_ENV] = liveConfigPath;
+  if (liveConfigPath !== undefined) env[LIVE_CONFIG_PATH_ENV] = liveConfigPath;
   return {
     env,
     repoRoot: cwd,
-    ...(homeDir ? { homeDir } : {}),
+    ...(homeDir !== undefined ? { homeDir } : {}),
     ...createHarnessLiveConfigHooks(),
   };
 }
@@ -207,23 +214,25 @@ function resolveLoadPaths(
   readonly outDir: string;
 } {
   return {
-    ...(options.registryPath
+    ...(options.registryPath !== undefined
       ? { registryPath: resolve(cwd, options.registryPath) }
       : {}),
-    ...(options.planPath
+    ...(options.planPath !== undefined
       ? {
           planPath: options.planPath.startsWith("use:")
             ? options.planPath
             : resolve(cwd, options.planPath),
         }
       : {}),
-    rootDir: options.rootDir ? resolve(cwd, options.rootDir) : cwd,
-    ...(options.liveConfigPath
+    rootDir:
+      options.rootDir !== undefined ? resolve(cwd, options.rootDir) : cwd,
+    ...(options.liveConfigPath !== undefined
       ? { liveConfigPath: resolve(cwd, options.liveConfigPath) }
       : {}),
-    outDir: options.outDir
-      ? resolve(cwd, options.outDir)
-      : resolve(cwd, ".tmp/x-agent-suite"),
+    outDir:
+      options.outDir !== undefined
+        ? resolve(cwd, options.outDir)
+        : resolve(cwd, ".tmp/x-agent-suite"),
   };
 }
 
@@ -235,24 +244,60 @@ export async function loadRecallCore(
   options: LoadRecallOptions,
 ): Promise<RecallLoadCore> {
   validateSelection(options.selection);
-  const executionParams = copyExecutionParams(options.executionParams ?? {});
-  const cwd = resolve(options.cwd ?? process.cwd());
+  const cwdOption = assertOptionalNonEmptyString(options.cwd, "Recall cwd");
+  const homeDir = assertOptionalNonEmptyString(
+    options.homeDir,
+    "Recall homeDir",
+  );
+  const target = assertOptionalNonEmptyString(options.target, "Recall target");
+  const registryPath = assertOptionalNonEmptyString(
+    options.registryPath,
+    "Recall registryPath",
+  );
+  const planPath = assertOptionalNonEmptyString(
+    options.planPath,
+    "Recall planPath",
+  );
+  const rootDir = assertOptionalNonEmptyString(
+    options.rootDir,
+    "Recall rootDir",
+  );
+  const liveConfigPath = assertOptionalNonEmptyString(
+    options.liveConfigPath,
+    "Recall liveConfigPath",
+  );
+  const outDir = assertOptionalNonEmptyString(options.outDir, "Recall outDir");
+  const approveLive = assertOptionalBoolean(
+    options.approveLive,
+    "Recall approveLive",
+  );
+
+  const executionParams = copyExecutionParams(
+    options.executionParams === undefined ? {} : options.executionParams,
+  );
+  const cwd = resolve(cwdOption ?? process.cwd());
   if (options.repeat !== undefined && !isPositiveInteger(options.repeat)) {
     throw new Error("Recall repeat 必须是正整数");
   }
-  const paths = resolveLoadPaths(cwd, options);
+  const paths = resolveLoadPaths(cwd, {
+    registryPath,
+    planPath,
+    rootDir,
+    liveConfigPath,
+    outDir,
+  });
   const registry = await loadRecallRegistry(paths.registryPath);
   const effects = await loadRecallEffectsPlan(paths.planPath, registry);
   const files = await findRecallFiles({
     cwd,
-    target: options.target,
+    target,
     excludePath: paths.planPath?.startsWith("use:")
       ? undefined
       : paths.planPath,
   });
   const scenarios = await loadScenarios(files, paths.rootDir, registry);
-  const config = liveConfigOptions(cwd, paths.liveConfigPath, options.homeDir);
-  const liveReviewApproved = options.approveLive ?? false;
+  const config = liveConfigOptions(cwd, paths.liveConfigPath, homeDir);
+  const liveReviewApproved = approveLive ?? false;
   const { live, catalog } = await resolveLiveCatalog({ config });
   const executions = await resolveExecutions({
     live,
@@ -262,6 +307,20 @@ export async function loadRecallCore(
     catalog,
     liveReviewApproved,
   });
+  for (const execution of executions) {
+    encodeSafePathSegment(
+      execution.target.carrier,
+      "Recall report carrier 路径段",
+    );
+    encodeSafePathSegment(
+      execution.target.channel.provider ?? "-",
+      "Recall report provider 路径段",
+    );
+    encodeSafePathSegment(
+      execution.target.channel.model,
+      "Recall report model 路径段",
+    );
+  }
   return {
     catalog,
     liveReviewApproved,

@@ -4,6 +4,7 @@
  */
 import { readdir, stat } from "node:fs/promises";
 import { extname, resolve } from "node:path";
+import { isNonEmptyString } from "./validation.ts";
 
 const DEFAULT_DIRECTORY = ".recall";
 
@@ -21,10 +22,14 @@ export interface FindRecallFilesOptions {
 export async function findRecallFiles(
   options: FindRecallFilesOptions,
 ): Promise<string[]> {
-  const excludePath = options.excludePath
-    ? resolve(options.cwd, options.excludePath)
-    : undefined;
-  if (options.target) {
+  const excludePath =
+    options.excludePath !== undefined
+      ? resolve(options.cwd, options.excludePath)
+      : undefined;
+  if (options.target !== undefined) {
+    if (!isNonEmptyString(options.target)) {
+      throw new Error("Recall target 必须是非空字符串");
+    }
     const target = resolve(options.cwd, options.target);
     const info = await statTarget(target);
     const files = info.isDirectory()

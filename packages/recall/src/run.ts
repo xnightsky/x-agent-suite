@@ -4,12 +4,14 @@
  * 不变量：动态判据装配（每 target 一次）完成于任何主 Driver 创建之前；
  * 装配失败中止本次运行，不记入 RecallRunResult.failures（该列表只承载单 case 基础设施失败）。
  */
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type {
   Criterion,
+  Redactor,
   ReportPaths,
   ScenarioSpec,
 } from "@x-agent-suite/contracts";
+import { redactLiveError } from "@x-agent-suite/llm-fixture";
 import { writeScenarioReports } from "@x-agent-suite/observation";
 import { runScenarioRepeat } from "@x-agent-suite/runner";
 import { assembleRecallCriteria } from "./criterion-assembly.ts";
@@ -22,6 +24,7 @@ import {
   type RecallLoadCore,
 } from "./load.ts";
 import { adaptRecallAssertionResult } from "./assertion-results.ts";
+import { encodeSafePathSegment } from "./validation.ts";
 
 /** 单个 case 的成功执行与报告位置。 */
 export interface RecallCaseRun {
@@ -59,17 +62,41 @@ export interface RecallRunResult {
   readonly failures: readonly RecallInfraFailure[];
 }
 
-function targetOutDir(
+/** 推导单 target 的报告目录，所有路径分量必须保持为单个安全段。 */
+export function targetOutDir(
   base: string,
   execution: RecallResolvedExecution,
 ): string {
   const { target } = execution;
-  return join(
-    base,
-    encodeURIComponent(target.carrier),
-    encodeURIComponent(target.channel.provider ?? "-"),
-    encodeURIComponent(target.channel.model),
+  const root = resolve(base);
+  const outDir = join(
+    root,
+    encodeSafePathSegment(target.carrier, "Recall report carrier 路径段"),
+    encodeSafePathSegment(
+      target.channel.provider ?? "-",
+      "Recall report provider 路径段",
+    ),
+    encodeSafePathSegment(target.channel.model, "Recall report model 路径段"),
   );
+  const nested = relative(root, outDir);
+  if (
+    !nested ||
+    nested === ".." ||
+    nested.startsWith(`..${sep}`) ||
+    isAbsolute(nested)
+  ) {
+    throw new Error("Recall report target 目录逃逸 outDir");
+  }
+  return outDir;
+}
+
+/** 按 driver 创建顺序组合去重后的 redactor。 */
+function composeRedactors(
+  redactors: readonly Redactor[],
+): Redactor | undefined {
+  const unique = [...new Set(redactors)];
+  if (unique.length === 0) return undefined;
+  return (text) => unique.reduce((current, redact) => redact(current), text);
 }
 
 /** 一个 target 的装配结果：执行实现与其复用的判据数组。 */
@@ -84,49 +111,66 @@ async function runCase(
   criteria: readonly Criterion[],
   loaded: LoadedRecall,
 ): Promise<RecallCaseRun> {
-  const executed = await runScenarioRepeat(spec, {
-    createDriver: (current) =>
-      createRecallDriver(current, {
-        execution,
-        effects: loaded.plan.effects,
-        registry: loaded.registry,
-        config: loaded.config,
-        executionParams: loaded.executionParams,
-      }),
-    criteria,
-    repeat: loaded.repeat,
-  });
-  const adapted = executed.results.map((item) =>
-    adaptRecallAssertionResult(spec, item, execution),
-  );
-  const last = adapted[adapted.length - 1]!;
-  const result = {
-    ...last,
-    observation: {
-      ...last.observation,
-      metadata: { ...last.observation.metadata, recall: spec.metadata?.recall },
-    },
-  };
-  const reports = await writeScenarioReports(
-    [
-      {
-        scenario: spec.id,
-        carrier: execution.target.carrier,
-        promptVariant: "default",
-        result,
-        ...(loaded.repeat > 1 ? { repeat: executed.stats } : {}),
+  const redactors: Redactor[] = [];
+  try {
+    const executed = await runScenarioRepeat(spec, {
+      createDriver: async (current) => {
+        const driver = await createRecallDriver(current, {
+          execution,
+          effects: loaded.plan.effects,
+          registry: loaded.registry,
+          config: loaded.config,
+          executionParams: loaded.executionParams,
+        });
+        if (driver.redactor) redactors.push(driver.redactor);
+        return driver;
       },
-    ],
-    { scenarioId: spec.id, outDir: targetOutDir(loaded.outDir, execution) },
-  );
-  return {
-    scenarioId: spec.id,
-    hardPass: last.hardPass,
-    reports,
-    carrier: execution.target.carrier,
-    mode: execution.mode,
-    ...(execution.cliRef ? { cliRef: execution.cliRef } : {}),
-  };
+      criteria,
+      repeat: loaded.repeat,
+    });
+    const adapted = executed.results.map((item) =>
+      adaptRecallAssertionResult(spec, item, execution),
+    );
+    const last = adapted[adapted.length - 1]!;
+    const result = {
+      ...last,
+      observation: {
+        ...last.observation,
+        metadata: {
+          ...last.observation.metadata,
+          recall: spec.metadata?.recall,
+        },
+      },
+    };
+    const redact = composeRedactors(redactors);
+    const reports = await writeScenarioReports(
+      [
+        {
+          scenario: spec.id,
+          carrier: execution.target.carrier,
+          promptVariant: "default",
+          result,
+          ...(loaded.repeat > 1 ? { repeat: executed.stats } : {}),
+        },
+      ],
+      {
+        scenarioId: spec.id,
+        outDir: targetOutDir(loaded.outDir, execution),
+        ...(redact ? { redact } : {}),
+      },
+    );
+    return {
+      scenarioId: spec.id,
+      hardPass: last.hardPass,
+      reports,
+      carrier: execution.target.carrier,
+      mode: execution.mode,
+      ...(execution.cliRef ? { cliRef: execution.cliRef } : {}),
+    };
+  } catch (cause) {
+    const redact = composeRedactors(redactors);
+    throw redact ? redactLiveError(cause, redact) : cause;
+  }
 }
 
 function asError(cause: unknown): Error {

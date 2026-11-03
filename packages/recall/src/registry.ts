@@ -220,9 +220,15 @@ function validateRegistry(value: unknown, path: string): RecallRegistry {
     throw new Error("Recall registry.transport 必须是函数");
   }
   return {
-    criteria: validateCriteria(value.criteria ?? []),
-    profiles: validateProfiles(value.profiles ?? {}),
-    effectsProfiles: validateEffectsProfiles(value.effectsProfiles ?? {}),
+    criteria: validateCriteria(
+      value.criteria === undefined ? [] : value.criteria,
+    ),
+    profiles: validateProfiles(
+      value.profiles === undefined ? {} : value.profiles,
+    ),
+    effectsProfiles: validateEffectsProfiles(
+      value.effectsProfiles === undefined ? {} : value.effectsProfiles,
+    ),
     ...(transport ? { transport: transport as LiveTransport } : {}),
   };
 }

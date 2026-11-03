@@ -90,13 +90,24 @@ function projectOutcome(
   };
 }
 
+/** 去掉 JSON 中无意义的显式 undefined error 字段。 */
+function withoutUndefinedError(
+  result: ScenarioResult<RunnerArtifact>,
+): ScenarioResult<RunnerArtifact> {
+  if (result.error !== undefined) return result;
+  const { error: _error, ...rest } = result;
+  return rest;
+}
+
 /** 将 Runner 结果改为 Recall 作者视图；无任何 turn/case expect 时保持原结果。 */
 export function adaptRecallAssertionResult(
   spec: ScenarioSpec,
   result: ScenarioResult<RunnerArtifact>,
   execution?: RecallResolvedExecution,
 ): ScenarioResult<RecallAssertionArtifact> {
-  if (!spec.expect && !spec.turns.some((turn) => turn.expect)) return result;
+  if (!spec.expect && !spec.turns.some((turn) => turn.expect)) {
+    return withoutUndefinedError(result);
+  }
   const projected = result.artifact.outcomes.map((outcome) =>
     projectOutcome(spec, outcome, execution),
   );
@@ -104,11 +115,18 @@ export function adaptRecallAssertionResult(
   const assertions = projected.map((item) => item.assertion);
   const rawScore = assertions.reduce((sum, item) => sum + item.score, 0);
   const failed = assertions.filter((item) => !item.pass);
+  const failedReasons = failed
+    .map((item) => item.name + ": " + item.reason)
+    .join("；");
+  const error = result.hardPass
+    ? undefined
+    : result.error && result.error.length > 0
+      ? result.error
+      : failedReasons || undefined;
+  const { error: _existingError, ...base } = result;
   return {
-    ...result,
+    ...base,
     artifact: { ...result.artifact, outcomes, assertions, rawScore },
-    error: result.hardPass
-      ? undefined
-      : failed.map((item) => item.name + ": " + item.reason).join("；"),
+    ...(error === undefined ? {} : { error }),
   };
 }

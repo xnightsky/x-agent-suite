@@ -14,7 +14,10 @@ import {
   isNonEmptyString,
   isPositiveInteger,
   isRecord,
+  pathCollisionKey,
   requiredString,
+  yamlErrorCategory,
+  yamlErrorLocation,
 } from "./validation.ts";
 import {
   parseRecallCaseExpect,
@@ -149,7 +152,7 @@ function parseResource(
     filePath,
     at,
   );
-  const kind = value.kind ?? "file";
+  const kind = value.kind === undefined ? "file" : value.kind;
   if (kind !== "file" && kind !== "directory") {
     throw schemaError(filePath, at + ".kind 必须是 file 或 directory");
   }
@@ -185,16 +188,27 @@ function assertNoDestinationConflicts(
   plan: string,
 ): void {
   const destinations = resources.flatMap((resource) =>
-    resource.install === false ? [] : [resource.destination],
+    resource.install === false
+      ? []
+      : [
+          {
+            value: resource.destination,
+            key: pathCollisionKey(resource.destination),
+          },
+        ],
   );
   for (let left = 0; left < destinations.length; left += 1) {
     for (let right = left + 1; right < destinations.length; right += 1) {
       const a = destinations[left]!;
       const b = destinations[right]!;
-      if (a === b || a.startsWith(b + "/") || b.startsWith(a + "/")) {
+      if (
+        a.key === b.key ||
+        a.key.startsWith(b.key + "/") ||
+        b.key.startsWith(a.key + "/")
+      ) {
         throw schemaError(
           filePath,
-          "plans." + plan + " destination 冲突：" + a + " 与 " + b,
+          "plans." + plan + " destination 冲突：" + a.value + " 与 " + b.value,
         );
       }
     }
@@ -204,7 +218,10 @@ function assertNoDestinationConflicts(
 function parsePlans(value: unknown, filePath: string) {
   if (value === undefined) return undefined;
   if (!isRecord(value)) throw schemaError(filePath, "plans 必须是对象");
-  const plans: Record<string, RecallProvisionPlanDefinition> = {};
+  const plans = Object.create(null) as Record<
+    string,
+    RecallProvisionPlanDefinition
+  >;
   for (const [name, rawPlan] of Object.entries(value)) {
     if (!isNonEmptyString(name) || name === "none") {
       throw schemaError(filePath, "plans.none 为内置空计划，禁止覆盖");
@@ -350,7 +367,11 @@ export function parseRecallYaml(
   try {
     value = parse(source, { strict: true, uniqueKeys: true });
   } catch (cause) {
-    throw schemaError(filePath, "YAML 解析失败：" + String(cause));
+    const { line, column } = yamlErrorLocation(cause);
+    throw schemaError(
+      filePath,
+      `${yamlErrorCategory(cause)}（line ${line ?? "?"}，column ${column ?? "?"}）`,
+    );
   }
   if (!isRecord(value)) throw schemaError(filePath, "顶层必须是对象");
   assertFields(

@@ -130,7 +130,9 @@ export async function createRecallDriver(
   }
   const driver = await execution.profile.createDriver({
     spec,
-    executionParams: copyExecutionParams(options.executionParams ?? {}),
+    executionParams: copyExecutionParams(
+      options.executionParams === undefined ? {} : options.executionParams,
+    ),
     backend,
     target,
     ...(execution.cliRef ? { cliRef: execution.cliRef } : {}),

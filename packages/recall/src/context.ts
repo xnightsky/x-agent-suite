@@ -4,6 +4,7 @@
  */
 import { readFile, realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
+import { pathCollisionKey } from "./validation.ts";
 
 /** provision 中的一个只读上下文文件。 */
 export interface RecallContextFile {
@@ -23,8 +24,16 @@ export async function readContextFiles(
     throw new Error("Recall rootDir 不是目录：" + rootDir);
   }
   const files: RecallContextFile[] = [];
-  for (const declared of paths)
-    files.push(await readContextFile(declared, root));
+  const destinations = new Set<string>();
+  for (const declared of paths) {
+    const file = await readContextFile(declared, root);
+    const key = pathCollisionKey(file.path);
+    if (destinations.has(key)) {
+      throw new Error("Recall context 文件目标重复：" + file.path);
+    }
+    destinations.add(key);
+    files.push(file);
+  }
   return files;
 }
 

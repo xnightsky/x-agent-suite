@@ -4,6 +4,7 @@
  * 不变量：只展开值、不展开键；整值保持类型，值中的模板符不递归解析。
  */
 import type { TurnCriterionContext } from "@x-agent-suite/contracts";
+import { assertJsonValue } from "@x-agent-suite/assertions";
 
 /** Recall 静态变量的编译期上下文。 */
 export interface RecallStaticVariableContext {
@@ -287,46 +288,6 @@ const RESERVED_VARIABLE_NAMES = new Set([
   "resources",
   "steps",
 ]);
-
-/**
- * 递归验证 vars 值确实属于无循环的 JSON 数据。
- *
- * @behavior recall-var-json-validation
- * Given: 任意变量值、诊断路径和当前递归访问集合。
- * When: 遍历数组与普通对象的嵌套值。
- * Then: 接受 null、字符串、布尔、有限数、数组和普通对象，并保留原始声明。
- * Failure: undefined、函数、非有限数、类实例或循环引用均抛带逻辑路径的 TypeError。
- */
-function assertJsonValue(
-  value: unknown,
-  at: string,
-  seen = new WeakSet<object>(),
-): void {
-  if (value === null || typeof value === "string" || typeof value === "boolean")
-    return;
-  if (typeof value === "number") {
-    if (!Number.isFinite(value))
-      throw new TypeError(at + " 必须是有限 JSON 数值");
-    return;
-  }
-  if (typeof value !== "object") throw new TypeError(at + " 必须是 JSON 数据");
-  if (seen.has(value)) throw new TypeError(at + " 不得包含循环引用");
-  seen.add(value);
-  if (Array.isArray(value)) {
-    value.forEach((item, index) =>
-      assertJsonValue(item, at + "[" + index + "]", seen),
-    );
-  } else {
-    const prototype = Object.getPrototypeOf(value) as object | null;
-    if (prototype !== Object.prototype && prototype !== null) {
-      throw new TypeError(at + " 必须是 JSON 对象");
-    }
-    for (const [key, item] of Object.entries(value)) {
-      assertJsonValue(item, at + "." + key, seen);
-    }
-  }
-  seen.delete(value);
-}
 
 /**
  * 校验一层 vars 的变量名、保留命名空间与 JSON 值。

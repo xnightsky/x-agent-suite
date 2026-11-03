@@ -40,6 +40,7 @@ x-agent-suite recall \
 - CLI 不提供 `--mode/--cli-ref`。路径只由 Carrier kind 决定：`cli`（含省略 kind）必须 borrowed，`ephemeral-client` 必须注册自定义 direct Adapter；effects/provision 只约束执行能力，不改变路径。
 - `kind: ephemeral-client` 的 Carrier 通过 `clientRef` 选择同 carrier 注册 Adapter，使用自定义 direct 路径；未注册或 carrier 不匹配即失败，不回退其他实现。详见 [ephemeral-client.md](./ephemeral-client.md)。
 - 考卷显式目标优先；否则读取 cwd 下 `.recall/*.{yaml,yml}` 第一层，不递归。显式 `--plan` 位于该目录时从默认考卷发现中排除。
+- 所有可选路径参数（`target/--live-config/--registry/--plan/--root-dir/--out-dir`、程序 API 的 `cwd/homeDir`）只在省略时使用缺省；一旦显式提供就必须是非空字符串。空串、空白串、null 或其他类型是定义错误，不得回退默认发现。`approveLive` 提供时必须是严格 boolean，不能用 truthy 字符串绕过 live 审批。
 
 ## 实际执行链
 
@@ -240,7 +241,8 @@ cases:
 ```
 
 - 顶层字段为 `version/id/context/plans/cases/vars`；plan 与 case 也可声明 `vars`，按 case > 选中 plan > 文档浅合并。case 可另含 `context` 与 `expect`，与 `id/turns/timeoutMs/metadata/vars` 并列。线性 turn 不需要额外标识字段，逐轮评价与位置归因见 [Recall 轮次级断言](./recall-turn-assertion.md)。变量仅用于显式 opt-in 的判据字段，详见 [Recall 变量机制](./recall-variables.md)。内置 Judge 与逐项计分目标契约见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
-- `plans.<name>.resources` 只是**当前 Recall YAML 文档内部**的资源别名注册表；禁止覆盖内置 `none`，不支持 extends、继承、深合并或跨 YAML 引用。
+- `plans.<name>.resources` 只是**当前 Recall YAML 文档内部**的资源别名注册表；禁止覆盖内置 `none`，不支持 extends、继承、深合并或跨 YAML 引用。plan 映射使用无原型记录且只按 own property 查找，原型链名称不得被误认为已注册 plan。
+- YAML parser 错误只输出固定类别（普通解析失败或重复 key）与 file/line/column，不回显 parser 的源行、插入符或原始错误 message。显式 null 不得被 `??` 当作字段缺省；缺省只适用于字段省略。
 - 全局 `context.plan` 是所有 case 的默认；case 未声明 context 时继承，声明时整块覆盖。`context.plan: none` 清空全局资源；case 也可改用 `context.files`。
 - 同一 context 的 `files` 与 `plan` 互斥。未注册 plan 或跨文件引用在 Driver 前失败。
 - `context.files` 仍编译为 `{ context: { files: [{ path, content }] } }`；`context.plan` 编译为 `{ plan: <name>, resources: [...] }`。两者都是 `ScenarioSpec.provision`，Runner 不再合并其他资源层。
@@ -272,6 +274,8 @@ plans:
 ```
 
 禁用项仍校验字段、source 字符串、install 类型、kind 与 readOnly，但不解析来源实体、不参与目标冲突检查，也不进入编译后的资源清单。跳过不负责卸载其他位置的资源；只有消费者隔离了其他启用的发现来源，才能把它作为未安装对照。context 的整块覆盖规则保持不变，不引入计划合并。
+
+启用的 resource destination 与 context file 目标在编译期做重复预检：路径别名、大小写/Unicode 归一后相同或互相为前缀的 resource 目标、以及归一后重复的 context 文件目标均拒绝，不等到物化阶段才报“目标已存在”。
 
 安装位置由 destination 指定，框架不推断载体目录。保留既有运行时 sandbox，本轮不增加 `sandbox`、`base` 或 `skills` DSL 字段；资源只复制到隔离 cwd，源仓库与用户全局目录不作为安装目标。当前 repo 用于读取考卷、配置和来源，默认报告仍写入 `.tmp/x-agent-suite`；资源隔离由注册 Profile/Driver 兑现，不等同于操作系统级文件访问隔离。
 
@@ -317,7 +321,11 @@ metadata.recallExecution = {
 }
 ```
 
-多 default target 使用 `<outDir>/<carrier>/<provider>/<model>/` 分目录，避免报告覆盖。provision/effects 是配置归因，不是实际读取或权限执行证据。
+多 default target 使用 `<outDir>/<carrier>/<provider>/<model>/` 分目录，避免报告覆盖。carrier/provider/model 是安全路径段：必须非空且不得为 `.`/`..`，分隔符经 URI 编码，拼出的目录必须仍位于 outDir 下。报告 Markdown 与 JSON 默认以 `0600` 权限创建。provision/effects 是配置归因，不是实际读取或权限执行证据。
+
+Recall 捕获每个主 Driver 暴露的可选 `redactor`，按创建顺序去重组合后应用于 Markdown/JSON 报告，以及失败结果和 CLI 错误。脱敏只发生在报告与诊断出口，判据求值仍看到原始 Observation；不得在 `sendPrompt` 返回边界提前改写证据。
+
+报告入口兼容历史 `JSON.stringify` 对对象字段的省略行为：对象值中的 `undefined`、function、symbol 字段会被丢弃；NaN、Infinity、BigInt、循环引用和不可安全编码的结构仍显式拒绝。该兼容只属于报告投影，不放宽 `executionParams` 或共享 JSON 严格校验。
 
 - 用法、registry、Plan、YAML、资源、target 和候选定义错误：退出码 2。
 - Driver、超时、报告写入等基础设施错误：退出码 1。

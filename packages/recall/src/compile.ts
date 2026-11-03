@@ -87,7 +87,7 @@ function assertPlanReferences(
   for (const item of definition.cases) {
     const context = item.context ?? definition.context;
     if (!context?.plan || context.plan === "none") continue;
-    if (!definition.plans?.[context.plan]) {
+    if (!definition.plans || !Object.hasOwn(definition.plans, context.plan)) {
       throw new Error(
         "Recall ProvisionPlan 未注册：" +
           context.plan +
@@ -106,7 +106,10 @@ async function loadPlans(
   options: CompileRecallOptions,
   filePath: string,
 ) {
-  const plans: Record<string, readonly RecallCompiledResource[]> = {};
+  const plans = Object.create(null) as Record<
+    string,
+    readonly RecallCompiledResource[]
+  >;
   for (const [name, plan] of Object.entries(definition.plans ?? {})) {
     plans[name] = await readRecallResources(
       plan.resources,
@@ -125,6 +128,9 @@ async function compileProvision(
   if (!context || context.plan === "none") return { attribution: "none" };
   if (context.plan) {
     const name = context.plan;
+    if (!Object.hasOwn(plans, name)) {
+      throw new Error("Recall ProvisionPlan 未注册：" + name);
+    }
     return {
       value: { plan: name, resources: plans[name]! },
       attribution: "plan:" + name,
@@ -161,12 +167,14 @@ function createVariableContext(
   const scenarioFile = resolve(filePath);
   const planName =
     context?.plan && context.plan !== "none" ? context.plan : "none";
+  const planVars =
+    planName !== "none" &&
+    definition.plans !== undefined &&
+    Object.hasOwn(definition.plans, planName)
+      ? definition.plans[planName]!.vars
+      : undefined;
   return {
-    vars: mergeRecallVariables(
-      definition.vars,
-      planName === "none" ? undefined : definition.plans?.[planName]?.vars,
-      item.vars,
-    ),
+    vars: mergeRecallVariables(definition.vars, planVars, item.vars),
     scenario: {
       id: definition.id,
       file: scenarioFile,
