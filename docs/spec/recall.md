@@ -8,7 +8,7 @@
 
 | 输入                  | 职责                                                                                                                          |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Recall YAML           | case 测试意图、文件内 `plans`、全局/case `context`，最终只编译为 `ScenarioSpec.provision`。                                   |
+| Recall YAML           | case 测试意图、文件内 `plans`、全局/case `context` 与三层 `vars`，编译场景 provision 和静态变量上下文。                       |
 | 执行 Plan YAML        | 只声明 `version: 1` 与 `effects: none/use/inline`。不得包含 driver、mode、cliRef、criteria 或 provision。                     |
 | 独立 registry TS 模块 | 注册 Criterion 与通用判据工厂、CLI/临时 Client execution profiles、EffectsProfile 与可选 transport；不是 Recall config 闭包。 |
 | `.env.e2e.yaml`       | 复用 carrier/provider/model、Carrier kind/clientRef/channelsFrom、凭据与私密 TargetTags，不建立第二套模型配置。               |
@@ -232,7 +232,7 @@ cases:
       - send: 改用文件资源
 ```
 
-- 顶层字段为 `version/id/context/plans/cases`；case 可另含 `context` 与 `expect`，与 `id/turns/timeoutMs/metadata` 并列。内置 Judge 与逐项计分目标契约见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
+- 顶层字段为 `version/id/context/plans/cases/vars`；plan 与 case 也可声明 `vars`，按 case > 选中 plan > 文档浅合并。case 可另含 `context` 与 `expect`，与 `id/turns/timeoutMs/metadata/vars` 并列。变量仅用于显式 opt-in 的判据字段，详见 [Recall 变量机制](./recall-variables.md)。内置 Judge 与逐项计分目标契约见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
 - `plans.<name>.resources` 只是**当前 Recall YAML 文档内部**的资源别名注册表；禁止覆盖内置 `none`，不支持 extends、继承、深合并或跨 YAML 引用。
 - 全局 `context.plan` 是所有 case 的默认；case 未声明 context 时继承，声明时整块覆盖。`context.plan: none` 清空全局资源；case 也可改用 `context.files`。
 - 同一 context 的 `files` 与 `plan` 互斥。未注册 plan 或跨文件引用在 Driver 前失败。

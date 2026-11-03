@@ -20,6 +20,10 @@ import {
   parseRecallCaseExpect,
   type RecallCaseExpectDefinition,
 } from "./assertion-dsl.ts";
+import {
+  parseRecallVariableDefinitions,
+  type RecallVariableDefinitions,
+} from "./recall-var.ts";
 
 /** 场景资源类别。 */
 export type RecallResourceKind = "file" | "directory";
@@ -50,6 +54,7 @@ export type RecallResourceDefinition = RecallResourceFields &
 /** 文件内命名 ProvisionPlan。 */
 export interface RecallProvisionPlanDefinition {
   readonly resources: readonly RecallResourceDefinition[];
+  readonly vars?: RecallVariableDefinitions;
 }
 
 /** 全局或 case 的 context；files 与 plan 互斥。 */
@@ -65,6 +70,7 @@ export interface RecallCaseDefinition {
   readonly timeoutMs?: number;
   readonly metadata?: Record<string, unknown>;
   readonly context?: RecallContextDefinition;
+  readonly vars?: RecallVariableDefinitions;
   readonly expect?: RecallCaseExpectDefinition;
 }
 
@@ -79,6 +85,7 @@ export interface RecallTurnDefinition {
 export interface RecallDefinition {
   readonly id: string;
   readonly context?: RecallContextDefinition;
+  readonly vars?: RecallVariableDefinitions;
   readonly plans?: Readonly<Record<string, RecallProvisionPlanDefinition>>;
   readonly cases: readonly RecallCaseDefinition[];
 }
@@ -95,6 +102,24 @@ function assertFields(
 ): void {
   try {
     assertKnownFields(value, allowed, at);
+  } catch (cause) {
+    throw schemaError(filePath, (cause as Error).message);
+  }
+}
+
+/**
+ * 将变量定义校验错误收口到 Recall schema 错误边界。
+ *
+ * @behavior recall-schema-vars-error-boundary
+ * Given: 可选 vars 原始值、考卷路径和声明位置。
+ * When: 缺省时保留缺省，否则调用 recall-var 的完整定义校验。
+ * Then: 返回合法变量记录，供顶层、plan 或 case 保留声明层。
+ * Failure: 变量校验的 TypeError 包装为含考卷与声明位置的 schema Error，不静默忽略。
+ */
+function parseVars(value: unknown, filePath: string, at: string) {
+  if (value === undefined) return undefined;
+  try {
+    return parseRecallVariableDefinitions(value, at);
   } catch (cause) {
     throw schemaError(filePath, (cause as Error).message);
   }
@@ -186,7 +211,7 @@ function parsePlans(value: unknown, filePath: string) {
     }
     if (!isRecord(rawPlan))
       throw schemaError(filePath, "plans." + name + " 必须是对象");
-    assertFields(rawPlan, ["resources"], filePath, "plans." + name);
+    assertFields(rawPlan, ["resources", "vars"], filePath, "plans." + name);
     if (!Array.isArray(rawPlan.resources)) {
       throw schemaError(filePath, "plans." + name + ".resources 必须是数组");
     }
@@ -198,7 +223,12 @@ function parsePlans(value: unknown, filePath: string) {
       ),
     );
     assertNoDestinationConflicts(resources, filePath, name);
-    plans[name] = { resources };
+    plans[name] = {
+      resources,
+      ...(rawPlan.vars !== undefined
+        ? { vars: parseVars(rawPlan.vars, filePath, "plans." + name + ".vars") }
+        : {}),
+    };
   }
   return plans;
 }
@@ -266,7 +296,7 @@ function parseCase(
   if (!isRecord(value)) throw schemaError(filePath, at + " 必须是对象");
   assertFields(
     value,
-    ["id", "turns", "expect", "timeoutMs", "metadata", "context"],
+    ["id", "turns", "expect", "timeoutMs", "metadata", "context", "vars"],
     filePath,
     at,
   );
@@ -296,10 +326,22 @@ function parseCase(
     ...(value.context !== undefined
       ? { context: parseContext(value.context, filePath, at + ".context") }
       : {}),
+    ...(value.vars !== undefined
+      ? { vars: parseVars(value.vars, filePath, at + ".vars") }
+      : {}),
   };
 }
 
-/** 解析并完整校验一份 Recall YAML；不读取其他 YAML 的 plans。 */
+/**
+ * 解析并完整校验一份 Recall YAML；不读取其他 YAML 的 plans。
+ *
+ * @behavior recall-yaml-schema
+ * Given: 一份 Recall YAML 文本及其逻辑文件路径。
+ * When: 严格解析顶层、plans、cases、context 与三层 vars。
+ * Then: 返回完整 RecallDefinition；context 整块覆盖语义不变，vars 保留声明层供编译合并。
+ * Failure: YAML 重复键、未知字段、非法 provision、保留变量名或非 JSON vars 均显式拒绝，
+ * 不返回部分定义，也不展开执行输入或变量值。
+ */
 export function parseRecallYaml(
   source: string,
   filePath: string,
@@ -313,7 +355,7 @@ export function parseRecallYaml(
   if (!isRecord(value)) throw schemaError(filePath, "顶层必须是对象");
   assertFields(
     value,
-    ["version", "id", "context", "plans", "cases"],
+    ["version", "id", "context", "plans", "cases", "vars"],
     filePath,
     "顶层",
   );
@@ -326,6 +368,9 @@ export function parseRecallYaml(
     id,
     ...(value.context !== undefined
       ? { context: parseContext(value.context, filePath, "context") }
+      : {}),
+    ...(value.vars !== undefined
+      ? { vars: parseVars(value.vars, filePath, "顶层 vars") }
       : {}),
     ...(value.plans !== undefined
       ? { plans: parsePlans(value.plans, filePath) }

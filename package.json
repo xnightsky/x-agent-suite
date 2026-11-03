@@ -45,6 +45,7 @@
     "ittest:token:cedar": "tsx packaging/cli.ts recall integrations/itrepos/cedar/.recall.yaml --root-dir integrations/itrepos/cedar --registry integrations/pi.registry.ts",
     "ittest:token:cedar-judge": "tsx packaging/cli.ts recall integrations/itrepos/cedar/judge/.recall.yaml --root-dir integrations/itrepos/cedar --registry integrations/pi.registry.ts --plan use:skill-readonly",
     "ittest:token:evidence": "tsx packaging/cli.ts recall integrations/itrepos/evidence/.recall.yaml --root-dir integrations/itrepos/evidence --registry integrations/pi.registry.ts --plan use:evidence-readonly",
+    "ittest:token:evidence-variables": "tsx packaging/cli.ts recall integrations/itrepos/evidence/variables/.recall.yaml --root-dir integrations/itrepos/evidence --registry integrations/pi.registry.ts --plan use:evidence-readonly",
     "ittest:token:cedar-skill": "tsx packaging/cli.ts recall integrations/itrepos/cedar/skills-def/change-summary/.recall.yaml --root-dir integrations/itrepos/cedar --registry integrations/pi.registry.ts --plan use:skill-readonly",
     "ittest:token:cedar-script": "tsx packaging/cli.ts recall integrations/itrepos/cedar/skills-def/change-report/.recall.yaml --root-dir integrations/itrepos/cedar --registry integrations/pi.registry.ts --plan use:skill-script",
     "tutorial:check": "tsx --test scripts/tests/tutorial.test.ts",

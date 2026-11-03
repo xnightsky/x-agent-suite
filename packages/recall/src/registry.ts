@@ -23,6 +23,7 @@ import type {
   TargetTagCatalog,
 } from "@x-agent-suite/llm-fixture";
 import type { RecallEffects, RecallEffectsProfile } from "./effects.ts";
+import type { RecallVariableResolver } from "./recall-var.ts";
 import { assertKnownFields, isNonEmptyString, isRecord } from "./validation.ts";
 
 /** 判据描述：编译期只需 name/scope 验证考卷引用。 */
@@ -52,6 +53,8 @@ export interface RecallCriterionFactoryContext {
   readonly clientRef?: string;
   /** 已归一化的执行副作用策略；不推导额外权限。 */
   readonly effects: RecallEffects;
+  /** 共享无状态 Recall 解析器；工厂按字段 opt-in，实际 case/turn 由 evaluate 上下文绑定。 */
+  readonly variables: RecallVariableResolver;
 }
 
 /**
@@ -127,6 +130,16 @@ export function emptyRecallRegistry(): RecallRegistry {
   return { criteria: [], profiles: {}, effectsProfiles: {} };
 }
 
+/**
+ * 校验判据注册项的实现形状与唯一性。
+ *
+ * @behavior recall-registry-criterion-registration
+ * Given: 未知 registry.criteria 数组及其中每个注册项。
+ * When: 逐项检查 name/scope、evaluate/create 和可选 assertionScore。
+ * Then: evaluate 与 create 恰居其一，scope:name 唯一，assertionScore 仅允许函数。
+ * Failure: 非数组、非法项、双实现、无实现或重复注册均显式抛 Error；
+ * 校验阶段不调用 create，也不触发执行副作用。
+ */
 function validateCriteria(
   value: unknown,
 ): readonly RecallCriterionRegistration[] {

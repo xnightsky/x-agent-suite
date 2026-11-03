@@ -8,6 +8,7 @@ import { createEvidenceCriterion } from "@x-agent-suite/assertions/evidence";
 import type { SessionCriterion, TurnCriterion } from "@x-agent-suite/contracts";
 import type {
   RecallAssertionScoreResolver,
+  RecallCriterionFactoryContext,
   RecallRegistry,
 } from "@x-agent-suite/recall";
 import { posix } from "node:path";
@@ -81,13 +82,28 @@ const answerContract: SessionCriterion & {
   },
 };
 
-/** 从当前消费者观察动态提供隔离 workspace 的访问痕迹证据判据。 */
-const observedEvidence = createEvidenceCriterion({
-  resolveWorkspaceCwd: (turn) =>
-    typeof turn.metadata.workspaceCwd === "string"
-      ? turn.metadata.workspaceCwd
-      : undefined,
-});
+/**
+ * 创建当前消费者的访问痕迹证据判据。
+ *
+ * @behavior pi-recall-evidence-factory
+ * Given: Recall 判据工厂上下文及当前 turn 的消费者 metadata。
+ * When: 装配判据或评估带 workspace/变量的声明。
+ * Then: 仅从字符串 workspaceCwd 提供路径边界，并把 context.variables 显式注入 contains；
+ * 不读取环境或文件系统补证据。
+ * Failure: 缺可信 workspace 时路径断言抛观察错误，不回退猜测 cwd。
+ */
+const observedEvidence = {
+  name: "evidence",
+  scope: "turn" as const,
+  create: (context: RecallCriterionFactoryContext) =>
+    createEvidenceCriterion({
+      resolveWorkspaceCwd: (turn) =>
+        typeof turn.metadata.workspaceCwd === "string"
+          ? turn.metadata.workspaceCwd
+          : undefined,
+      variables: context.variables,
+    }),
+};
 
 /** 显式注册场景仓使用的宿主和判据，渠道仍由命令选择。 */
 const registry: RecallRegistry = {

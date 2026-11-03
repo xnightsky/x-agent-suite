@@ -1,7 +1,7 @@
-# Recall 变量机制（待审设计）
+# Recall 变量机制
 
-> 日期：2026-11-02。状态：待审设计，未实现。
-> 范围：Recall 内部 `recall-var` 的候选设计；当前只推进变量基础与动态 Provider。`sequence`、局部 `steps` 和严格 `seq` 整体延后，不新增 npm 包或顶层判据模块。
+> 日期：2026-11-02；阶段 1 完成：2026-11-03。状态：静态基础已实现，动态 Provider 仍待实施。
+> 范围：当前已落地 Recall 内部 `recall-var` 静态基础、三层 `vars`、`turn.index` 和 `evidence.toolResult.contains` 的显式 opt-in；`run/resources` 动态 Provider 继续留待阶段 2。`sequence`、局部 `steps` 和严格 `seq` 整体延后，不新增 npm 包或顶层判据模块。
 
 ## 结论
 
@@ -85,7 +85,7 @@ interface CriterionVariableResolver {
 
 这个接缝避免 Recall 预先理解每个 criterion 的 expect 形状，也避免 Assertions 依赖 Recall。
 
-作用域固定为：turn 判据可使用静态命名空间及当前 turn 的 `turn/run/resources`；session 判据本期只允许 `vars/scenario/case/plan`，引用 `turn/run/resources/steps` 在准备阶段报定义错误，不隐式选择最后一轮。未来若需要会话级动态变量，另行定义轮次选择与缺席语义。
+目标作用域固定为：turn 判据可使用静态命名空间及当前 turn 的 `turn/run/resources`；session 判据只允许 `vars/scenario/case/plan`。阶段 1 仅通过 turn 判据工厂注入静态命名空间与 `turn.index`，`run/resources/steps` 均在准备阶段拒绝；session 判据尚未接入变量解析，不隐式选择最后一轮。动态能力与 session 接入仍须按阶段 2 重新审查。
 
 ## 方案选择
 
@@ -284,7 +284,7 @@ type VariableResolution =
 - 变量引擎不访问文件系统，不证明 realpath、inode、符号链接或文件存在。
 - 现有 `toolResult.path.resource` 仍是 workspace 相对逻辑路径；变量求值为绝对路径后仍按原契约拒绝。本期不因变量存在而开放绝对动态资源断言。
 
-默认诊断使用变量引用和逻辑路径，不回显临时 HOME、workspace 或源仓绝对路径；需要保留物理路径时由报告脱敏器处理。
+默认诊断使用变量引用、逻辑路径或脱敏计数，不回显变量值、临时 HOME、workspace 或源仓绝对路径；需要保留物理路径时由报告脱敏器处理。
 
 ## 解析阶段与缺失语义
 
@@ -308,24 +308,35 @@ type VariableResolution =
 
 “动态来源缺席”与“观察损坏”必须区分：前者是合法无证据，后者显式抛错。这样 `not` 可以否定真正未出现的模式，却不能把损坏 Observation 变成通过。
 
-## 示例
+## 阶段 1 已启用字段
 
-### 变量可被不同判据复用
+当前只有 `evidence.toolResult.contains` 可以通过工厂选项接收 Recall 变量解析器；其他判据与字段，包括 `citation.contains`，仍读取原始声明。Recall 判据工厂可显式装配：
 
-以下是判据显式支持变量后的目标写法，不代表现有判据已经支持：
+```ts
+const criterion = createEvidenceCriterion({ variables: context.variables });
+```
+
+对应考卷写法：
 
 ```yaml
 vars:
   requiredMarker: REPORT_OK
-  expectedReport: { total: 3, added: 2, fixed: 1 }
 
-expect:
-  text-contains:
-    - "{{ vars.requiredMarker }}"
-  artifact-json:
-    path: "{{ run.workspaceDir }}/out/report.json"
-    value: "{{ vars.expectedReport }}"
+cases:
+  - id: example
+    turns:
+      - send: 读取报告并核对结果
+        expect:
+          evidence:
+            toolResult:
+              tool: read
+              contains:
+                - "{{ vars.requiredMarker }}"
+                - "turn-{{ turn.index }}"
+                - '\{{ 仅字面量 }}'
 ```
+
+`contains` 也可整值引用一个字符串数组。完整 `evidence` 声明树先准备全部 `contains`，再统一求值并重新执行原字段类型校验；未命中 `not/allOf` 分支中的非法引用同样失败。
 
 ## 兼容性与文档关系
 
@@ -333,7 +344,7 @@ expect:
 - 不调用变量解析接口的判据完全不变。
 - `toolResult/citation/not/allOf` 的现有语义不变。
 - [Scenario DSL](./scenario-dsl.md) 的执行前参数化决策不变；本文只增加结果评估期的变量解析。
-- [Evidence assertions](./evidence-assertions.md) 是当前行为契约；本文未实现前不得在教程中当作可用语法。
+- [Evidence assertions](./evidence-assertions.md) 是当前行为契约；阶段 1 可用语法仅限上述显式字段，教程不得将其扩展为全局插值。
 - [脚本与 CLI 进程执行证据](./process-execution-evidence.md) 定义独立证据基座；[Evidence 有序调用与局部捕获](./future/evidence-sequence.md) 保存延后的顺序设计，不属于本文实施范围。
 - 不新增公开 package、子路径导出或顶层 criterion 名。
 
@@ -350,11 +361,13 @@ expect:
 
 ## 分阶段落地顺序
 
-### 阶段 1：`recall-var` 静态基础
+### 阶段 1：`recall-var` 静态基础（已完成）
 
-- 实现声明准备、转义、整值类型保持、嵌入引用和静态命名空间；turn 判据另支持 `turn.index`。
-- 先用显式判据工厂/选项注入，选择一个有实际需求的简单判据验证 opt-in；不为单个消费者新增通用 contracts 字段。
-- 不引入 sequence、局部 steps 或 seq collector，不改变执行输入。
+- 已实现声明准备、转义、整值类型保持、嵌入引用、三层 `vars` 浅合并、保留命名空间约束、静态命名空间和 turn 判据的 `turn.index`。
+- 已通过 `RecallCriterionFactoryContext.variables` 与 `createEvidenceCriterion({ variables })` 显式注入，仅为 `evidence.toolResult.contains` 建立闭环；未新增通用 contracts 字段。
+- 未引入 sequence、局部 steps、seq collector 或动态 Provider，未改变 `send`、provision 等执行输入。
+- 验证入口：`packages/recall/tests/recall-var.test.ts`、`packages/recall/tests/recall-variables.test.ts`、`packages/assertions/tests/evidence-variables.test.ts`，覆盖工厂装配、完整准备、plan 选择和 2 case × 2 turn × repeat=2 隔离。
+- 原 `integrations/itrepos/evidence/.recall.yaml` 保持字面量基线；独立 `variables/.recall.yaml` 以 2 个单轮 case 覆盖三层优先级、整值数组、嵌入、转义、单次展开、标量、逻辑身份及 turn.index=0。turn.index=1 与跨轮隔离由零 token repeat 覆盖。live 分别经 `pnpm ittest:token:evidence` 与 `pnpm ittest:token:evidence-variables` 运行。
 
 ### 阶段 2：动态 Provider 与路径
 

@@ -27,6 +27,15 @@ export interface EvidenceVerdict {
 /** 当前 turn 的 workspace 解析器。 */
 export type WorkspaceResolver = (turn: TurnObservation) => string | undefined;
 
+/**
+ * 解析 workspace 资源身份声明。
+ *
+ * @behavior evidence-resource-expect-parse
+ * Given: 原始 path.arg 与 path.resource 字段及错误位置。
+ * When: 校验工具入参键和逻辑资源路径。
+ * Then: 返回非空 arg 与严格的 workspace 相对 POSIX resource。
+ * Failure: 绝对路径、盘符、反斜杠、空段、点段或父级段均抛 TypeError。
+ */
 function parseResource(value: unknown, at: string): WorkspaceResourceExpect {
   if (!isEvidenceRecord(value)) throw new TypeError(at + " 必须是对象");
   assertEvidenceFields(value, ["arg", "resource"], at);
@@ -48,7 +57,15 @@ function parseResource(value: unknown, at: string): WorkspaceResourceExpect {
   return { arg, resource };
 }
 
-/** 严格解析 toolResult 声明。 */
+/**
+ * 严格解析 toolResult 声明并保留可选约束。
+ *
+ * @behavior evidence-tool-result-expect-parse
+ * Given: 原始 tool/action/args/path/contains 字段及错误位置。
+ * When: 逐字段校验声明形状和资源路径。
+ * Then: 返回规范化 ToolResultEvidenceExpect；未声明的可选字段保持缺省。
+ * Failure: 未知字段、空工具名、非对象 args、非法资源路径或非法 contains 均抛 TypeError。
+ */
 export function parseToolResultExpect(
   value: unknown,
   at: string,
@@ -82,6 +99,16 @@ export function parseToolResultExpect(
   };
 }
 
+/**
+ * 为路径断言取得可信 workspace 边界。
+ *
+ * @behavior evidence-workspace-boundary
+ * Given: 当前 turn 和消费者显式提供的 workspace resolver。
+ * When: toolResult.path 需要归一资源身份。
+ * Then: 返回能归一为 workspace 根的非空绝对边界；无路径断言不调用本函数。
+ * Failure: resolver 缺失、返回空值、相对路径或不可归一边界均抛观察错误，
+ * 不猜测进程 cwd，也不回退真实文件系统。
+ */
 function requireWorkspace(
   turn: TurnObservation,
   resolver: WorkspaceResolver | undefined,
@@ -100,6 +127,15 @@ function requireWorkspace(
   return workspace;
 }
 
+/**
+ * 将一次工具调用的路径输入映射到 workspace 逻辑资源。
+ *
+ * @behavior evidence-call-resource
+ * Given: 一次 ToolCall、资源声明和可信 workspace。
+ * When: 读取声明的顶层入参键并做纯词法路径归一。
+ * Then: 返回 workspace 相对逻辑路径；缺入参键或路径越界时返回 undefined。
+ * Failure: 路径不是非空字符串或无法可信归一时抛观察错误，不当作普通未命中。
+ */
 function callResource(
   call: ToolCall,
   resource: WorkspaceResourceExpect,
@@ -131,9 +167,21 @@ function missingContains(
   return expected.filter((fragment) => !text.includes(fragment));
 }
 
+/**
+ * 评估候选调用的成功非空正文及 contains 约束。
+ *
+ * @behavior evidence-tool-result-texts
+ * Given: 已按工具、action、args 和可选 path 过滤的调用及 contains 声明。
+ * When: 筛选 completed 调用并提取可识别文本块。
+ * Then: 有 path 时聚合相同资源的非空正文，无 path 时要求同次调用覆盖全部片段；
+ * 全部满足才 pass；有 path 且变量模式下，缺失片段只报告数量与脱敏标记；无 path 保留通用原因。
+ * Failure: 无 completed、无有效正文或片段缺失均返回内容失败；
+ * 未注入变量时保留原有片段明细。
+ */
 function evaluateTexts(
   calls: readonly ToolCall[],
   expect: ToolResultEvidenceExpect,
+  maskContains: boolean,
 ): EvidenceVerdict {
   const completed = calls.filter((call) => call.status === "completed");
   if (completed.length === 0) {
@@ -152,7 +200,10 @@ function evaluateTexts(
       if (missing.length > 0) {
         return {
           pass: false,
-          reason: "同一路径聚合正文缺少片段：" + missing.join("、"),
+          // 解析值可能含源仓或隔离目录物理路径；变量模式下只保留数量，避免进入报告。
+          reason: maskContains
+            ? `同一路径聚合正文缺少 ${missing.length} 个已解析片段（值已脱敏）`
+            : "同一路径聚合正文缺少片段：" + missing.join("、"),
         };
       }
     } else if (
@@ -171,11 +222,21 @@ function evaluateTexts(
   };
 }
 
-/** 判定成功且非空工具结果证据；所有约束复用同一候选调用集合。 */
+/**
+ * 判定成功且非空工具结果证据；所有约束复用同一候选调用集合。
+ *
+ * @behavior evidence-tool-result-match
+ * Given: 当前 turn、严格 toolResult 声明和可选 workspace resolver。
+ * When: 依次按 tool、action、args、path 过滤，再评估成功非空正文。
+ * Then: 全部约束命中同一证据集合才通过；path 使用 workspace 相对逻辑资源身份。
+ * Failure: 缺可信 workspace 或路径观察损坏显式抛错；普通未命中返回 pass=false；
+ * maskContains 开启时诊断不回显变量解析值。
+ */
 export function evaluateToolResult(
   turn: TurnObservation,
   expect: ToolResultEvidenceExpect,
   resolver: WorkspaceResolver | undefined,
+  maskContains = false,
 ): EvidenceVerdict {
   const workspace = expect.path ? requireWorkspace(turn, resolver) : undefined;
   const named = turn.toolCalls.filter((call) =>
@@ -192,7 +253,7 @@ export function evaluateToolResult(
     : acted;
   if (argsMatched.length === 0)
     return { pass: false, reason: "工具入参不匹配期望子集" };
-  if (!expect.path) return evaluateTexts(argsMatched, expect);
+  if (!expect.path) return evaluateTexts(argsMatched, expect, maskContains);
   const resource = expect.path;
   const matched = argsMatched.filter(
     (call) => callResource(call, resource, workspace!) === resource.resource,
@@ -200,5 +261,5 @@ export function evaluateToolResult(
   if (matched.length === 0) {
     return { pass: false, reason: "未读取目标资源 " + resource.resource };
   }
-  return evaluateTexts(matched, expect);
+  return evaluateTexts(matched, expect, maskContains);
 }

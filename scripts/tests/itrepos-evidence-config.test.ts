@@ -27,6 +27,17 @@ test("Evidence 场景仓编译检索、实读、引用、否定与只读权限�
     positive.allOf.map((child) => child.name),
     ["search", "entry", "attachment", "cite"],
   );
+  const toolNodes = positive.allOf.slice(0, 3).map((child) => {
+    assert.ok("toolResult" in child);
+    return child.toolResult;
+  });
+  assert.deepEqual(toolNodes[0]!.contains, ["research.md"]);
+  assert.deepEqual(toolNodes[1]!.contains, ["提取关键词与目标", "完成标准"]);
+  assert.deepEqual(toolNodes[2]!.contains, ["附件约束"]);
+  const evidenceRegistration = registry.criteria.find(
+    (item) => item.name === "evidence" && item.scope === "turn",
+  );
+  assert.ok(evidenceRegistration && "create" in evidenceRegistration);
   const provision = scenarios[0]!.provision as {
     resources: readonly { destination: string; readOnly: boolean }[];
   };

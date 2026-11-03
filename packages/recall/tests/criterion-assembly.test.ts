@@ -165,6 +165,7 @@ test("同源装配上下文原样到达工厂：target/config/tags/批准/effect
   assert.equal(calls[0]!.clientRef, "client-a");
   assert.equal(calls[0]!.cliRef, undefined);
   assert.equal(calls[0]!.effects, EFFECTS);
+  assert.equal(typeof calls[0]!.variables.prepareValue, "function");
 });
 
 test("工厂返回 name/scope 不符或缺 evaluate 时在装配期拒绝，错误只含 scope:name 与阶段", async () => {

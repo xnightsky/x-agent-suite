@@ -9,17 +9,18 @@
 - 不要求通用 Driver 增加完成信号或 workspace 字段；轮次完成性由 Driver/消费者观察守卫负责。
 - 不增加结构化子项结果。整体仍返回 `CriterionResult { pass, score, reason }`，组合诊断写入 `reason`。
 
-> 当前行为不包含变量插值、进程节点或顺序节点。变量候选方案见 [Recall 变量机制](./recall-variables.md)，进程快照入口及覆盖完整性见 [脚本与 CLI 进程执行证据](./process-execution-evidence.md)；`sequence`、局部 `steps` 和严格 `seq` 已整体延后，独立保存在 [Evidence 有序调用与局部捕获](./future/evidence-sequence.md)。这些均未实现，当前行为仍以本文契约为准。
+> 当前变量能力仅限显式注入后的 `toolResult.contains`，不包含进程节点或顺序节点。静态变量行为见 [Recall 变量机制](./recall-variables.md)，进程快照入口及覆盖完整性见 [脚本与 CLI 进程执行证据](./process-execution-evidence.md)；`sequence`、局部 `steps` 和严格 `seq` 已整体延后，独立保存在 [Evidence 有序调用与局部捕获](./future/evidence-sequence.md)。
 
 ## 公开入口
 
-| 导出                                              | 用途                                                                    |
-| ------------------------------------------------- | ----------------------------------------------------------------------- |
-| `evidence`                                        | 无 workspace 依赖时可直接注册的 `TurnCriterion`，metric 名为 `evidence` |
-| `createEvidenceCriterion(options)`                | 注入按 turn 动态求值的 workspace resolver                               |
-| `extractToolOutputText(output)`                   | 提取标准 content-block 文本，不猜测其他 output 形状                     |
-| `normalizeWorkspacePath(workspaceCwd, inputPath)` | 纯词法路径归一与边界判断                                                |
-| `EvidenceExpect` 及相关类型                       | `toolResult/citation/not/allOf` 声明类型                                |
+| 导出                                              | 用途                                                                             |
+| ------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `evidence`                                        | 无 workspace 依赖时可直接注册的 `TurnCriterion`，metric 名为 `evidence`          |
+| `createEvidenceCriterion(options)`                | 注入按 turn 动态求值的 workspace resolver，或显式启用 `toolResult.contains` 变量 |
+| `extractToolOutputText(output)`                   | 提取标准 content-block 文本，不猜测其他 output 形状                              |
+| `normalizeWorkspacePath(workspaceCwd, inputPath)` | 纯词法路径归一与边界判断                                                         |
+| `EvidenceExpect` 及相关类型                       | `toolResult/citation/not/allOf` 声明类型                                         |
+| `EvidenceVariableResolver` 及相关类型             | 判据工厂显式接收的准备/求值接口；不反向依赖 Recall                               |
 
 完整证据能力可从 `@x-agent-suite/assertions/evidence` 导入，根入口 `@x-agent-suite/assertions` 继续重导出相同符号。`@x-agent-suite/criteria` 重导出判据与声明类型；纯原语从 assertions 根入口或 evidence 子路径导入。
 
@@ -37,6 +38,14 @@ const evidenceWithWorkspace = createEvidenceCriterion({
 ```
 
 resolver 必须按当前 turn/case/repeat 动态求值，因为隔离 cwd 可以每次不同。缺少可信边界时路径断言抛观察错误；无路径断言不调用 resolver。
+
+Recall 变量同样由消费者工厂显式注入，不做全局注册或全 YAML 替换：
+
+```ts
+const criterion = createEvidenceCriterion({ variables: context.variables });
+```
+
+该选项只作用于 `toolResult.contains`。未注入时，其他声明保持原义，但该字段出现 `{{` 会按配置错误显式拒绝，而不是把模板当普通正文。
 
 注册后，声明放在目标轮的 `expect.evidence`；引用中的“最终回答”就是该轮 `turn.text`：
 
@@ -84,6 +93,8 @@ toolResult:
 - 有 `path`：只保留归一后等于 `resource` 的调用；声明 `contains` 时，将该资源所有成功非空读取正文按观察顺序以 `\n` 拼接，再核对全部片段。
 - 不同逻辑路径不混合，失败和空白读取不贡献聚合正文。
 - 回答自称读过、只发生工具调用或只有失败输出均不能替代有效证据。
+- 显式注入 `variables` 后，`contains` 可整值引用字符串数组，也可在数组字符串中嵌入引用；完整声明树先准备、后求值，结果重新满足非空字符串数组校验。其他字段及 `citation.contains` 不插值。
+- 变量模式下，缺失片段诊断只报告数量与脱敏标记，不回显解析后的物理路径或变量值；显式 `contains` 求值为 `undefined` 会抛定义错误，不按未声明处理。
 
 ### `citation`
 
@@ -158,12 +169,15 @@ citation:
 - `packages/assertions/tests/workspace-path.test.ts`：相对/绝对/Windows 路径、边界与逃逸。
 - `packages/assertions/tests/evidence.test.ts`：读取、否定、组合、声明和观察错误。
 - `packages/assertions/tests/evidence-citation.test.ts`：引用、跨次分段阅读及完整检索—实读—引用组合。
+- `packages/assertions/tests/evidence-variables.test.ts`：字段级 opt-in、完整准备顺序、求值后类型校验和未注入配置错误。
+- `packages/recall/tests/recall-var.test.ts`、`packages/recall/tests/recall-variables.test.ts`：静态语法、三层 vars、内建命名空间及 Recall 闭环。
 - `packages/observation/tests/observation-criteria-runner.test.ts`：复用现有调度和 outcome 投影。
 
 ## 场景仓示例
 
-`integrations/itrepos/evidence/` 维护完整 Recall 示例：正向 case 组合检索、入口与附件实读、正文片段和最终引用，反向 case 验证无目标访问痕迹。`scripts/tests/itrepos-evidence-config.test.ts` 在默认单元回归中编译实际考卷；真实 provider 验证只能通过显式命令运行：
+`integrations/itrepos/evidence/.recall.yaml` 原样保留字面量基线；`integrations/itrepos/evidence/variables/.recall.yaml` 以两个单轮 case 独立覆盖三层 `vars`、整值数组、多变量嵌入、转义、单次展开、逻辑身份和 `turn.index=0`；`turn.index=1` 与跨轮隔离由零 token Runner repeat 覆盖。两个配置测试在默认单元回归中核对声明形态，并经真实消费者工厂与独立 fake 观察验证；真实 provider 验证使用两个精确入口：
 
 ```bash
 pnpm ittest:token:evidence --carrier pi --provider co --model default/deepseek-v4-flash --approve-live
+pnpm ittest:token:evidence-variables --carrier pi --provider co --model default/deepseek-v4-flash --approve-live
 ```

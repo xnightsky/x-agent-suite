@@ -1,13 +1,14 @@
 /**
  * @module @x-agent-suite/recall/compile
- * RecallDefinition → ScenarioSpec；只编译场景 provision，不创建 Driver 或合并执行资源。
+ * RecallDefinition → ScenarioSpec；编译场景 provision 并绑定静态变量上下文，不创建 Driver 或合并执行资源。
  */
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import type { ScenarioSpec } from "@x-agent-suite/contracts";
 import {
   parseRecallYaml,
   type RecallContextDefinition,
+  type RecallCaseDefinition,
   type RecallDefinition,
 } from "./schema.ts";
 import type { RecallCriterionDescriptor } from "./registry.ts";
@@ -17,6 +18,11 @@ import {
   type RecallCompiledResource,
 } from "./resources.ts";
 import { compileRecallCaseExpect } from "./assertion-dsl.ts";
+import {
+  attachRecallVariableContext,
+  mergeRecallVariables,
+  type RecallStaticVariableContext,
+} from "./recall-var.ts";
 
 /** 单份考卷编译选项。 */
 export interface CompileRecallOptions {
@@ -135,7 +141,53 @@ function createContextProvision(files: readonly RecallContextFile[]) {
   return { context: { files: files.map((file) => ({ ...file })) } };
 }
 
-/** 读取、校验并编译一份 Recall YAML；所有 plans 引用与资源均在返回前校验。 */
+/**
+ * 为单个 case 构造只读类型的静态变量上下文。
+ *
+ * @behavior recall-variable-context-compile
+ * Given: 已校验的 Recall 文档、case、有效 context 和编译选项。
+ * When: 选择当前文件内 plan 并合并变量层。
+ * Then: vars 按 case > plan > 文档浅合并；scenario.file/dir/rootDir 使用实际编译路径；
+ * 未选择命名 plan 或 context.plan=none 时 plan.name=none；resources: [] 的命名 plan 仍保留其 vars。
+ * Failure: 未注册 plan 已在编译前置检查拒绝，不回退其他 plan 或猜测上下文。
+ */
+function createVariableContext(
+  definition: RecallDefinition,
+  item: RecallCaseDefinition,
+  context: RecallContextDefinition | undefined,
+  options: CompileRecallOptions,
+  filePath: string,
+): RecallStaticVariableContext {
+  const scenarioFile = resolve(filePath);
+  const planName =
+    context?.plan && context.plan !== "none" ? context.plan : "none";
+  return {
+    vars: mergeRecallVariables(
+      definition.vars,
+      planName === "none" ? undefined : definition.plans?.[planName]?.vars,
+      item.vars,
+    ),
+    scenario: {
+      id: definition.id,
+      file: scenarioFile,
+      dir: dirname(scenarioFile),
+      rootDir: resolve(options.rootDir),
+    },
+    case: { id: item.id },
+    plan: { name: planName },
+  };
+}
+
+/**
+ * 读取、校验并编译一份 Recall YAML；所有 plans 引用与资源均在返回前校验。
+ *
+ * @behavior recall-file-compile
+ * Given: 考卷路径、资源 rootDir 和独立判据描述表。
+ * When: 解析文档，校验 metric/plan/resource，再逐 case 编译 provision 与变量上下文。
+ * Then: 返回 ScenarioSpec[]；send 等执行输入保持原义，静态上下文经 metadata 弱引用绑定，
+ * 不创建 Driver，也不把 vars 写入可枚举报告 metadata。
+ * Failure: 读取、YAML、注册引用或资源校验失败均显式抛错，不返回部分场景。
+ */
 export async function compileRecallFile(
   filePath: string,
   options: CompileRecallOptions,
@@ -149,28 +201,30 @@ export async function compileRecallFile(
   const plans = await loadPlans(definition, options, filePath);
   const scenarios: ScenarioSpec[] = [];
   for (const item of definition.cases) {
-    const provision = await compileProvision(
-      item.context ?? definition.context,
-      plans,
-      options,
-    );
+    const context = item.context ?? definition.context;
+    const provision = await compileProvision(context, plans, options);
     const caseExpect = compileRecallCaseExpect(item.expect);
+    const metadata = {
+      ...item.metadata,
+      recall: {
+        file: resolve(filePath),
+        fileId: definition.id,
+        caseId: item.id,
+        provision: provision.attribution,
+        ...(caseExpect.judge ? { judge: caseExpect.judge } : {}),
+      },
+    };
+    attachRecallVariableContext(
+      metadata,
+      createVariableContext(definition, item, context, options, filePath),
+    );
     scenarios.push({
       id: definition.id + "/" + item.id,
       turns: item.turns.map((turn) => ({ ...turn })),
       ...(item.timeoutMs !== undefined ? { timeoutMs: item.timeoutMs } : {}),
       ...(caseExpect.expect ? { expect: caseExpect.expect } : {}),
       ...(provision.value !== undefined ? { provision: provision.value } : {}),
-      metadata: {
-        ...item.metadata,
-        recall: {
-          file: resolve(filePath),
-          fileId: definition.id,
-          caseId: item.id,
-          provision: provision.attribution,
-          ...(caseExpect.judge ? { judge: caseExpect.judge } : {}),
-        },
-      },
+      metadata,
     });
   }
   return scenarios;

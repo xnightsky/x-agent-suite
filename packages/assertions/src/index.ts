@@ -30,6 +30,8 @@ export type {
   CitationEvidenceExpect,
   EvidenceCriterionOptions,
   EvidenceExpect,
+  EvidenceVariableResolver,
+  PreparedEvidenceVariableValue,
   ToolResultEvidenceExpect,
   WorkspaceResourceExpect,
 } from "./evidence/types.ts";

@@ -1,0 +1,73 @@
+version: 1
+id: observed-evidence-variables
+vars:
+  searchResultMarker: research.md
+  entryFragments: [文档层不应覆盖 plan 或 case 的片段]
+  attachmentFragment: 文档层不应覆盖 plan 的片段]
+  resourceStem: research
+  resourceExtension: md
+  literalTemplate: "{{ vars.notAReference }}"
+  amount: -1.25
+  enabled: false
+plans:
+  resources:
+    vars:
+      entryFragments: [计划层不应覆盖 case 的片段]
+      attachmentFragment: 附件约束
+    resources:
+      - source: docs/research.md
+        destination: docs/research.md
+      - source: docs/attachment.md
+        destination: docs/attachment.md
+      - source: docs/variables.md
+        destination: docs/variables.md
+context:
+  plan: resources
+cases:
+  - id: layered-contains
+    vars:
+      entryFragments: [提取关键词与目标, 完成标准]
+    turns:
+      - send: 请用 grep 在 docs 中检索“研究流程”，再阅读 docs/research.md 和 docs/attachment.md，最后只回答 VARIABLE_LAYERS_OK。不要读写其他文件。
+        expect:
+          evidence:
+            allOf:
+              - name: search
+                toolResult:
+                  tool: grep
+                  args: { pattern: 研究流程 }
+                  contains: ["{{ vars.searchResultMarker }}"]
+              - name: entry
+                toolResult:
+                  tool: read
+                  path: { arg: path, resource: docs/research.md }
+                  contains: "{{ vars.entryFragments }}"
+              - name: attachment
+                toolResult:
+                  tool: read
+                  path: { arg: path, resource: docs/attachment.md }
+                  contains: ["{{ vars.attachmentFragment }}"]
+          text-contains: [VARIABLE_LAYERS_OK]
+  - id: embedded-escaped-and-turn-index
+    turns:
+      - send: 请用 grep 在 docs 中检索“研究流程”，再读取 docs/variables.md，最后只回答 VARIABLE_TURN_OK。不要读写其他文件。
+        expect:
+          evidence:
+            allOf:
+              - name: search
+                toolResult:
+                  tool: grep
+                  args: { pattern: 研究流程 }
+                  contains:
+                    ["{{ vars.resourceStem }}.{{ vars.resourceExtension }}"]
+              - name: fixture
+                toolResult:
+                  tool: read
+                  path: { arg: path, resource: docs/variables.md }
+                  contains:
+                    - '\{{ 研究流程 }}'
+                    - "{{ vars.literalTemplate }}"
+                    - "turn-{{ turn.index }}"
+                    - 'n={{ vars.amount }};flag={{ vars.enabled }};literal\keep'
+                    - "suite={{ scenario.id }};case={{ case.id }};plan={{ plan.name }}"
+          text-contains: [VARIABLE_TURN_OK]

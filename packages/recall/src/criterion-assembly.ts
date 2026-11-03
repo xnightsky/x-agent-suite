@@ -24,6 +24,7 @@ import { isRecord } from "./validation.ts";
 import { recallJudgeCriterionName } from "./assertion-dsl.ts";
 import { createRecallJudgeCriteria } from "./judge-criterion.ts";
 import { preflightRecallAssertionScores } from "./assertion-score.ts";
+import { recallVariableResolver } from "./recall-var.ts";
 
 /** assembleRecallCriteria 入参。 */
 export interface AssembleRecallCriteriaOptions {
@@ -43,7 +44,15 @@ export interface AssembleRecallCriteriaOptions {
   readonly effects: RecallEffects;
 }
 
-/** 收集全部场景机械判据引用；内部 Judge 键由专用装配器处理。 */
+/**
+ * 收集全部场景机械判据引用；内部 Judge 键由专用装配器处理。
+ *
+ * @behavior recall-criterion-reference-presence
+ * Given: 编译场景的 turn/session expect 和 Recall 私有 Judge 元数据。
+ * When: 按 Object.keys 收集引用并区分 scope。
+ * Then: false、0、null、空串均算已引用；内部 Judge 名不重复计入机械判据集合。
+ * Failure: 不解释 expect 内容、不求值、不调用工厂；falsy 不得被当成未声明。
+ */
 function collectReferences(
   scenarios: readonly ScenarioSpec[],
 ): ReadonlySet<string> {
@@ -73,7 +82,16 @@ function isCriterionFactory(
   return "create" in registration && typeof registration.create === "function";
 }
 
-/** 调用工厂并包装错误：message 只含 scope:name 与阶段，cause 链保留。 */
+/**
+ * 调用单个判据工厂并约束对外错误边界。
+ *
+ * @behavior recall-criterion-factory-error-boundary
+ * Given: 已声明工厂、同源装配上下文和 scope:name 键。
+ * When: await 工厂 create 并核对返回值。
+ * Then: 返回 name/scope 与声明一致且含 evaluate 函数的 Criterion。
+ * Failure: create 异常包装时保留 cause；畸形返回走形状校验错误；
+ * 顶层 message 只含判据键与阶段，不回显 config、context 或插件敏感内容。
+ */
 async function createFromFactory(
   factory: RecallCriterionFactory,
   context: RecallCriterionFactoryContext,
@@ -99,6 +117,14 @@ async function createFromFactory(
 /**
  * 按已选 target 装配实际引用的动态判据；静态判据原样保留，工厂按声明顺序就地替换。
  * 未引用工厂不调用；case expect 可引用 session 判据，内置 Judge 单独展开。
+ *
+ * @behavior recall-criterion-assembly
+ * Given: 独立 registry、编译场景和同源执行上下文。
+ * When: 收集 turn/session expect 引用并装配实际使用的工厂。
+ * Then: 静态判据保持原对象与顺序；每 target 每工厂至多创建一次；
+ * context.variables 提供同一无状态 Recall 解析器，不启动 Driver 或联网。
+ * Failure: 工厂异常或返回 name/scope/evaluate 形状不符均中止装配，
+ * 对外错误只含判据键和阶段，不回显配置或插件敏感细节。
  */
 export async function assembleRecallCriteria(
   options: AssembleRecallCriteriaOptions,
@@ -114,6 +140,7 @@ export async function assembleRecallCriteria(
     ...(execution.cliRef ? { cliRef: execution.cliRef } : {}),
     ...(execution.clientRef ? { clientRef: execution.clientRef } : {}),
     effects: options.effects,
+    variables: recallVariableResolver,
   };
   const assembled: Criterion[] = [];
   for (const registration of options.registry.criteria) {

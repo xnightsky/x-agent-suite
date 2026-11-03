@@ -2,8 +2,10 @@
  * @module @x-agent-suite/assertions/evidence/types
  * 通用证据判据的公开声明类型，不包含任何具体被测系统语义。
  */
-import type { TurnObservation } from "@x-agent-suite/contracts";
-
+import type {
+  TurnCriterionContext,
+  TurnObservation,
+} from "@x-agent-suite/contracts";
 /** workspace 内资源的输入字段与逻辑路径声明。 */
 export interface WorkspaceResourceExpect {
   /** 工具 input 中承载路径的顶层字段名。 */
@@ -68,8 +70,25 @@ export type EvidenceExpect = EvidenceNodeName &
       }
   );
 
+/** 已准备的判据变量值；由调用方完成全树准备后再求值。 */
+export interface PreparedEvidenceVariableValue {
+  /** 同步返回变量求值结果。 */
+  readonly resolve: () => unknown;
+}
+
+/** evidence 可显式接收的通用变量解析接口；不依赖任何变量实现。 */
+export interface EvidenceVariableResolver {
+  /** 绑定当前 turn 判据上下文并准备值。 */
+  readonly prepareValue: (
+    value: unknown,
+    context: TurnCriterionContext,
+  ) => PreparedEvidenceVariableValue;
+}
+
 /** evidence 判据工厂选项。 */
 export interface EvidenceCriterionOptions {
   /** 按当前 turn 动态提供可信 workspace；仅路径断言需要。 */
   readonly resolveWorkspaceCwd?: (turn: TurnObservation) => string | undefined;
+  /** 仅为 toolResult.contains 显式启用变量；其他字段保持原义。 */
+  readonly variables?: EvidenceVariableResolver;
 }
