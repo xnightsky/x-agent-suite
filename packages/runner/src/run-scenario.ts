@@ -4,6 +4,7 @@
  *
  * 不变量：
  * - 基础设施失败（启动失败、超时、driver 报错）显式抛错；评分不达标只进 Result；
+ * - primary error 与 close/cleanup error 同时存在时用 AggregateError 全部保留；
  * - driver 由消费者工厂注入，runner 取得后即负责清理：start/逐轮 sendPrompt 同在
  *   try 内，start 失败也走 finally close；
  * - 源 spec 只读，一切状态写入发生在 driver 自己的 sandbox 内。
@@ -96,6 +97,8 @@ export async function runScenarioSpec(
   const outcomes: CriterionOutcome[] = [];
   const startedAt = Date.now();
 
+  let primaryError: unknown;
+  let hasPrimaryError = false;
   try {
     await driver.start();
     for (const [index, turn] of spec.turns.entries()) {
@@ -124,8 +127,31 @@ export async function runScenarioSpec(
         })),
       );
     }
+  } catch (error) {
+    primaryError = error;
+    hasPrimaryError = true;
+    throw error;
   } finally {
-    await driver.close("runScenarioSpec 完成");
+    let cleanupError: unknown;
+    let hasCleanupError = false;
+    try {
+      // timeout 或 send 失败后立即进入 close；driver 必须把它视为终态取消。
+      await driver.close("runScenarioSpec 完成");
+    } catch (error) {
+      cleanupError = error;
+      hasCleanupError = true;
+    }
+    if (hasCleanupError) {
+      if (hasPrimaryError) {
+        throw new AggregateError(
+          [primaryError, cleanupError],
+          `runScenarioSpec(${spec.id}) 失败且 close 也失败：` +
+            `primary=${primaryError instanceof Error ? primaryError.message : String(primaryError)}；` +
+            `cleanup=${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`,
+        );
+      }
+      throw cleanupError;
+    }
   }
 
   const session = createSessionObservation(spec, turns);
