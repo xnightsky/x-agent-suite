@@ -27,11 +27,53 @@ test("首次版本创建 annotated tag，后续 fix 自动递增 PATCH", async (
     const tagged = planArtifactVersion({ root, snapshot: false });
     assert.equal(tagged.version, "0.1.0");
     assert.equal(tagged.tagExistsAtHead, true);
+    assert.equal(createVersionTag(root, tagged), false);
 
     await commitFile(root, "fix.txt", "two\n", "fix: 修复制品");
     const patch = planArtifactVersion({ root, snapshot: false });
     assert.equal(patch.version, "0.1.1");
     assert.equal(patch.previousTag, "v0.1.0");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("HEAD 上的 lightweight 稳定 tag 被稳定打包拒绝", async () => {
+  const root = await createRepository();
+  try {
+    await commitFile(root, "base.txt", "base\n", "feat: 基线");
+    git(root, ["tag", "v0.1.0"]);
+    assert.throws(
+      () => planArtifactVersion({ root, snapshot: false }),
+      /annotated|lightweight/,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("已有 lightweight tag 在 createVersionTag 阶段同样被拒绝", async () => {
+  const root = await createRepository();
+  try {
+    await commitFile(root, "base.txt", "base\n", "feat: 基线");
+    const plan = planArtifactVersion({ root, snapshot: false });
+    git(root, ["tag", "v0.1.0"]);
+    assert.throws(() => createVersionTag(root, plan), /annotated|lightweight/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("历史 lightweight 稳定 tag 不参与版本推导", async () => {
+  const root = await createRepository();
+  try {
+    await commitFile(root, "base.txt", "base\n", "feat: 基线");
+    git(root, ["tag", "v0.1.0"]);
+    await commitFile(root, "fix.txt", "fix\n", "fix: 修复");
+    assert.throws(
+      () => planArtifactVersion({ root, snapshot: false }),
+      /annotated|lightweight/,
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }

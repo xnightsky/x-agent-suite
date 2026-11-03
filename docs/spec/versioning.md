@@ -34,7 +34,7 @@ tags: [spec, versioning]
 ## 单一版本真相源
 
 - Git history 与当前提交上的稳定 tag 是版本真相源；根 package 和内部 workspace 的 `0.0.0` 只是不可发布占位值。
-- Git tag 使用 `v<version>`，例如 `v0.1.0`；稳定 `artifacts:pack` 获当前操作者授权且成功后自动创建 annotated tag。
+- Git tag 使用 `v<version>`，例如 `v0.1.0`；稳定 `artifacts:pack` 获当前操作者授权且成功后自动创建 annotated tag。tag 发现、版本推导与已有 tag 复用都必须验证 annotated 对象；lightweight 稳定 tag 显式拒绝，已有 tag 还必须 peel 到当前 HEAD。
 - 核心包、PTY 包、artifact 目录、tarball 文件名与 manifest 必须使用同一推导版本。
 - `CHANGELOG.md` 归集消费者可见变化，不承担机器版本真相源。
 - 一个版本一旦形成可消费制品，其内容不得覆盖或替换；任何修改都产生新版本。
@@ -42,7 +42,7 @@ tags: [spec, versioning]
 
 ## 固定版本与 HEAD 对齐
 
-稳定版本 `V` 必须与一个干净的 release commit 一一对应，`v<V>` annotated tag 指向该提交。首次形成制品时 tag 不是前置条件，而是完整验收成功后的原子收口；重打历史固定版本时 tag 是首选构建来源，完整 commit SHA 仅用于恢复异常历史。
+稳定版本 `V` 必须与一个干净的 release commit 一一对应，`v<V>` annotated tag 指向该提交。首次形成制品时 tag 不是前置条件，而是完整验收成功后的原子收口；重打历史固定版本时 tag 是首选构建来源，完整 commit SHA 仅用于恢复异常历史。发现或复用既有 `v<V>` 时若对象是 lightweight tag，或 annotated tag 的 peeled commit 不等于 HEAD，稳定打包必须失败。
 
 | 目标                         | 正确构建来源                         | 制品版本示例                 |
 | ---------------------------- | ------------------------------------ | ---------------------------- |
