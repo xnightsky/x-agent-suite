@@ -14,8 +14,35 @@ import type {
   Observation,
   ToolCall,
 } from "@x-agent-suite/contracts";
+import {
+  assertJsonValue,
+  isJsonObject,
+  isJsonValue,
+  jsonEqual,
+  type JsonObject,
+} from "./json-safe.ts";
 
 export type { EnumerateCheck, EnumerateResult, HardExpectation };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+function displayJson(value: unknown): string {
+  try {
+    return JSON.stringify(value) ?? String(value);
+  } catch {
+    return "<无法序列化的值>";
+  }
+}
 
 /**
  * 工具名归一判定：末段匹配，兼容命名空间前缀。
@@ -32,7 +59,7 @@ export function toolNameMatches(call: ToolCall, tool: string): boolean {
 }
 
 /**
- * action 归一判定：ToolCall.input 为对象且 action 字段精确相等。
+ * action 归一判定：ToolCall.input 为对象且自有 action 字段精确相等。
  * @param call 一次工具调用记录。
  * @param action 期望的单工具 action。
  */
@@ -41,6 +68,8 @@ export function toolActionMatches(call: ToolCall, action: string): boolean {
   return (
     typeof input === "object" &&
     input !== null &&
+    Array.isArray(input) === false &&
+    Object.hasOwn(input, "action") &&
     (input as Record<string, unknown>).action === action
   );
 }
@@ -51,41 +80,127 @@ export function toolActionMatches(call: ToolCall, action: string): boolean {
  * @returns 失败原因列表；空数组 = 通过。
  */
 export function dryChecks(observation: Observation): string[] {
+  if (!isRecord(observation)) return ["observation 不是对象"];
   const failures: string[] = [];
-  if (!Array.isArray(observation.events) || observation.events.length === 0) {
-    failures.push("events 为空：driver 未产出任何底层事件");
+
+  if (typeof observation.text !== "string") {
+    failures.push("observation.text 必须是字符串");
   }
-  if (!Array.isArray(observation.toolCalls)) {
+
+  const events = observation.events;
+  if (!Array.isArray(events) || events.length === 0) {
+    failures.push("events 为空：driver 未产出任何底层事件");
+  } else {
+    for (const [index, event] of events.entries()) {
+      if (!isRecord(event)) {
+        failures.push(`events[${index}] 必须是对象`);
+        continue;
+      }
+      if (!isNonEmptyString(event.type)) {
+        failures.push(`events[${index}].type 必须是非空字符串`);
+      }
+      if (
+        typeof event.timestamp !== "number" ||
+        !Number.isFinite(event.timestamp)
+      ) {
+        failures.push(`events[${index}].timestamp 必须是有限数`);
+      }
+    }
+  }
+
+  const toolCalls = observation.toolCalls;
+  const countValid = isNonNegativeInteger(observation.toolCallsCount);
+  if (!countValid) {
+    failures.push("toolCallsCount 必须是非负整数");
+  }
+  if (!Array.isArray(toolCalls)) {
     failures.push("toolCalls 不是数组");
     return failures;
   }
-  if (observation.toolCallsCount !== observation.toolCalls.length) {
+  if (countValid && observation.toolCallsCount !== toolCalls.length) {
     failures.push(
-      `toolCallsCount=${observation.toolCallsCount} 与 toolCalls.length=${observation.toolCalls.length} 不一致`,
+      `toolCallsCount=${observation.toolCallsCount} 与 toolCalls.length=${toolCalls.length} 不一致`,
     );
   }
-  for (const call of observation.toolCalls) {
-    if (!call.name) {
-      failures.push("存在缺少 name 的 ToolCall");
+  for (const [index, call] of toolCalls.entries()) {
+    if (!isRecord(call)) {
+      failures.push(`toolCalls[${index}] 必须是对象`);
+      continue;
+    }
+    if (!isNonEmptyString(call.name)) {
+      failures.push(`toolCalls[${index}].name 必须是非空字符串`);
+    }
+    if (!Object.hasOwn(call, "input")) {
+      failures.push(`toolCalls[${index}] 缺少 input`);
     }
     if (call.status !== "completed" && call.status !== "failed") {
       failures.push(
-        `ToolCall(${call.name}) status 非法: ${JSON.stringify(call.status)}`,
+        `ToolCall(${String(call.name)}) status 非法: ${displayJson(call.status)}`,
       );
+    }
+  }
+
+  if (
+    observation.steps !== undefined &&
+    !isNonNegativeInteger(observation.steps)
+  ) {
+    failures.push("steps 必须是非负整数");
+  }
+  if (
+    observation.exhausted !== undefined &&
+    typeof observation.exhausted !== "boolean"
+  ) {
+    failures.push("exhausted 必须是 boolean");
+  }
+  if (observation.usage !== undefined) {
+    if (!isRecord(observation.usage)) {
+      failures.push("usage 必须是对象");
+    } else {
+      for (const key of [
+        "promptTokens",
+        "completionTokens",
+        "totalTokens",
+      ] as const) {
+        if (!isNonNegativeInteger(observation.usage[key])) {
+          failures.push(`usage.${key} 必须是非负整数`);
+        }
+      }
     }
   }
   return failures;
 }
 
-/** 浅层入参匹配：input 必须是对象，且每个期望键的值 JSON 相等。 */
-function argsMatch(input: unknown, expected: Record<string, unknown>): boolean {
-  if (typeof input !== "object" || input === null) {
-    return false;
+/** 校验 hardChecks 的封闭期望形状。 */
+function asHardExpectation(value: unknown): HardExpectation {
+  if (!isRecord(value)) {
+    throw new TypeError("hardChecks 的 expected 必须是对象");
   }
-  const record = input as Record<string, unknown>;
+  for (const key of Object.keys(value)) {
+    if (key !== "tool" && key !== "action" && key !== "args") {
+      throw new TypeError("hardChecks 的 expected 含未知字段 " + key);
+    }
+  }
+  if (!isNonEmptyString(value.tool)) {
+    throw new TypeError("hardChecks 的 expected.tool 必须是非空字符串");
+  }
+  if (value.action !== undefined && !isNonEmptyString(value.action)) {
+    throw new TypeError("hardChecks 的 expected.action 必须是非空字符串");
+  }
+  if (value.args !== undefined && !isJsonObject(value.args)) {
+    throw new TypeError("hardChecks 的 expected.args 必须是普通对象");
+  }
+  if (value.args !== undefined) {
+    assertJsonValue(value.args, "hardChecks 的 expected.args");
+  }
+  return value as unknown as HardExpectation;
+}
+
+/** 浅层入参匹配：input 必须是普通对象，且每个期望键的值 JSON 相等。 */
+function argsMatch(input: unknown, expected: JsonObject): boolean {
+  if (!isJsonValue(input) || !isJsonObject(input)) return false;
   return Object.entries(expected).every(
     ([key, value]) =>
-      key in record && JSON.stringify(record[key]) === JSON.stringify(value),
+      Object.hasOwn(input, key) && jsonEqual(input[key]!, value),
   );
 }
 
@@ -100,14 +215,16 @@ export function hardChecks(
   observation: Observation,
   expected: HardExpectation,
 ): string[] {
+  const validated = asHardExpectation(expected);
   const label =
-    expected.action === undefined
-      ? expected.tool
-      : `${expected.tool}(action=${expected.action})`;
+    validated.action === undefined
+      ? validated.tool
+      : `${validated.tool}(action=${validated.action})`;
   const calls = observation.toolCalls.filter(
     (c) =>
-      toolNameMatches(c, expected.tool) &&
-      (expected.action === undefined || toolActionMatches(c, expected.action)),
+      toolNameMatches(c, validated.tool) &&
+      (validated.action === undefined ||
+        toolActionMatches(c, validated.action)),
   );
   if (calls.length === 0) {
     return [`未调用 ${label}`];
@@ -116,19 +233,19 @@ export function hardChecks(
   if (completed.length === 0) {
     return [
       `${label} 调用未成功完成（status 均非 completed）: ` +
-        JSON.stringify(calls.map((c) => ({ name: c.name, status: c.status }))),
+        displayJson(calls.map((c) => ({ name: c.name, status: c.status }))),
     ];
   }
-  if (!expected.args) {
+  if (validated.args === undefined) {
     return [];
   }
   const matched = completed.some((c) =>
-    argsMatch(c.input, expected.args ?? {}),
+    argsMatch(c.input, validated.args as JsonObject),
   );
   if (!matched) {
     return [
-      `${label} 入参不匹配，期望包含 ${JSON.stringify(expected.args)}；` +
-        `实际: ${JSON.stringify(completed.map((c) => c.input ?? null))}`,
+      `${label} 入参不匹配，期望包含 ${displayJson(validated.args)}；` +
+        `实际: ${displayJson(completed.map((c) => c.input ?? null))}`,
     ];
   }
   return [];

@@ -5,6 +5,11 @@
  * 本包不认识任何具体被测系统、宿主、协议或消费者判据。
  */
 export {
+  assertJsonValue,
+  cloneJsonValue,
+  type JsonValue,
+} from "./json-safe.ts";
+export {
   checkListResult,
   dryChecks,
   fuzzyChecks,

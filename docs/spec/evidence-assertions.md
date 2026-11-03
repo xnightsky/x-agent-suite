@@ -96,6 +96,8 @@ toolResult:
 
 工具名、action、args 匹配与 `tool-call` 一致，args 是递归子集约束。有效证据必须来自 `status: "completed"` 且文本正文 `trim()` 非空的调用；`failed`、缺 output、无可识别文本块、空或纯空白正文均不算有效证据。
 
+`tool`、`action` 和 `args` 走严格 JSON-safe 形状校验：tool/action 必须是非空字符串，args 必须是普通对象；对象只读取 own enumerable data property，对象比较忽略键序，数组比较保留顺序，且 object/array/null 等类型不得互等。args 只接受 null、boolean、finite number、string、dense array 与普通对象；`NaN`、`Infinity`、`undefined`、函数、symbol、BigInt、Date/Map/Set、accessor、非 enumerable 字段、稀疏数组和循环引用均属定义错误。该 JSON 比较语义同时用于 `tool-call` 与检查层 `hardChecks`，不再使用 `JSON.stringify` 字符串相等。
+
 - 无 `path`：所有约束落在同一候选调用集合；声明 `contains` 时，要求同一次成功非空调用包含全部片段。
 - 有 `path`：只保留归一后等于 `resource` 的调用；声明 `contains` 时，将该资源所有成功非空读取正文按观察顺序以 `\n` 拼接，再核对全部片段。
 - 不同逻辑路径不混合，失败和空白读取不贡献聚合正文。
