@@ -13,6 +13,8 @@ import {
   isPositiveInteger,
   isRecord,
   requiredString,
+  yamlErrorCategory,
+  yamlErrorLocation,
 } from "./validation.ts";
 
 /** 模型工具策略。 */
@@ -81,21 +83,26 @@ function normalizeEffects(
     ["tools", "commands", "maxSteps", "timeoutMs", "workspace", "cleanup"],
     "Recall effects",
   );
-  const tools = value.tools ?? "none";
+  const tools = value.tools === undefined ? "none" : value.tools;
   if (tools !== "none" && tools !== "read-only" && tools !== "allowlist") {
     throw new Error("Recall effects.tools 必须是 none/read-only/allowlist");
   }
-  const maxSteps = value.maxSteps ?? 1;
-  const timeoutMs = value.timeoutMs ?? 30_000;
+  const maxSteps = value.maxSteps === undefined ? 1 : value.maxSteps;
+  const timeoutMs = value.timeoutMs === undefined ? 30_000 : value.timeoutMs;
   if (!isPositiveInteger(maxSteps))
     throw new Error("Recall effects.maxSteps 必须是正整数");
   if (!isPositiveInteger(timeoutMs)) {
     throw new Error("Recall effects.timeoutMs 必须是正整数");
   }
-  if ((value.workspace ?? "isolated") !== "isolated") {
+  if (
+    (value.workspace === undefined ? "isolated" : value.workspace) !==
+    "isolated"
+  ) {
     throw new Error("Recall effects.workspace 当前仅支持 isolated");
   }
-  if ((value.cleanup ?? "required") !== "required") {
+  if (
+    (value.cleanup === undefined ? "required" : value.cleanup) !== "required"
+  ) {
     throw new Error("Recall effects.cleanup 当前仅支持 required");
   }
   return {
@@ -134,7 +141,10 @@ function parsePlan(source: string, path: string): unknown {
   try {
     document = parse(source, { strict: true, uniqueKeys: true });
   } catch (cause) {
-    throw new Error("Recall 执行 Plan YAML 解析失败：" + path, { cause });
+    const { line, column } = yamlErrorLocation(cause);
+    throw new Error(
+      `Recall 执行 Plan ${yamlErrorCategory(cause)}（${path}:line ${line ?? "?"}, column ${column ?? "?"}）`,
+    );
   }
   if (!isRecord(document)) throw new Error("Recall 执行 Plan 顶层必须是对象");
   assertKnownFields(document, ["version", "effects"], "Recall 执行 Plan");

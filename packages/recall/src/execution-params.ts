@@ -2,6 +2,7 @@
  * @module @x-agent-suite/recall/execution-params
  * 每次调用的执行参数；不变量：只验证 JSON 对象形状，不解释宿主字段、不回显输入。
  */
+import { cloneJsonValue } from "@x-agent-suite/assertions";
 import { isRecord } from "./validation.ts";
 
 /** 校验并复制执行参数，避免 Adapter 在 case/repeat 之间共享可变对象。 */
@@ -11,7 +12,7 @@ export function copyExecutionParams(
   if (!isRecord(value))
     throw new Error("Recall executionParams 必须是 JSON 对象");
   try {
-    const parsed: unknown = JSON.parse(JSON.stringify(value));
+    const parsed = cloneJsonValue(value, "Recall executionParams");
     if (!isRecord(parsed)) throw new Error();
     return parsed;
   } catch {
