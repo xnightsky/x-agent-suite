@@ -12,6 +12,20 @@ export {
 } from "../../packages/driver/src/jsonl-framing.ts";
 export { AsyncQueue } from "../../packages/driver/src/queue.ts";
 export { MockDriver } from "../../packages/driver/src/mock.ts";
+export {
+  JsonRpcPeer,
+  type JsonRpcIncomingRequest,
+  type JsonRpcNotification,
+  type JsonRpcPeerOptions,
+  type JsonRpcReverseAnswer,
+} from "../../packages/driver/src/jsonrpc-peer.ts";
+export {
+  LongLivedJsonRpcDriver,
+  type JsonRpcLongLivedAdapter,
+  type JsonRpcRequestSpec,
+  type LongLivedJsonRpcDriverOptions,
+  type NotificationMapping,
+} from "../../packages/driver/src/long-lived-jsonrpc.ts";
 export type {
   AgentDriver,
   LongLivedAgentDriver,

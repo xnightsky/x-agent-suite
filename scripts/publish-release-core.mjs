@@ -32,15 +32,9 @@ async function main() {
   if (manifest.mode !== "stable") throw new Error("补发只接受 stable 制品");
   if (core.version !== version) throw new Error("制品版本与请求版本不一致");
   if (manifest.commit !== commit) throw new Error("制品提交与 tag 提交不一致");
-  const pkg = JSON.parse(
-    execFileSync("tar", ["-xOf", core.path, "package/package.json"], {
-      encoding: "utf8",
-    }),
-  );
-  if (pkg.name !== "@xnightsky/x-agent-suite")
-    throw new Error("tarball 内包名不是核心主包");
-  if (pkg.version !== version || pkg.private === true)
-    throw new Error("tarball 内版本或公开发布属性非法");
+  // verifyCoreArtifact 共享身份校验：name/version/private/bin 均在调用 npm 前完成。
+  if (core.packageIdentity.version !== version)
+    throw new Error("tarball 内版本与请求版本不一致");
   execFileSync(
     "npm",
     [
