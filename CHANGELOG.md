@@ -4,6 +4,28 @@
 
 ## Unreleased
 
+## 0.12.1 - 2026-11-03
+
+### Added
+
+- `@x-agent-suite/assertions` 导出 `assertJsonValue`、`cloneJsonValue` 与 `JsonValue`，为消费者提供 JSON-safe 值校验和深克隆原语；聚合分发包的 `driver` 入口补齐 `JsonRpcPeer` 与 `LongLivedJsonRpcDriver` 公共导出。
+- 新增最终定向回归和 Codex 独立审查摘要，覆盖断言、聚合、Recall、凭据、沙箱、driver/harness 生命周期与发布脚本边界。
+
+### Changed
+
+- live 请求安全收紧：显式声明但缺失或为空的 `apiKey`/`apiKeyEnv` 在发送前 fail-closed；默认 transport 使用 `redirect: "error"`；sniff 的 deadline 覆盖凭据解析与请求并主动 abort；配置读取失败、未知显式 wire 和 YAML 解析错误不再静默回退或回显源行。
+- driver/PTY 生命周期收紧：start/close 显式状态机和单飞清理；关闭后禁止 restart；PTY 永久记录 exitCode/signal，异常退出不再产出成功 Observation；runner timeout 触发 close-as-cancel，primary/cleanup 错误聚合保留。
+- Recall/observation 输入更严格：新增 JSON-safe 比较与校验，拒绝 NaN/Infinity、非法 aggregation schema、空路径、非 boolean `approveLive`、原型链 plan 与重复目标；报告接入 driver.redactor，`__proto__` 安全写回，文件默认权限为 0600。
+- 发布链路收紧：`install:global` 与补发入口共同校验 tarball 内包身份，扫描重复、路径别名、PAX size/path、结束块和布局扩展；稳定打包拒绝 lightweight tag；`run-ittests --require-executed` 可阻止全 skip 假绿。
+
+### Fixed
+
+- 修复 sandbox provision 经符号链接越界写入、源链接外泄、symlink 挂载点穿透，以及 createSandbox 中途失败不回收目录的问题。
+- 修复 assertions 对 tool-call 畸形 expect、dryChecks 畸形 Observation、JSON 键序/继承属性/NaN 的误判，以及 evidence args 的 JSON 校验缺口。
+- 修复 observation 聚合对非法 weight/threshold/absent 的静默接受、OR 维度未知名遗漏，以及 aggregate 失败原因被 Recall 投影覆盖。
+- 修复 Recall YAML 错误泄露配置源行、aggregate reason 丢失、报告脱敏未接线、target 目录路径逃逸、plan 原型链绕过和 null 被当作缺省的问题。
+- 修复 PTY close 被挂起 start 阻塞、退出订阅随轮次累积、waitForScreen dispose 不取消、LongLived closeRequest 同步异常阻断清理、PTY cleanup 阶段无界等待等生命周期问题。
+
 ## 0.12.0 - 2026-11-03
 
 ### Added
