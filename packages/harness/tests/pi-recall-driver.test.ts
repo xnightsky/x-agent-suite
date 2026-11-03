@@ -9,7 +9,6 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import type { ScenarioSpec } from "@x-agent-suite/contracts";
 import { createPiRecallDriver } from "../../../profiles/pi-recall.ts";
 import {
   HOST_SETTINGS,
@@ -123,17 +122,6 @@ test("tools=allowlist：落到本 Adapter 固定的原生只读工具集", async
   });
 });
 
-test("多轮场景在工厂阶段就拒绝，不产生任何执行", () => {
-  const multiTurn: ScenarioSpec = {
-    id: "pi-recall/multi",
-    turns: [{ send: "a" }, { send: "b" }],
-  };
-  assert.throws(
-    () => createPiRecallDriver({ ...driverContext({}), spec: multiTurn }),
-    /单轮|多轮/,
-  );
-});
-
 test("appendSystemPrompt 只透传为 --append-system-prompt，prompt 前以 -- 终止选项解析", async () => {
   const appended = "consumer trusted rules";
   await withDriver({ appendSystemPrompt: appended }, async (driver) => {
@@ -223,8 +211,7 @@ test("步数预算命中时保留原生中断证据", async () => {
     assert.equal(observation.metadata?.nativeAborted, undefined);
   });
 });
-
-test("headless 一次性进程：第二次 sendPrompt 显式拒绝而不丢上下文", async () => {
+test("单轮 headless 保持一次性：第二次 sendPrompt 显式拒绝", async () => {
   await withDriver({}, async (driver) => {
     await driver.sendPrompt("first");
     await assert.rejects(driver.sendPrompt("second"), /多轮|一次性/);

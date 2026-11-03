@@ -36,23 +36,31 @@ try {
 }`;
 }
 
-/** 生成安装后一次性驱动冒烟，用假子进程验证 live 分支、原生完成信号及隔离配置。 */
+/** 生成安装后多轮驱动冒烟，用 fake 宿主验证原生 session 恢复、逐轮证据与隔离配置。 */
 function createPiRecallRuntimeSmoke(): string {
   return `const { createPiRecallDriver } = await import("@xnightsky/x-agent-suite/profiles/pi-recall");
   const { LiveBackend } = await import("@xnightsky/x-agent-suite/llm-fixture");
   const hostScript = join(profileSandbox.cwd, "fake-host.mjs");
   await writeFile(hostScript, [
-    'import { readFileSync } from "node:fs";',
+    'import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";',
     'import { join } from "node:path";',
-    'const text = readFileSync(join(process.env.PI_CODING_AGENT_DIR, "settings.json"), "utf8");',
-    'console.log(JSON.stringify({type:"message_end", message:{role:"assistant", stopReason:"stop", content:[{type:"text",text}]}}));',
+    'const argv = process.argv.slice(2); const prompt = argv.at(-1);',
+    'const id = argv[argv.indexOf("--session-id") + 1];',
+    'const dir = argv[argv.indexOf("--session-dir") + 1];',
+    'const file = id && dir ? join(dir, id + ".jsonl") : null;',
+    'const history = file && existsSync(file) ? readFileSync(file, "utf8").split("\\\\n").filter(Boolean).map(line => JSON.parse(line)) : [];',
+    'const settings = JSON.parse(readFileSync(join(process.env.PI_CODING_AGENT_DIR, "settings.json"), "utf8"));',
+    'if (file) { mkdirSync(dir, { recursive: true }); writeFileSync(file, [...history, prompt].map(item => JSON.stringify(item)).join("\\\\n") + "\\\\n"); }',
+    'const text = JSON.stringify({ settings, history });',
+    'console.log(JSON.stringify({type:"message_end", message:{role:"assistant", stopReason:"stop", usage:{input:1,output:1,totalTokens:2}, content:[{type:"text",text}]}}));',
     'console.log(JSON.stringify({type:"agent_end"}));',
   ].join("\\n"));
   const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
   process.env.PI_CODING_AGENT_DIR = host;
   const target = { carrier: "pi", channel: { ...context.live, baseUrl: context.baseUrl, apiKey: "synthetic" } };
+  const firstPrompt = "offline smoke";
   const driver = createPiRecallDriver({
-    spec: { id: "artifact-profile", turns: [{ send: "offline smoke" }] },
+    spec: { id: "artifact-profile", turns: [{ send: firstPrompt }, { send: "resume smoke" }] },
     target, backend: new LiveBackend(target), cliRef: "pi", executionParams: {},
     effects: { kind: "none", attribution: "none", tools: "none", commands: { allow: [], deny: [] },
       maxSteps: 1, timeoutMs: 10000, workspace: "isolated", cleanup: "required" },
@@ -60,10 +68,17 @@ function createPiRecallRuntimeSmoke(): string {
   let workspace;
   try {
     await driver.start();
-    const observation = await driver.sendPrompt("offline smoke");
-    assert.equal(JSON.parse(observation.text).defaultThinkingLevel, "high");
-    assert.equal(observation.metadata.nativeCompleted, true);
-    workspace = observation.metadata.workspaceCwd;
+    const first = await driver.sendPrompt(firstPrompt);
+    const second = await driver.sendPrompt("resume smoke");
+    assert.deepEqual(JSON.parse(first.text).history, []);
+    const resumed = JSON.parse(second.text);
+    assert.deepEqual(resumed.history, [firstPrompt]);
+    assert.equal(resumed.settings.defaultThinkingLevel, "high");
+    assert.equal(first.metadata.nativeCompleted, true);
+    assert.equal(second.metadata.nativeCompleted, true);
+    assert.ok(first.usage.totalTokens > 0 && second.usage.totalTokens > 0);
+    assert.equal(second.events.length, first.events.length);
+    workspace = second.metadata.workspaceCwd;
   } finally {
     try { await driver.close(); } finally {
       if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;

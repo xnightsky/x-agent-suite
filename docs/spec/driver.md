@@ -98,6 +98,8 @@ export interface PtyProcess {
 
 第 4 条是硬顺序约束：sandbox 一旦 cleanup，artifact 判据就永久失去证据。
 
+- Harness 的每次 `Observation.events` 只包含当前进程事件；`sendPrompt` 保持活动进程登记至最终 `proc.close()` 完成，并在文件证据等后续异步步骤后再次判关闭状态。任何 `close` 都取消当前轮，不得在 sandbox 清理后补发成功 Observation。
+
 ### 失败分类前缀
 
 driver 必须让判据能区分框架级失败与领域失败，靠 reason 前缀实现：

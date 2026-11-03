@@ -185,13 +185,23 @@ class HarnessDriverImpl implements HarnessDriver {
     });
     this.activeProc = proc;
     this.lastProc = proc;
+    let observation: Observation;
     try {
       await proc.start();
-      return await this.collect(proc);
+      observation = await this.collect(proc);
     } finally {
-      this.activeProc = null;
-      await proc.close();
+      try {
+        await proc.close();
+      } finally {
+        this.activeProc = null;
+      }
     }
+    if (this.closePromise) {
+      throw new Error(
+        `HarnessDriver(${this.profile.name}): sendPrompt 已被 close 取消`,
+      );
+    }
+    return observation;
   }
 
   /** 最近一次进程的 stderr 尾部，用于失败诊断。 */
@@ -241,6 +251,7 @@ class HarnessDriverImpl implements HarnessDriver {
 
   /** 消费进程 stdout JSONL 至退出（带超时），聚合 Observation。 */
   private async collect(proc: JsonlProcess): Promise<Observation> {
+    const eventOffset = this.log.length;
     const parse = this.profile.createParser();
     const texts: string[] = [];
     const toolCalls: ToolCall[] = [];
@@ -311,7 +322,7 @@ class HarnessDriverImpl implements HarnessDriver {
         toolCalls,
         toolCallsCount: toolCalls.length,
         steps,
-        events: [...this.log],
+        events: this.log.slice(eventOffset),
       },
       this.redactor,
     );

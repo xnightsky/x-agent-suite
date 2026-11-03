@@ -62,7 +62,7 @@ x-agent-suite recall --carrier pi --live-config private-live.yaml \
 
 省略 `--execution-params` 或传 `{}` 均继承宿主；显式覆盖只对当前 case/repeat 的隔离配置生效。参数不记录为原始报告字段，也不得承载凭据；secret 继续走 live/auth 配置及既有脱敏器。
 
-## Pi Recall 单轮工厂
+## Pi Recall 单轮与原生多轮工厂
 
 不需要自持 Driver 时，可显式注册根 `profiles/pi-recall.ts` 的工厂；它仍复用 Harness 与 `writePiLiveConfig`，不在核心包识别宿主，不改变 TargetTags 或 live 审批。
 
@@ -74,7 +74,10 @@ const profiles = {
 };
 ```
 
-- 只支持单轮，创建时拒绝多轮；`executionParams` 只支持 `thinkingLevel`，默认继承原生配置。
+- 单轮保持 `--no-session` 与一次性 `sendPrompt`；多轮 spec 在同一 Driver/隔离工作区内使用 Driver 专属 `session-id` 与 `piHome/sessions` 的 `session-dir`，由每次独立 Pi 进程恢复真实上下文，不拼接历史，也不触碰用户最近会话。
+- 多轮逐轮隔离文本、工具调用、事件、完成标记、usage 与 `workspaceCwd`，不复用上一轮 `agent_end` 或累计用量；每轮必须重新收到 `agent_end` 与正数原生 `totalTokens`，缺失或为零时显式失败。单轮缺少 usage 仍只省略、不编造；并发调用显式拒绝。
+- 调用方仍在 `close/finally` 收尾，session/HOME/cwd 一并清理；`close` 在 stdout 消费、最终进程收尾或文件证据读取中发生都取消当前轮，不得在 sandbox 清理后返回成功 Observation。
+- `executionParams` 只支持 `thinkingLevel`，默认继承原生配置。
 - `contextFiles` 与 `skills` 是受信任 Profile 选项，均默认 `off`；显式 `project` 后分别启用隔离工作区的 AGENTS/CLAUDE 与 Skill 原生发现，不把正文拼进追加系统提示词。场景资源仍只来自 `spec.provision`，不复制真实 HOME 的规则或 Skill；扩展发现、MCP 与提示模板保持关闭。Skill 正文由模型通过显式只读工具权限读取。
 - `appendSystemPrompt` 只接受受信任调用方显式提供的字符串，不自动读取消费者提示词；`commandOverride` 仅为零 token 测试注入。
 - `tools: none` 禁用工具；`read-only` 使用固定的 `read,grep,find,ls`。只有 `tools: allowlist` 且显式配置 `commands.allow` 时才增加 `bash`，命令限定为工作区内 `.mjs` 的 Node 调用；拒绝 shell 组合、变量展开和其他解释器。命令按完整字符串精确匹配，deny 优先，路径表示变化不会自动放行。
@@ -88,5 +91,5 @@ const profiles = {
 - borrowed 测试暂不按计费类型筛选，不需要冒充 subscription；live unknown/disallowed 仍拒绝，review-required 仍需本次批准。
 - fixture 才允许用 fake 模型的 `reasoning:false` 与 `defaultThinkingLevel:off`。live 分支必须独立于这套 fixture 默认值。
 - 合成原生配置测试覆盖默认继承、配套映射、显式覆盖、源文件不变、坏配置拒绝；源码入口与外部安装入口均验证。
-- 外部安装冒烟同时验证公共 TargetTags YAML、独立 CLI live 拒绝门禁和 Pi 隔离 settings 的继承证据，不启动真实 provider，不产生 token。
+- 外部安装冒烟同时验证公共 TargetTags YAML、独立 CLI live 拒绝门禁、Pi 隔离 settings 的继承证据，以及公开 Pi Driver 的两轮原生 session 恢复、逐轮事件/usage 和清理，不启动真实 provider，不产生 token。
 - 尚不保证扩展动态注册、原生认证 headers/OAuth、远程目录缓存或多版本 CLI 的完全等价；需要这些能力时由对应消费者 Profile 明确实现，不能靠投影辅助函数声称已完成真实宿主验收。

@@ -8,9 +8,10 @@
  * - 默认工具集为四个原生只读工具；显式命令白名单才增加 bash，守卫执行精确命令与路径检查；
  * - 证据只认原生事件：agent_end 判完成，tool_execution_end 判工具成败，message_end 的 stopReason/usage
  *   判错误、截断与用量；退出码与模型自述都不作为证据；
- * - 只支持单轮：spec.turns 超过一轮在工厂阶段就拒绝，绝不靠拼接历史伪造上下文；
+ * - 多轮使用 Driver 专属 session-id/session-dir 恢复原生上下文；单轮保持 no-session，绝不拼接历史；
  * - 消费者可用 appendSystemPrompt 注入自己受信任的追加系统提示词，内容原样透传、本模块不解释。
  */
+import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type {
@@ -104,7 +105,7 @@ interface NativeState {
 
 /** 在创建任何执行资源前拒绝当前工厂不能兑现的声明。 */
 function assertSupported(
-  { spec, executionParams, effects }: RecallProfileDriverContext,
+  { executionParams, effects }: RecallProfileDriverContext,
   options: PiRecallDriverOptions,
 ): void {
   for (const key of ["contextFiles", "skills"] as const) {
@@ -115,11 +116,6 @@ function assertSupported(
     ) {
       throw new Error("Pi Recall Driver " + key + " 只支持 off/project");
     }
-  }
-  if (spec.turns.length > 1) {
-    throw new Error(
-      "Pi Recall Driver 只支持单轮场景，headless 不保留多轮上下文",
-    );
   }
   if (
     options.appendSystemPrompt !== undefined &&
@@ -247,6 +243,9 @@ function createProfile(
   options: PiRecallDriverOptions,
   state: NativeState,
 ): HarnessProfile {
+  const multiTurn = context.spec.turns.length > 1;
+  const sessionId = randomUUID();
+  let sessionDir = "";
   let guardPath = "";
   return {
     name: "pi-recall",
@@ -261,10 +260,14 @@ function createProfile(
     headlessArgs: (prompt) => [
       ...CLEAN_START_ARGS.filter(
         (flag) =>
+          (flag !== "--no-session" || !multiTurn) &&
           (flag !== "--no-context-files" ||
             options.contextFiles !== "project") &&
           (flag !== "--no-skills" || options.skills !== "project"),
       ),
+      ...(multiTurn
+        ? ["--session-id", sessionId, "--session-dir", sessionDir]
+        : []),
       ...(context.effects.tools === "none"
         ? ["--no-tools"]
         : ["--tools", piRecallTools(context.effects).join(",")]),
@@ -287,6 +290,7 @@ function createProfile(
         },
         { executionParams: context.executionParams },
       );
+      sessionDir = join(sandbox.configDirs![PI_HOME_DIR]!, "sessions");
       guardPath = join(sandbox.configDirs![PI_HOME_DIR]!, GUARD_FILE);
       await writeFile(
         guardPath,
@@ -298,61 +302,106 @@ function createProfile(
   };
 }
 
+/**
+ * @behavior Given 上一轮已成功或失败，When 开始新一轮，Then 清空文本、完成、预算与 usage；
+ * Failure 不允许上一轮原生证据使新一轮误判完成或累计用量。
+ */
+function resetNativeState(state: NativeState): void {
+  state.text = "";
+  state.steps = 0;
+  state.completed = false;
+  state.budgetAborted = false;
+  for (const key of Object.keys(state.usage) as (keyof NativeUsage)[]) {
+    state.usage[key] = 0;
+  }
+}
+
 /** 补齐原生完成、usage 与预算证据，并在清理前采集显式声明的文件。 */
 function wrapHarness(
   harness: HarnessDriver,
   state: NativeState,
+  multiTurn: boolean,
   evidence?: Readonly<Record<string, string>>,
 ): AgentDriver {
   let sent = false;
+  let sending = false;
+  let closed = false;
   return {
     redactor: harness.redactor,
     start: () => harness.start(),
     events: () => harness.events(),
-    close: (reason) => harness.close(reason),
+    close: (reason) => {
+      closed = true;
+      return harness.close(reason);
+    },
     sendPrompt: async (text) => {
-      if (sent)
+      if (sending) {
+        throw new Error("Pi Recall Driver 不支持并发 sendPrompt");
+      }
+      if (!multiTurn && sent) {
         throw new Error(
           "Pi Recall Driver 是一次性进程，本实例不能发送多轮 prompt",
         );
+      }
+      sending = true;
       sent = true;
-      const observation = await harness.sendPrompt(text);
-      if (!state.completed)
-        throw new Error("Pi 原生完成信号缺失：未收到 agent_end");
-      const usage = state.usage;
-      const fileEvidence = evidence
-        ? await collectPiRecallEvidence(harness.sandbox.cwd, evidence)
-        : undefined;
-      return {
-        ...observation,
-        ...(usage.totalTokens > 0
-          ? {
-              usage: {
-                promptTokens: usage.input + usage.cacheRead + usage.cacheWrite,
-                completionTokens: usage.output,
-                totalTokens: usage.totalTokens,
-              },
-            }
-          : {}),
-        ...(state.budgetAborted ? { exhausted: true } : {}),
-        metadata: {
-          ...observation.metadata,
-          nativeCompleted: true,
-          workspaceCwd: harness.sandbox.cwd,
-          nativeUsage: { ...usage },
-          ...(fileEvidence ? { fileEvidence } : {}),
-        },
-      };
+      resetNativeState(state);
+      try {
+        const observation = await harness.sendPrompt(text);
+        if (!state.completed) {
+          const stderr = harness.stderrTail();
+          throw new Error(
+            "Pi 原生完成信号缺失：未收到 agent_end" +
+              (stderr ? "；stderr: " + stderr : ""),
+          );
+        }
+        if (multiTurn && state.usage.totalTokens <= 0) {
+          throw new Error("Pi 多轮原生 usage 缺失或 totalTokens 非正数");
+        }
+        const usage = state.usage;
+        if (closed) {
+          throw new Error("Pi Recall Driver 已被 close 取消");
+        }
+        const fileEvidence = evidence
+          ? await collectPiRecallEvidence(harness.sandbox.cwd, evidence)
+          : undefined;
+        if (closed) {
+          throw new Error("Pi Recall Driver 已被 close 取消");
+        }
+        return {
+          ...observation,
+          ...(usage.totalTokens > 0
+            ? {
+                usage: {
+                  promptTokens:
+                    usage.input + usage.cacheRead + usage.cacheWrite,
+                  completionTokens: usage.output,
+                  totalTokens: usage.totalTokens,
+                },
+              }
+            : {}),
+          ...(state.budgetAborted ? { exhausted: true } : {}),
+          metadata: {
+            ...observation.metadata,
+            nativeCompleted: true,
+            workspaceCwd: harness.sandbox.cwd,
+            nativeUsage: { ...usage },
+            ...(fileEvidence ? { fileEvidence } : {}),
+          },
+        };
+      } finally {
+        sending = false;
+      }
     },
   };
 }
 
 /**
- * 创建单轮 Pi Recall Driver；目标与权限来自已批准上下文，不自动注册任何 profile。
+ * 创建 Pi Recall Driver；单轮保持一次性，多轮经原生 session 恢复真实上下文。
  * @param context Recall 的场景、backend、目标、effects 与 executionParams。
  * @param options 受信任的上下文发现、文件证据、追加系统提示词与测试命令注入。
- * @returns start 创建隔离资源、close 幂等清理的一次性驱动。
- * @throws 多轮、不合法的命令策略或不支持的 executionParams 在执行前显式拒绝。
+ * @returns start 创建隔离资源、按轮执行、close 幂等清理的驱动。
+ * @throws 不合法的命令策略、上下文选项或不支持的 executionParams 在执行前显式拒绝。
  */
 export function createPiRecallDriver(
   context: RecallProfileDriverContext,
@@ -382,5 +431,10 @@ export function createPiRecallDriver(
       },
     },
   );
-  return wrapHarness(harness, state, options.evidence);
+  return wrapHarness(
+    harness,
+    state,
+    context.spec.turns.length > 1,
+    options.evidence,
+  );
 }
