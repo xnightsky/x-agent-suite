@@ -1,6 +1,7 @@
 /**
  * @module scripts/artifacts-git
- * 读取 Git history、规划制品版本并创建经过验证的版本 tag。
+ * 读取 Git history、规划制品版本并创建经过验证的 annotated 版本 tag。
+ * 不变量：稳定 tag 的发现、推导与复用只接受 annotated 对象。
  */
 import { execFileSync } from "node:child_process";
 
@@ -102,16 +103,28 @@ export function createVersionTag(
   root: string,
   plan: ArtifactVersionPlan,
 ): boolean {
-  if (plan.snapshot || plan.tagExistsAtHead) {
+  if (plan.snapshot) {
     return false;
   }
-  const existing = tryGit(root, [
-    "rev-parse",
-    "--verify",
-    `refs/tags/${plan.tag}`,
-  ]);
+  const tagRef = `refs/tags/${plan.tag}`;
+  const existing = tryGit(root, ["rev-parse", "--verify", tagRef]);
   if (existing !== null) {
-    throw new Error(`tag ${plan.tag} 已存在但不指向当前 HEAD`);
+    const tagType = tryGit(root, ["cat-file", "-t", tagRef])?.trim();
+    if (tagType !== "tag") {
+      throw new Error(
+        `tag ${plan.tag} 必须是 annotated tag，拒绝 lightweight tag`,
+      );
+    }
+    const tagCommit = git(root, [
+      "rev-parse",
+      "--verify",
+      `${tagRef}^{commit}`,
+    ]).trim();
+    const head = git(root, ["rev-parse", "HEAD"]).trim();
+    if (tagCommit !== head) {
+      throw new Error(`tag ${plan.tag} 已存在但不指向当前 HEAD`);
+    }
+    return false;
   }
   git(root, ["tag", "-a", plan.tag, "-m", `release: ${plan.tag}`, "HEAD"]);
   return true;
@@ -144,11 +157,13 @@ function createSnapshotVersion(
 }
 
 function stableTagsAtHead(root: string): string[] {
-  return git(root, ["tag", "--points-at", "HEAD"])
+  const tags = git(root, ["tag", "--points-at", "HEAD"])
     .split("\n")
     .map((tag) => tag.trim())
     .filter((tag) => STABLE_TAG_PATTERN.test(tag))
     .sort(compareTagsDescending);
+  for (const tag of tags) assertAnnotatedTag(root, tag);
+  return tags;
 }
 
 function nearestStableTag(root: string): string | null {
@@ -160,7 +175,9 @@ function nearestStableTag(root: string): string | null {
     "v[0-9]*",
   ]);
   const tag = described?.trim() ?? "";
-  return STABLE_TAG_PATTERN.test(tag) ? tag : null;
+  if (!STABLE_TAG_PATTERN.test(tag)) return null;
+  assertAnnotatedTag(root, tag);
+  return tag;
 }
 
 function nearestStableTagBeforeHead(root: string): string | null {
@@ -173,7 +190,17 @@ function nearestStableTagBeforeHead(root: string): string | null {
     .map((tag) => tag.trim())
     .filter((tag) => STABLE_TAG_PATTERN.test(tag))
     .sort(compareTagsDescending);
+  for (const tag of tags) assertAnnotatedTag(root, tag);
   return tags[0] ?? null;
+}
+
+function assertAnnotatedTag(root: string, tag: string): void {
+  const type = tryGit(root, ["cat-file", "-t", `refs/tags/${tag}`])?.trim();
+  if (type !== "tag") {
+    throw new Error(
+      `稳定 tag ${tag} 必须是 annotated tag，拒绝 lightweight tag`,
+    );
+  }
 }
 
 function readCommitMessages(

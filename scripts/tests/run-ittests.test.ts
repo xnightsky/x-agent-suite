@@ -7,7 +7,11 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { discoverIttestFiles } from "../run-ittests.ts";
+import {
+  discoverIttestFiles,
+  parseTapSummary,
+  shouldRejectRequiredSummary,
+} from "../run-ittests.ts";
 
 test("默认 itest 发现包与教程中的普通用例并排除 token 用例", async () => {
   const root = await mkdtemp(join(tmpdir(), "xas-ittest-discovery-"));
@@ -32,4 +36,37 @@ test("默认 itest 发现包与教程中的普通用例并排除 token 用例", 
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("required 模式拒绝全 skip 或没有可解析执行的 TAP 汇总", () => {
+  const allSkipped = parseTapSummary(
+    [
+      "TAP version 13",
+      "1..3",
+      "# tests 3",
+      "# pass 0",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 3",
+    ].join("\n"),
+  );
+  assert.ok(allSkipped);
+  assert.equal(allSkipped.executed, 0);
+  assert.equal(shouldRejectRequiredSummary(allSkipped), true);
+
+  const executed = parseTapSummary(
+    [
+      "TAP version 13",
+      "1..3",
+      "# tests 3",
+      "# pass 2",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 1",
+    ].join("\n"),
+  );
+  assert.ok(executed);
+  assert.equal(executed.executed, 2);
+  assert.equal(shouldRejectRequiredSummary(executed), false);
+  assert.equal(shouldRejectRequiredSummary(null), true);
 });

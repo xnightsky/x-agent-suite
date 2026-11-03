@@ -162,7 +162,7 @@ artifacts/0.1.0/
   SHA256SUMS
 ```
 
-`--version` 是**期望值校验**，不是临时改版本。若 Git history 推导结果不是 `0.1.0`，命令失败。稳定模式始终先运行 `pnpm check` 和仓库外安装冒烟；完整制品形成后才创建 `v0.1.0` annotated tag。命令拒绝 dirty working tree 和已存在的输出目录，避免从不同内容覆盖同名固定版本。
+`--version` 是**期望值校验**，不是临时改版本。若 Git history 推导结果不是 `0.1.0`，命令失败。稳定模式始终先运行 `pnpm check` 和仓库外安装冒烟；完整制品形成后才创建 `v0.1.0` annotated tag。命令拒绝 dirty working tree 和已存在的输出目录，避免从不同内容覆盖同名固定版本。稳定 tag 的发现与复用只接受 annotated tag；lightweight `vX.Y.Z` 或已有 tag 的 peeled commit 不是 HEAD 时显式失败，不能静默跳过或复用。
 
 当前开发 HEAD 的试用包使用 snapshot 模式：
 
