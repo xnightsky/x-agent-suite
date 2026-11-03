@@ -178,6 +178,8 @@ test("YAML 与 schema 错误不回显 secret 或原始配置行", async (t) => {
       assert.ok(error instanceof LiveAuthConfigError);
       assert.doesNotMatch(error.message, new RegExp(secret));
       assert.doesNotMatch(error.message, /broken:/);
+      assert.doesNotMatch(error.message, /Flow sequence/);
+      assert.match(error.message, /第 \d+ 行第 \d+ 列/);
       return true;
     },
   );

@@ -107,6 +107,40 @@ test("runtime 来源不读取 auth 文件，缺值标记 required", async (t) =>
   assert.equal(missing.required, true);
 });
 
+test("model-config 显式内联凭据缺失或空串返回 required missing", async (t) => {
+  const root = await authWorkspace(t);
+  for (const override of [
+    { apiKeyEnv: "MISSING_INLINE_KEY" },
+    { apiKey: "" },
+    { apiKeyEnv: "" },
+  ] as const) {
+    const result = await resolveLiveCredential(
+      channel({
+        provider: "provider-a",
+        credentialSource: "model-config",
+        ...override,
+      }),
+      { carrier: "carrier-a", repoRoot: root, homeDir: root, env: {} },
+    );
+    assert.equal(result.kind, "missing");
+    if (result.kind !== "missing") continue;
+    assert.equal(result.required, true);
+  }
+});
+
+test("credential: harness 借用失败返回 required missing", async () => {
+  const result = await resolveLiveCredential(
+    channel({
+      provider: "provider-a",
+      from: "harness",
+      credential: "harness",
+    }),
+    { carrier: "carrier-a", env: {} },
+  );
+  assert.equal(result.kind, "missing");
+  if (result.kind === "missing") assert.equal(result.required, true);
+});
+
 test("auth.provider 允许多个渠道显式复用同一认证条目", async (t) => {
   const root = await authWorkspace(t);
   await writeAuth(

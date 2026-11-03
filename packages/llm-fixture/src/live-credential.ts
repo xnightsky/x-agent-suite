@@ -172,6 +172,21 @@ function resolveAuthEntry(
   };
 }
 
+/** 渠道是否明确声明了一个凭据来源（包括空串，空串也代表声明了意图）。 */
+function declaresCredentialSource(channel: LiveChannel): boolean {
+  return (
+    channel.apiKey !== undefined ||
+    channel.apiKeyEnv !== undefined ||
+    channel.auth !== undefined ||
+    channel.credential === "harness"
+  );
+}
+
+/** 构造已声明来源缺失的 required 结果。 */
+function requiredCredentialMissing(reason: string): BorrowedCredentialResult {
+  return { kind: "missing", required: true, reason };
+}
+
 /** 既有内联与宿主借用解析。 */
 async function resolveConfiguredCredential(
   channel: LiveChannel,
@@ -181,19 +196,22 @@ async function resolveConfiguredCredential(
     channel.credential === "harness" &&
     (channel.apiKey !== undefined || channel.apiKeyEnv !== undefined)
   ) {
-    return {
-      kind: "missing",
-      reason: "显式凭据与 credential: harness 不能同时声明",
-    };
+    return requiredCredentialMissing(
+      "显式凭据与 credential: harness 不能同时声明",
+    );
   }
   const direct = resolveLiveApiKey(channel, options.env ?? process.env);
   if (direct) return resolvedDirectCredential(channel, direct);
   if (channel.credential !== "harness") {
-    return {
-      kind: "missing",
-      reason:
-        "未配置 apiKey/apiKeyEnv，且未声明 credential: harness（不悄悄借用宿主登录态）",
-    };
+    return declaresCredentialSource(channel)
+      ? requiredCredentialMissing(
+          "已声明凭据来源，但 apiKey/apiKeyEnv 未解析出非空值",
+        )
+      : {
+          kind: "missing",
+          reason:
+            "未配置 apiKey/apiKeyEnv，且未声明 credential: harness（不悄悄借用宿主登录态）",
+        };
   }
   return resolveBorrowedCredential(channel, options);
 }
@@ -216,24 +234,27 @@ async function resolveBorrowedCredential(
   options: LiveCredentialOptions,
 ): Promise<BorrowedCredentialResult> {
   if (channel.from !== "harness") {
-    return {
-      kind: "missing",
-      reason: '借用凭据 credential: "harness" 必须同时声明 from: "harness"',
-    };
+    return requiredCredentialMissing(
+      '借用凭据 credential: "harness" 必须同时声明 from: "harness"',
+    );
   }
   const invalidChannel = await verifyBorrowedChannel(channel, options);
-  if (invalidChannel) return { kind: "missing", reason: invalidChannel.reason };
+  if (invalidChannel) {
+    return requiredCredentialMissing(invalidChannel.reason);
+  }
   const borrow = options.borrowCredential;
   if (!borrow) {
-    return {
-      kind: "missing",
-      reason: "未注入 borrowCredential 钩子，无法解析 credential: harness",
-    };
+    return requiredCredentialMissing(
+      "未注入 borrowCredential 钩子，无法解析 credential: harness",
+    );
   }
-  return borrow(channel.harness ?? options.carrier, {
+  const borrowed = await borrow(channel.harness ?? options.carrier, {
     homeDir: options.homeDir ?? homedir(),
     env: options.env ?? process.env,
     now: options.now ?? Date.now(),
     provider: channel.provider,
   });
+  return borrowed.kind === "missing"
+    ? requiredCredentialMissing(borrowed.reason)
+    : borrowed;
 }

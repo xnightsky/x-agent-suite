@@ -40,6 +40,38 @@ test("未配置渠道：start 抛 LiveNotConfiguredError（显式类型，供 sk
   }
 });
 
+test("LiveBackend 对显式缺失的内联凭据在请求前 fail-closed", async () => {
+  for (const channel of [
+    {
+      wire: "openai-chat" as const,
+      baseUrl: "https://audit.invalid/v1",
+      model: "m",
+      apiKeyEnv: "MISSING_INLINE_KEY",
+      credentialSource: "model-config" as const,
+    },
+    {
+      wire: "openai-chat" as const,
+      baseUrl: "https://audit.invalid/v1",
+      model: "m",
+      apiKey: "",
+      credentialSource: "model-config" as const,
+    },
+  ]) {
+    let transportCalls = 0;
+    const backend = new LiveBackend({
+      carrier: "audit",
+      channel,
+      config: { env: {} },
+      transport: async () => {
+        transportCalls += 1;
+        return { status: 200, text: "{}" };
+      },
+    });
+    await assert.rejects(backend.start(), LiveNotConfiguredError);
+    assert.equal(transportCalls, 0);
+  }
+});
+
 test("借用凭据被重定向时在 transport 前拒绝", async () => {
   const root = await mkdtemp(join(os.tmpdir(), "xas-live-redirect-"));
   let transportCalls = 0;

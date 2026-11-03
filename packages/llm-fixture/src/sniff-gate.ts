@@ -5,6 +5,7 @@
  * 不变量：
  * - 任一阶段不过返回结构化 SniffResult（含 stage 与可读原因），供 skip 记录，绝不抛裸错；
  * - 原因文本一律经 redactLiveSecrets 脱敏（baseUrl 与 apiKey 不外泄）；
+ * - 整个尝试受统一 deadline 约束；超时 abort 请求，不让 credential hook 之后继续发请求；
  * - transport 可注入：单元测试用 FakeProviderBackend 或桩当被嗅探端，不烧 token；
  * - 与 preflight 并列：preflight 验 harness 可用性，sniff 验渠道/模型可用性与能力。
  */
@@ -47,7 +48,7 @@ export type SniffResult =
 export interface SniffOptions {
   /** 注入 transport；缺省为全局 fetch。 */
   readonly transport?: LiveTransport;
-  /** 嗅探超时（毫秒）；默认 20_000。 */
+  /** 整个 sniff 尝试的 deadline（毫秒）；默认 20_000。 */
   readonly timeoutMs?: number;
   /** 环境变量表（apiKeyEnv 解析用）；缺省 process.env。 */
   readonly env?: NodeJS.ProcessEnv;
@@ -74,27 +75,125 @@ const SNIFF_TOOL = {
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 
-/** 带超时的 transport 调用。 */
-async function callWithTimeout(
-  transport: LiveTransport,
-  request: Parameters<LiveTransport>[0],
-  timeoutMs: number,
-): Promise<{ status: number; text: string }> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
+interface SniffAttemptContext {
+  readonly carrier: string;
+  readonly channel: LiveChannel;
+  readonly transport: LiveTransport;
+  readonly options: SniffOptions;
+  readonly signal: AbortSignal;
+  readonly resolvedSecrets: string[];
+  readonly timeoutReason: string;
+  readonly fail: (stage: SniffStage, reason: string) => SniffResult;
+}
+
+/** 超时错误使用固定文本，不携带请求头或 URL。 */
+function timeoutMessage(timeoutMs: number): string {
+  return `sniff 超时（${timeoutMs}ms）`;
+}
+
+/** 与 AbortSignal 竞速；超时/取消时拒绝，底层 Promise 仍由其自身负责停止。 */
+function abortable<T>(
+  operation: Promise<T>,
+  signal: AbortSignal,
+  message: string,
+): Promise<T> {
+  if (signal.aborted) return Promise.reject(new Error(message));
+  let onAbort: (() => void) | undefined;
+  const aborted = new Promise<never>((_resolve, reject) => {
+    onAbort = () => reject(new Error(message));
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+  return Promise.race([operation, aborted]).finally(() => {
+    if (onAbort) signal.removeEventListener("abort", onAbort);
+  });
+}
+
+/** 判断阶段函数是否已返回结构化 sniff 失败。 */
+function isSniffResult(value: unknown): value is SniffResult {
+  return typeof value === "object" && value !== null && "ok" in value;
+}
+
+/** 在整体 deadline 内解析凭据；超时或失败都不得继续请求。 */
+async function sniffCredential(
+  context: SniffAttemptContext,
+): Promise<BorrowedCredentialResult | SniffResult> {
+  let credential: BorrowedCredentialResult;
   try {
-    return await Promise.race([
-      transport(request),
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(
-          () => reject(new Error(`sniff 超时（${timeoutMs}ms）`)),
-          timeoutMs,
-        );
+    credential = await abortable(
+      resolveLiveCredential(context.channel, {
+        carrier: context.carrier,
+        env: context.options.env ?? process.env,
+        repoRoot: context.options.repoRoot,
+        homeDir: context.options.homeDir,
+        borrowChannel: context.options.borrowChannel,
+        borrowCredential: context.options.borrowCredential,
       }),
-    ]);
-  } finally {
-    if (timer) {
-      clearTimeout(timer);
-    }
+      context.signal,
+      context.timeoutReason,
+    );
+  } catch (error) {
+    return context.fail(
+      "auth",
+      context.signal.aborted
+        ? `认证配置失败：${context.timeoutReason}`
+        : `认证配置失败：${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  if (credential.kind === "resolved") {
+    context.resolvedSecrets.push(credential.apiKey);
+  }
+  if (
+    credential.kind === "missing" &&
+    (credential.required || context.channel.credential === "harness")
+  ) {
+    return context.fail("auth", credential.reason);
+  }
+  return credential;
+}
+
+/** 在整体 deadline 内送出请求并取得原始响应；超时先 abort 再返回失败。 */
+async function sniffResponse(
+  context: SniffAttemptContext,
+  apiKey: string | undefined,
+): Promise<{ status: number; text: string } | SniffResult> {
+  if (context.signal.aborted) {
+    return context.fail("connectivity", `请求失败：${context.timeoutReason}`);
+  }
+  let request: ReturnType<typeof buildLiveRequest>;
+  try {
+    request = buildLiveRequest(context.channel.wire, {
+      baseUrl: context.channel.baseUrl,
+      model: context.channel.model,
+      apiKey,
+      messages: [
+        {
+          role: "user",
+          text: `调用工具 ${SNIFF_TOOL.name}（参数 echo="ping"），不要输出其它内容。`,
+        },
+      ],
+      tools: [SNIFF_TOOL],
+      maxTokens: 256,
+      signal: context.signal,
+    });
+  } catch (error) {
+    return context.fail(
+      "connectivity",
+      `请求构造失败：${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  try {
+    return await abortable(
+      context.transport(request),
+      context.signal,
+      context.timeoutReason,
+    );
+  } catch (error) {
+    return context.fail(
+      "connectivity",
+      context.signal.aborted
+        ? `请求失败：${context.timeoutReason}`
+        : `请求失败：${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -112,99 +211,75 @@ export async function sniffLiveChannel(
   const started = Date.now();
   const transport = options.transport ?? createFetchTransport();
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  let credential: BorrowedCredentialResult;
+  const controller = new AbortController();
   const resolvedSecrets: string[] = [];
+  const timeoutReason = timeoutMessage(timeoutMs);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   const fail = (stage: SniffStage, reason: string): SniffResult => ({
     ok: false,
     carrier,
     stage,
     reason: redactLiveSecrets(reason, [channel], resolvedSecrets),
   });
-  try {
-    credential = await resolveLiveCredential(channel, {
-      carrier,
-      env: options.env ?? process.env,
-      repoRoot: options.repoRoot,
-      homeDir: options.homeDir,
-      borrowChannel: options.borrowChannel,
-      borrowCredential: options.borrowCredential,
-    });
-    if (credential.kind === "resolved") resolvedSecrets.push(credential.apiKey);
-  } catch (error) {
-    return fail(
-      "auth",
-      `认证配置失败：${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-  if (
-    credential.kind === "missing" &&
-    (credential.required || channel.credential === "harness")
-  ) {
-    return fail("auth", credential.reason);
-  }
-  const request = buildLiveRequest(channel.wire, {
-    baseUrl: channel.baseUrl,
-    model: channel.model,
-    apiKey: credential.kind === "resolved" ? credential.apiKey : undefined,
-    messages: [
-      {
-        role: "user",
-        text: `调用工具 ${SNIFF_TOOL.name}（参数 echo="ping"），不要输出其它内容。`,
-      },
-    ],
-    tools: [SNIFF_TOOL],
-    maxTokens: 256,
-  });
-
-  // 阶段 1：连通
-  let response: { status: number; text: string };
-  try {
-    response = await callWithTimeout(transport, request, timeoutMs);
-  } catch (error) {
-    return fail(
-      "connectivity",
-      `请求失败：${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-
-  // 阶段 2：鉴权
-  if (response.status === 401 || response.status === 403) {
-    return fail(
-      "auth",
-      `HTTP ${response.status}（鉴权失败，检查 apiKey / apiKeyEnv 声明）`,
-    );
-  }
-  if (response.status >= 400) {
-    return fail(
-      "connectivity",
-      `HTTP ${response.status}：${response.text.slice(0, 200)}`,
-    );
-  }
-
-  // 阶段 3：tool calling 能力（+ 阶段 4：尽力回报模型标识）
-  let completion;
-  try {
-    completion = parseLiveResponse(
-      channel.wire,
-      response.status,
-      response.text,
-    );
-  } catch (error) {
-    return fail(
-      "tool-calling",
-      `响应解析失败：${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-  if (completion.toolCalls.length === 0) {
-    return fail(
-      "tool-calling",
-      "响应未包含工具调用（渠道/模型可能不具备 tool calling 能力）",
-    );
-  }
-  return {
-    ok: true,
+  const context: SniffAttemptContext = {
     carrier,
-    latencyMs: Date.now() - started,
-    ...(completion.model ? { modelReported: completion.model } : {}),
+    channel,
+    transport,
+    options,
+    signal: controller.signal,
+    resolvedSecrets,
+    timeoutReason,
+    fail,
   };
+  try {
+    const credential = await sniffCredential(context);
+    if (isSniffResult(credential)) return credential;
+    const response = await sniffResponse(
+      context,
+      credential.kind === "resolved" ? credential.apiKey : undefined,
+    );
+    if (isSniffResult(response)) return response;
+    if (controller.signal.aborted) {
+      return fail("connectivity", `请求失败：${timeoutReason}`);
+    }
+    if (response.status === 401 || response.status === 403) {
+      return fail(
+        "auth",
+        `HTTP ${response.status}（鉴权失败，检查 apiKey / apiKeyEnv 声明）`,
+      );
+    }
+    if (response.status >= 400) {
+      return fail(
+        "connectivity",
+        `HTTP ${response.status}：${response.text.slice(0, 200)}`,
+      );
+    }
+    let completion;
+    try {
+      completion = parseLiveResponse(
+        channel.wire,
+        response.status,
+        response.text,
+      );
+    } catch (error) {
+      return fail(
+        "tool-calling",
+        `响应解析失败：${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    if (completion.toolCalls.length === 0) {
+      return fail(
+        "tool-calling",
+        "响应未包含工具调用（渠道/模型可能不具备 tool calling 能力）",
+      );
+    }
+    return {
+      ok: true,
+      carrier,
+      latencyMs: Date.now() - started,
+      ...(completion.model ? { modelReported: completion.model } : {}),
+    };
+  } finally {
+    clearTimeout(timer);
+  }
 }

@@ -84,6 +84,8 @@ export interface FixtureProviderOptions {
 
 `LiveCompleteInput.signal?: AbortSignal` 会经 `buildLiveRequest` 透传到 `LiveRequest.signal`，默认 `createFetchTransport` 再传给 fetch；既有不传 signal 的调用不变。`@x-agent-suite/judge` 的 direct 模式复用这条取消链实现 per-attempt 真超时，borrowed 模式则由消费者 driver 工厂兑现 no-session、工具策略和 close 隔离。direct/borrowed 由通用 TargetTags 决策：唯一候选可自动选择，多候选必须显式 mode/cliRef；`from: harness` / `credential: harness` 只描述来源，不等于 direct 授权，失败不跨模式回退。详见 [judge.md](./judge.md) 与 [target-tags.md](./target-tags.md)。
 
+默认 `createFetchTransport` 固定使用 `redirect: "error"`：baseUrl 必须指向最终端点，不自动跟随 301/302/303/307/308。禁止自动跨源重定向是为了防止 `x-api-key`、`x-goog-api-key` 等自定义鉴权头被重定向目标读取；fetch 失败在 transport 抛出前会用请求 URL 与凭据头构造 redactor，错误文本不保留这些秘密。sniff 的 `timeoutMs` 是**整个尝试**的 deadline：启动 timer 后同时覆盖凭据解析、请求发送与响应获取；超时先 abort `AbortController`，再把 signal 注入 `LiveRequest`，未在 deadline 内完成的 credential hook 不得继续触发 transport。
+
 ### live 多模型配置契约
 
 #### 概念与不变量
@@ -183,6 +185,8 @@ carriers:
 
 1–5 是 `loadLiveConfig` / `resolveLiveChannel` 的文件发现与覆盖链（命中即停）；6 发生在文件声明内部；7 不经过文件链。缺文件、缺 carrier 或借用失败均返回显式「未配置」结果（不抛异常），live 用例据此 skip，不判红。
 
+文件发现命中后的读取错误只有 `ENOENT` 视为“该候选不存在”并继续查找；`EACCES`、`EISDIR`、`ELOOP` 等其他读取错误、YAML 解析错误、缺少 `carriers` 对象均立即返回 `not-configured` 原因，不得回退到后续 home 配置或另一个端点。YAML 解析失败只输出固定类别、文件路径和可取得的行/列位置，禁止拼接 parser `message`、出错源行或配置值。显式未知 `wire` 保持 `invalid`，不得猜成其他协议或回退其他渠道。
+
 ### live 可选认证文件
 
 `.env.auth.yaml` 是可选的 provider 凭据存储。`.env.e2e.yaml` 可以只声明模型与端点；`loadLiveConfig`、`resolveLiveTargets` 和 TargetTags 加载均不读取认证文件，只有执行前的 `resolveLiveCredential` 才按 provider 解析凭据。
@@ -272,14 +276,15 @@ providers:
 
 代码显式 `new LiveBackend({ channel })` 没有配置来源标记，继续旁路文件与环境发现。只有来源不存在才向下回退；来源存在但失败不得切换身份：
 
-| 情况                          | 结果                                                                          |
-| ----------------------------- | ----------------------------------------------------------------------------- |
-| 默认关联条目不存在            | 回退内联凭据                                                                  |
-| 显式绑定缺文件或指定条目      | `LiveAuthConfigError`，不回退                                                 |
-| runtime/auth 条目环境变量缺值 | required missing；backend 抛未配置错误，sniff 返回 auth 失败，不发无 key 请求 |
-| 内联借用失败                  | 保留既有 missing，不换身份                                                    |
-| 所有来源均不存在              | 允许无凭据请求；需要认证的端点在 sniff/请求阶段失败                           |
-| 上游返回 401/403              | 不自动换另一凭据来源                                                          |
+| 情况                                      | 结果                                                                          |
+| ----------------------------------------- | ----------------------------------------------------------------------------- |
+| 默认关联条目不存在                        | 回退内联凭据                                                                  |
+| 显式绑定缺文件或指定条目                  | `LiveAuthConfigError`，不回退                                                 |
+| runtime/auth 条目环境变量缺值             | required missing；backend 抛未配置错误，sniff 返回 auth 失败，不发无 key 请求 |
+| 已声明内联 apiKey/apiKeyEnv 但值为空/缺失 | required missing；backend 与 sniff 均不发送请求                               |
+| 内联借用失败                              | 保留既有 required missing，不换身份                                           |
+| 所有来源均不存在                          | 允许无凭据请求；需要认证的端点在 sniff/请求阶段失败                           |
+| 上游返回 401/403                          | 不自动换另一凭据来源                                                          |
 
 认证字面量和环境变量解析值统一进入 `redactLiveSecrets`；诊断只保留 runtime/auth-file/model-config/harness 等非秘密来源标签。认证文件不生成 `provider.auth.*` 标签，也不改变 live 审批门禁。完整设计见 [live-auth-config.md](./live-auth-config.md)。
 

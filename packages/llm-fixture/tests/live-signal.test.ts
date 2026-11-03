@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import test from "node:test";
+import { inspect } from "node:util";
 import {
   buildLiveRequest,
   createFetchTransport,
@@ -51,4 +54,80 @@ test("createFetchTransport 将 request.signal 交给 fetch，缺省行为不变"
     fetchMock.mock.calls[0]?.arguments[1]?.signal,
     controller.signal,
   );
+});
+
+test("createFetchTransport 默认禁止重定向并脱敏 fetch 错误", async (t) => {
+  const secret = "synthetic-redirect-secret";
+  const baseUrl = "https://private-redirect.example.com/v1";
+  const request = buildLiveRequest("openai-chat", {
+    baseUrl,
+    model: "fixture",
+    messages: [{ role: "user", text: "hello" }],
+    apiKey: secret,
+  });
+  const fetchMock = t.mock.method(globalThis, "fetch", async () => {
+    throw new Error(
+      `redirect failed for ${request.url} authorization=Bearer ${secret}`,
+    );
+  });
+  let failure: unknown;
+  try {
+    await createFetchTransport()(request);
+  } catch (error) {
+    failure = error;
+  }
+  const init = fetchMock.mock.calls[0]?.arguments[1];
+  assert.equal(init?.redirect, "error");
+  const diagnostic = inspect(failure, { depth: 10 });
+  assert.doesNotMatch(diagnostic, new RegExp(secret));
+  assert.doesNotMatch(diagnostic, /private-redirect\.example\.com/);
+  assert.match(diagnostic, /\[REDACTED\]/);
+});
+
+test("跨源重定向由默认 transport 拒绝，目标 origin 不收到请求", async () => {
+  let targetHits = 0;
+  const target = createServer((_req, res) => {
+    targetHits += 1;
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end("{}");
+  });
+  await new Promise<void>((resolve) => target.listen(0, "127.0.0.1", resolve));
+  const targetPort = (target.address() as AddressInfo).port;
+  const redirector = createServer((_req, res) => {
+    res.writeHead(302, {
+      location: `http://127.0.0.1:${targetPort}/capture`,
+    });
+    res.end();
+  });
+  await new Promise<void>((resolve) =>
+    redirector.listen(0, "127.0.0.1", resolve),
+  );
+  const redirectorPort = (redirector.address() as AddressInfo).port;
+  try {
+    const secret = "synthetic-redirect-integration-secret";
+    const request = buildLiveRequest("anthropic-messages", {
+      baseUrl: `http://127.0.0.1:${redirectorPort}/v1`,
+      model: "fixture",
+      messages: [{ role: "user", text: "hello" }],
+      apiKey: secret,
+    });
+    let failure: unknown;
+    try {
+      await createFetchTransport()(request);
+    } catch (error) {
+      failure = error;
+    }
+    assert.ok(failure, "redirect:error 必须显式失败");
+    assert.equal(targetHits, 0, "跨源目标不得收到请求");
+    assert.doesNotMatch(inspect(failure, { depth: 10 }), new RegExp(secret));
+  } finally {
+    await Promise.all([
+      new Promise<void>((resolve, reject) =>
+        redirector.close((error) => (error ? reject(error) : resolve())),
+      ),
+      new Promise<void>((resolve, reject) =>
+        target.close((error) => (error ? reject(error) : resolve())),
+      ),
+    ]);
+  }
 });

@@ -627,3 +627,90 @@ test("YAML 特性：注释与多行块标量被容忍", async () => {
     await cleanup();
   }
 });
+
+test("repo 级配置读取非 ENOENT 错误时不回退 home 配置", async () => {
+  const { root, cleanup } = await makeDirs();
+  try {
+    const repoRoot = join(root, "repo");
+    const homeDir = join(root, "home");
+    await mkdir(join(repoRoot, ".env.e2e.yaml"), { recursive: true });
+    await writeConfig(join(homeDir, ".env.e2e.yaml"), {
+      "home-only": { ...KIMI_CHANNEL, model: "home-model" },
+    });
+
+    const load = await loadLiveConfig({ env: {}, repoRoot, homeDir });
+    assert.equal(load.kind, "not-configured");
+    if (load.kind !== "not-configured") return;
+    assert.match(load.reason, /无法读取 live 配置文件/);
+    assert.match(load.reason, /EISDIR/);
+    assert.doesNotMatch(load.reason, /home-only|home-model/);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("YAML 解析错误只输出固定类别、文件和行列，不回显源行", async () => {
+  const { root, cleanup } = await makeDirs();
+  try {
+    const repoRoot = join(root, "repo");
+    const homeDir = join(root, "home");
+    const secret = "SYNTHETIC_LIVE_YAML_SECRET";
+    const privateUrl = "https://private-yaml.example.com/v1";
+    await mkdir(repoRoot, { recursive: true });
+    await writeFile(
+      join(repoRoot, ".env.e2e.yaml"),
+      [
+        "carriers:",
+        "  audit:",
+        "    wire: openai-chat",
+        `    baseUrl: ${privateUrl}`,
+        "    model: m",
+        `    apiKey: [${secret}`,
+      ].join("\n"),
+      "utf8",
+    );
+    await writeConfig(join(homeDir, ".env.e2e.yaml"), {
+      "home-only": { ...KIMI_CHANNEL, model: "home-model" },
+    });
+
+    const load = await loadLiveConfig({ env: {}, repoRoot, homeDir });
+    assert.equal(load.kind, "not-configured");
+    if (load.kind !== "not-configured") return;
+    assert.match(load.reason, /配置文件 YAML 解析失败/);
+    assert.match(load.reason, /第 \d+ 行第 \d+ 列/);
+    assert.match(load.reason, /\.env\.e2e\.yaml/);
+    assert.doesNotMatch(load.reason, new RegExp(secret));
+    assert.doesNotMatch(load.reason, /private-yaml\.example\.com/);
+    assert.doesNotMatch(load.reason, /apiKey:/);
+    assert.doesNotMatch(load.reason, /home-only|home-model/);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("显式未知 wire 保持 invalid，不回退其他渠道或协议", async () => {
+  const { root, cleanup } = await makeDirs();
+  try {
+    const repoRoot = join(root, "repo");
+    await writeConfig(join(repoRoot, ".env.e2e.yaml"), {
+      healthy: { ...KIMI_CHANNEL, model: "healthy-model" },
+      bogus: { ...KIMI_CHANNEL, wire: "unknown-wire" },
+    });
+    const load = await loadLiveConfig({
+      env: {},
+      repoRoot,
+      homeDir: join(root, "home"),
+    });
+    assert.equal(load.kind, "loaded");
+    if (load.kind !== "loaded") return;
+    assert.match(load.invalid.bogus ?? "", /wire/);
+    const selected = resolveLiveChannel(load, "bogus", {});
+    assert.equal(selected.kind, "not-configured");
+    if (selected.kind === "not-configured") {
+      assert.match(selected.reason, /wire/);
+      assert.doesNotMatch(selected.reason, /healthy-model/);
+    }
+  } finally {
+    await cleanup();
+  }
+});

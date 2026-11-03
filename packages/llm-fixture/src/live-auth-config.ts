@@ -8,6 +8,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
+import { yamlErrorPosition } from "./yaml-error.ts";
 
 /** 认证文件显式路径的环境变量名。 */
 export const LIVE_AUTH_CONFIG_PATH_ENV = "E2E_AUTH_CONFIG_PATH";
@@ -102,8 +103,12 @@ export function parseLiveAuthConfig(text: string): LiveAuthConfig {
   let parsed: unknown;
   try {
     parsed = parseYaml(text);
-  } catch {
-    throw new LiveAuthConfigError("Live 认证 YAML 解析失败");
+  } catch (error) {
+    const position = yamlErrorPosition(error);
+    throw new LiveAuthConfigError(
+      "Live 认证 YAML 解析失败" +
+        (position ? `（第 ${position.line} 行第 ${position.column} 列）` : ""),
+    );
   }
   const root = asRecord(parsed, "Live 认证配置");
   const unknown = Object.keys(root).filter(
@@ -167,9 +172,12 @@ export async function loadLiveAuthConfig(
     try {
       config = parseLiveAuthConfig(text);
     } catch (error) {
-      throw new LiveAuthConfigError("Live 认证文件无效：" + candidate.path, {
-        cause: error,
-      });
+      const detail =
+        error instanceof LiveAuthConfigError ? "；" + error.message : "";
+      throw new LiveAuthConfigError(
+        "Live 认证文件无效：" + candidate.path + detail,
+        { cause: error },
+      );
     }
     return {
       kind: "loaded",
