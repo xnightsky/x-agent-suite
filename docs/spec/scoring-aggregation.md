@@ -154,6 +154,8 @@ export declare function resolveAggregate(
 
 语义细节（实现级口径，代码以此为准）：
 
+运行时 schema 在任何算术前执行：`spec` 与每个 dimension 必须是普通对象且未知字段拒绝；`dimensions` 必须是数组（空数组保持现有空考语义）；`threshold` 与 `weight` 若存在必须是 finite number；`metric` 必须是非空字符串或非空字符串数组；`knockout` 必须是 boolean；`absent` 必须封闭为 `zero/pass/fail`。任一非法输入抛 `TypeError`，不得产生 NaN 分或静默按缺省映射。`weight=0` 与负 threshold 保持既有语义；negative finite weight 暂不新增策略，继续按既有算术处理。
+
 - **维度状态（映射前）**：该 `metric` 名下任一结果显式 `state: "absent"`，或名下无任何结果 → absent；否则全部 `pass=true` → hit，至少一个 `pass=false` → miss。`state` 缺省为 evaluated。同名多结果（turn 判据每轮一条）取完整覆盖口径：任一轮 absent 即整个 metric absent，全部轮次有结果且全过才算命中。
 - **metric 数组（OR）**：先按上条求各引用 metric 的状态；任一引用为 hit → 本维 hit；无 hit 但至少一个引用为 miss → 本维 miss；引用全部为 absent → 本维 absent。
 - **absent 映射**：`zero` → 贡献 0、**不计入** maxScore（中立，靠 coverage 披露）；`pass` → 视为 hit、计入 maxScore；`fail` → 视为 miss、计入 maxScore。
@@ -163,7 +165,7 @@ export declare function resolveAggregate(
 - **pass 判定**：knockout 未触发，且 `threshold` 存在时 `score >= threshold`；省略时计入维全部 hit。threshold 可为任意有限数，与归一分可为负的语义一致。
 - **空考警示**：`coverage.evaluated = 0`（无任何在场维）时 reason 必须显式声明「无在场维度」——机制上不替场景做 zero/fail 选择，但绝不允许「免费绿」被静默误读。该规则仅描述本通用聚合契约；Recall 目标 DSL 不再提供缺席计分机制。
 - **coverage**：`evaluated` = OR 归约后、映射前非缺席维数，`total` = 声明维数。多轮部分 absent 的 metric 不计入 `evaluated`；若它属于 OR 维度，则以整个维度的归约状态为准。`absent: pass/fail` 只影响计分，不倒推提高 coverage。
-- **引用完整性**：`metric` 引用了任何判据都未产出的名字时，按 absent 处理（不报错），但 `resolveAggregate` 在 reason 中逐个点名，供场景作者发现拼写错误（呼应 [scenario-dsl.md](./scenario-dsl.md) 的引用完整性校验原则）。
+- **引用完整性**：`metric` 引用了任何判据都未产出的名字时，按 absent 处理（不报错），但 `resolveAggregate` 在 reason 中逐个点名，供场景作者发现拼写错误（呼应 [scenario-dsl.md](./scenario-dsl.md) 的引用完整性校验原则）。OR metric 数组中即使其他引用已经造成 hit/miss，未产出的引用名仍必须出现在 reason 中。
 
 ## 接线位置
 
