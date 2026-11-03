@@ -20,6 +20,8 @@ import { delimiter, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+import { rawTarGz } from "./tar-fixture.ts";
+
 const command = fileURLToPath(
   new URL("../publish-release-core.mjs", import.meta.url),
 );
@@ -196,11 +198,16 @@ for (const [title, options, error] of [
 }
 
 test("补发拒绝重复 package.json 及其路径别名且不调用 npm", unixOnly, () => {
+  const valid = JSON.stringify(packageJsonFor({}));
+  const evil = JSON.stringify(
+    packageJsonFor({ packageName: "another-package" }),
+  );
   for (const duplicatePath of DUPLICATE_PACKAGE_PATHS) {
-    const result = run({
-      duplicatePackage: { packageName: "another-package" },
-      duplicatePath,
-    });
+    const tarBytes = rawTarGz([
+      { name: "package/package.json", data: Buffer.from(valid) },
+      { name: duplicatePath, data: Buffer.from(evil) },
+    ]);
+    const result = run({ tarBytes });
     assert.notEqual(result.status, 0, duplicatePath);
     assert.match(result.stderr, /重复.*package\/package\.json/, duplicatePath);
     assert.deepEqual(result.args, [], duplicatePath);
