@@ -19,6 +19,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+import { rawTarGz } from "./tar-fixture.ts";
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const VERSION = "0.7.0-dev.20261028.480de68";
 const CORE = `x-agent-suite-${VERSION}.tgz`;
@@ -180,11 +182,16 @@ test("tarball 内包名、版本、private 或 bin 不符合身份时拒绝安�
 
 test("重复 package/package.json 路径别名即使首条合法也拒绝安装", async () => {
   const { installGlobal } = await import("../install-global.ts");
+  const valid = JSON.stringify(packageJsonFor({}));
+  const evil = JSON.stringify(
+    packageJsonFor({ name: "evil-package", version: "9.9.9" }),
+  );
   for (const duplicatePath of PACKAGE_JSON_ALIASES) {
-    const { directory } = await fixture({
-      duplicate: { name: "evil-package", version: "9.9.9" },
-      duplicatePath,
-    });
+    const tarBytes = rawTarGz([
+      { name: "package/package.json", data: Buffer.from(valid) },
+      { name: duplicatePath, data: Buffer.from(evil) },
+    ]);
+    const { directory } = await fixture({ tarBytes });
     try {
       await assert.rejects(
         installGlobal([directory], () => assert.fail("不得安装")),

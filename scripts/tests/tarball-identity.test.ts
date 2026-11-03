@@ -8,10 +8,15 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { gzipSync } from "node:zlib";
 
 import { packPackage } from "../artifacts-build.ts";
 import { readTarballPackageIdentity } from "../install-global.ts";
+import {
+  paxRecord,
+  rawTarGz,
+  rawTarHeader,
+  type RawTarEntry,
+} from "./tar-fixture.ts";
 
 test("真实 pnpm tarball 的 package/package.json 可被身份 reader 读取", async () => {
   const root = await mkdtemp(join(tmpdir(), "xas-tarball-identity-"));
@@ -92,37 +97,14 @@ const PATH_ALIASES = [
 test("重复 package/package.json 的路径别名均被拒绝", async () => {
   for (const alias of PATH_ALIASES) {
     const root = await mkdtemp(join(tmpdir(), "xas-tarball-alias-"));
-    const first = join(root, "first");
-    const second = join(root, "second");
     try {
-      await mkdir(join(first, "package"), { recursive: true });
-      await mkdir(join(second, "package", "foo"), { recursive: true });
-      await writeFile(
-        join(first, "package", "package.json"),
-        JSON.stringify({
-          name: "@xnightsky/x-agent-suite",
-          version: "0.7.2",
-          bin: { "x-agent-suite": "./dist/cli.js" },
-        }),
-      );
-      await writeFile(
-        join(second, "package", "package.json"),
-        JSON.stringify({
-          name: "evil-package",
-          version: "9.9.9",
-          bin: { "x-agent-suite": "./evil.js" },
-        }),
-      );
       const archive = join(root, "alias.tgz");
-      execFileSync("tar", [
-        "-czf",
-        archive,
-        "-C",
-        first,
-        "package/package.json",
-        "-C",
-        second,
-        alias,
+      await writeRawTar(archive, [
+        {
+          name: "package/package.json",
+          data: Buffer.from(VALID_PACKAGE_JSON),
+        },
+        { name: alias, data: Buffer.from(EVIL_PACKAGE_JSON) },
       ]);
       await assert.rejects(
         () => readTarballPackageIdentity(archive),
@@ -137,55 +119,19 @@ test("重复 package/package.json 的路径别名均被拒绝", async () => {
 test("绝对路径和逃逸解包根的 package.json 路径均被拒绝", async () => {
   const root = await mkdtemp(join(tmpdir(), "xas-tarball-path-escape-"));
   try {
-    const absoluteSource = join(root, "absolute");
-    await mkdir(join(absoluteSource, "package"), { recursive: true });
-    const absoluteJson = join(absoluteSource, "package", "package.json");
-    await writeFile(
-      absoluteJson,
-      JSON.stringify({
-        name: "@xnightsky/x-agent-suite",
-        version: "0.7.2",
-        bin: { "x-agent-suite": "./dist/cli.js" },
-      }),
-    );
-    const absoluteArchive = join(root, "absolute.tgz");
-    execFileSync("tar", [
-      "-P",
-      "-czf",
-      absoluteArchive,
-      "-C",
-      absoluteSource,
-      absoluteJson,
-    ]);
-    await assert.rejects(
-      () => readTarballPackageIdentity(absoluteArchive),
-      /绝对|逃逸/,
-    );
-
-    const escapeSource = join(root, "escape");
-    const escapeWork = join(escapeSource, "work");
-    await mkdir(join(escapeWork, "package"), { recursive: true });
-    await mkdir(join(escapeWork, "sub"), { recursive: true });
-    await writeFile(
-      join(escapeWork, "package", "package.json"),
-      JSON.stringify({
-        name: "@xnightsky/x-agent-suite",
-        version: "0.7.2",
-        bin: { "x-agent-suite": "./dist/cli.js" },
-      }),
-    );
-    const escapeArchive = join(root, "escape.tgz");
-    execFileSync("tar", [
-      "-czf",
-      escapeArchive,
-      "-C",
-      join(escapeWork, "sub"),
-      "../package/package.json",
-    ]);
-    await assert.rejects(
-      () => readTarballPackageIdentity(escapeArchive),
-      /绝对|逃逸/,
-    );
+    for (const [file, name] of [
+      ["absolute.tgz", "/package/package.json"],
+      ["escape.tgz", "../package/package.json"],
+    ] as const) {
+      const archive = join(root, file);
+      await writeRawTar(archive, [
+        { name, data: Buffer.from(VALID_PACKAGE_JSON) },
+      ]);
+      await assert.rejects(
+        () => readTarballPackageIdentity(archive),
+        /绝对|逃逸/,
+      );
+    }
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -201,81 +147,6 @@ const EVIL_PACKAGE_JSON = JSON.stringify({
   version: "9.9.9",
   bin: { "x-agent-suite": "./evil.js" },
 });
-
-interface RawTarEntry {
-  readonly name?: string;
-  readonly typeFlag?: string;
-  readonly data?: Buffer;
-  readonly headerSize?: number;
-  readonly rawBlock?: Buffer;
-}
-
-function writeOctal(
-  buffer: Buffer,
-  offset: number,
-  length: number,
-  value: number,
-): void {
-  const text = value.toString(8).padStart(length - 1, "0");
-  buffer.write(text, offset, "ascii");
-  buffer[offset + length - 1] = 0;
-}
-
-function rawTarHeader(name: string, typeFlag: string, size: number): Buffer {
-  const header = Buffer.alloc(512);
-  header.write(name, 0, 100, "utf8");
-  writeOctal(header, 100, 8, 0o644);
-  writeOctal(header, 108, 8, 0);
-  writeOctal(header, 116, 8, 0);
-  writeOctal(header, 124, 12, size);
-  writeOctal(header, 136, 12, 0);
-  header.fill(0x20, 148, 156);
-  header.write(typeFlag, 156, 1, "ascii");
-  header.write("ustar\0", 257, 6, "ascii");
-  header.write("00", 263, 2, "ascii");
-  writeOctal(header, 329, 8, 0);
-  writeOctal(header, 337, 8, 0);
-  let checksum = 0;
-  for (const byte of header) checksum += byte;
-  header.write(checksum.toString(8).padStart(6, "0"), 148, 6, "ascii");
-  header[154] = 0;
-  header[155] = 0x20;
-  return header;
-}
-
-function rawTarGz(entries: readonly RawTarEntry[]): Buffer {
-  const chunks: Buffer[] = [];
-  for (const entry of entries) {
-    if (entry.rawBlock) {
-      chunks.push(entry.rawBlock);
-      continue;
-    }
-    const data = entry.data ?? Buffer.alloc(0);
-    chunks.push(
-      rawTarHeader(
-        entry.name ?? "",
-        entry.typeFlag ?? "0",
-        entry.headerSize ?? data.length,
-      ),
-    );
-    chunks.push(data);
-    const padding = (512 - (data.length % 512)) % 512;
-    if (padding) chunks.push(Buffer.alloc(padding));
-  }
-  chunks.push(Buffer.alloc(1024));
-  return gzipSync(Buffer.concat(chunks));
-}
-
-function paxRecord(key: string, value: string): Buffer {
-  const body = Buffer.from(`${key}=${value}\n`, "utf8");
-  let length = body.length + 2;
-  for (;;) {
-    const next = body.length + 1 + String(length).length;
-    if (next === length) break;
-    length = next;
-  }
-  return Buffer.from(`${length} ${body.toString()}`);
-}
 
 async function writeRawTar(
   path: string,
