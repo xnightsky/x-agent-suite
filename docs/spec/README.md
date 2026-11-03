@@ -31,9 +31,9 @@
 | [versioning.md](./versioning.md)                                 | lockstep 版本、发布准备与 tag 时机、固定版本重打及升级说明            |
 | [scenario-evaluation.md](./scenario-evaluation.md)               | 评分层：Dry / Hard / Fuzzy / enumerate / 报告                         |
 | [evidence-assertions.md](./evidence-assertions.md)               | 访问痕迹证据：非空工具结果、workspace 路径、引用与组合                |
-| [recall-variables.md](./recall-variables.md)                     | 待审设计：Recall 统一变量、动态 Provider 与判据局部作用域             |
-| [process-execution-evidence.md](./process-execution-evidence.md) | 待审设计：真实进程证据、wrapper/fake CLI、严格顺序与安装矩阵          |
-| [future/README.md](./future/README.md)                           | 未来与延后设计：Recall 分类/分支/停止/组合政策                        |
+| [recall-variables.md](./recall-variables.md)                     | 待审设计：Recall 变量、动态 Provider 与两阶段解析                     |
+| [process-execution-evidence.md](./process-execution-evidence.md) | 待审设计：进程证据入口、覆盖完整性、wrapper 与安装矩阵                |
+| [future/README.md](./future/README.md)                           | 未来与延后设计：有序证据、Recall 分类/分支/停止/组合政策              |
 | [scoring-aggregation.md](./scoring-aggregation.md)               | 打分聚合机：维度声明、knockout/absent 三态、静态打分出口              |
 | [matrix.md](./matrix.md)                                         | `runMatrix`：变体串行、carrier 并行、对照表与报告                     |
 | [long-lived-driver.md](./long-lived-driver.md)                   | `LongLivedAgentDriver` 与入站事件观测                                 |

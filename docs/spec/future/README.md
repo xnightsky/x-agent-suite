@@ -11,16 +11,18 @@
 
 ## 目录
 
-| 文档                                                                         | 范围                                 | 重新审查的需求                             |
-| ---------------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------ |
-| [Recall 后续能力预设计总览](./recall-classification-branching-pre-design.md) | 下列 Recall 候选能力的职责与组合关系 | 只作导航，不作为整包上线计划               |
-| [Recall 分类](./recall-classification-pre-design.md)                         | choices／else 与受约束类别           | boolean 判断不能表达需要记录的有限类别     |
-| [Recall 条件分支](./recall-conditional-branching-pre-design.md)              | 条件树、内嵌子步骤与自然汇合         | 有明确条件执行需求，并先解决可比性原则冲突 |
-| [Recall 轮次级断言](./recall-turn-assertion-pre-design.md)                   | 评价时机、结果身份与汇总             | 当前 Recall 作者层需要逐轮评价             |
-| [Recall 提前终止](./recall-early-termination-pre-design.md)                  | onFail:stop、报告与清理              | 明确失败后继续执行的成本或风险不可接受     |
-| [Recall Decision](./recall-decision-pre-design.md)                           | 组合计分、阈值、否决与结果引用       | 固定全通过不再满足具体消费者政策           |
+| 文档                                                                         | 范围                                      | 重新审查的需求                                 |
+| ---------------------------------------------------------------------------- | ----------------------------------------- | ---------------------------------------------- |
+| [Evidence 有序调用与局部捕获](./evidence-sequence.md)                        | sequence、局部 steps、可信 seq 与严格时序 | 实际调用顺序或前序返回值消费不能由独立证据满足 |
+| [Recall 后续能力预设计总览](./recall-classification-branching-pre-design.md) | 下列 Recall 候选能力的职责与组合关系      | 只作导航，不作为整包上线计划                   |
+| [Recall 分类](./recall-classification-pre-design.md)                         | choices／else 与受约束类别                | boolean 判断不能表达需要记录的有限类别         |
+| [Recall 条件分支](./recall-conditional-branching-pre-design.md)              | 条件树、内嵌子步骤与自然汇合              | 有明确条件执行需求，并先解决可比性原则冲突     |
+| [Recall 轮次级断言](./recall-turn-assertion-pre-design.md)                   | 评价时机、结果身份与汇总                  | 当前 Recall 作者层需要逐轮评价                 |
+| [Recall 提前终止](./recall-early-termination-pre-design.md)                  | onFail:stop、报告与清理                   | 明确失败后继续执行的成本或风险不可接受         |
+| [Recall Decision](./recall-decision-pre-design.md)                           | 组合计分、阈值、否决与结果引用            | 固定全通过不再满足具体消费者政策               |
 
 ## 未决边界与验证
 
 - 条件分支草案及其总览中的“规则一致不要求轨迹相同”，与现行 [Scenario DSL](../scenario-dsl.md#可比性轴) 对主动分支的禁令存在未决冲突。本次迁移仅整理位置，不裁决或修改现行原则；实施前必须先定适用边界并更新规格。
+- sequence 的 collector 到达序号不等于实际执行顺序；可信严格时序的同步前提与重启门槛见对应专题。
 - 文档中的 YAML、类型、算例及验收清单均为候选，不是已可运行的功能或已经通过的宿主验证。当前 Recall 行为仍以各现行规格及实现为准。
