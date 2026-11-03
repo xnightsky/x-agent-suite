@@ -78,6 +78,8 @@ export const scenarios = cases.map((q, i) =>
 
 展开在跑之前完成，每个被测系统拿到的展开结果完全一致，**可比性零代价**。
 
+本节只否决把模板语法用于**执行前场景参数化**。执行后在显式支持变量的判据 expect 中引用静态上下文和实际 Observation 属于另一问题，待审设计见 [Recall 变量机制与 Evidence 局部捕获](./recall-variables.md)；该设计不得反向用于 prompt、provision 或 effects。
+
 ## 衰减看得见，也要断言得了
 
 同一 criterion 在多个轮次上重复声明，报告就能打印衰减点：

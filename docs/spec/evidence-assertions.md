@@ -9,6 +9,8 @@
 - 不要求通用 Driver 增加完成信号或 workspace 字段；轮次完成性由 Driver/消费者观察守卫负责。
 - 不增加结构化子项结果。整体仍返回 `CriterionResult { pass, score, reason }`，组合诊断写入 `reason`。
 
+> 当前行为不包含变量插值或顺序节点。统一变量见 [Recall 变量机制](./recall-variables.md)；真实进程、动态资源路径以及 Evidence `sequence`/`steps` 见 [脚本与 CLI 进程执行证据](./process-execution-evidence.md)。两份均为待审设计，实现前仍以本文的当前契约为准。
+
 ## 公开入口
 
 | 导出                                              | 用途                                                                    |
