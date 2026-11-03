@@ -5,9 +5,10 @@
  * 不变量：写入前递归建目录；stamp 默认可生成、测试可钉死；
  * json 保留完整 Observation / artifact / tool 入参与 stdout/stderr tail（排查用）。
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { cloneJsonValue } from "@x-agent-suite/assertions";
 import type {
   RepeatStats,
   ReportPaths,
@@ -74,7 +75,12 @@ function redactJsonValue(
   const output: Record<string, unknown> = {};
   for (const [key, nested] of Object.entries(value)) {
     const safeKey = uniqueJsonKey(output, redact(key));
-    output[safeKey] = redactJsonValue(nested, redact);
+    Object.defineProperty(output, safeKey, {
+      value: redactJsonValue(nested, redact),
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
   }
   return output;
 }
@@ -110,9 +116,11 @@ function prepareRows<Artifact>(
 ): readonly ScenarioReportRow<Artifact>[] {
   let copied: unknown;
   try {
-    copied = JSON.parse(JSON.stringify(rows));
+    copied = cloneJsonValue(rows, "报告数据", {
+      omitUnsupportedObjectProperties: true,
+    });
   } catch (cause) {
-    throw new Error("报告数据无法序列化（可能包含循环引用）", {
+    throw new Error("报告数据无法序列化为严格 JSON（可能包含循环引用）", {
       cause: redactSerializationCause(cause, redact),
     });
   }
@@ -178,11 +186,17 @@ export async function writeScenarioReports<Artifact = Record<string, unknown>>(
     `${stamp}-${scenarioSegment}-report.json`,
   );
   await mkdir(outDir, { recursive: true });
-  await writeFile(mdPath, renderMarkdown(safeRows, scenarioId, stamp), "utf8");
-  await writeFile(
-    jsonPath,
-    JSON.stringify({ scenario: scenarioId, stamp, rows: safeRows }, null, 2),
-    "utf8",
+  const json = JSON.stringify(
+    { scenario: scenarioId, stamp, rows: safeRows },
+    null,
+    2,
   );
+  for (const [path, content] of [
+    [mdPath, renderMarkdown(safeRows, scenarioId, stamp)],
+    [jsonPath, json],
+  ] as const) {
+    await writeFile(path, content, { encoding: "utf8", mode: 0o600 });
+    await chmod(path, 0o600);
+  }
   return { mdPath, jsonPath };
 }

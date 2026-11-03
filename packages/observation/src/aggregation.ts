@@ -34,6 +34,85 @@ interface ResolvedDimension {
   readonly weight: number;
 }
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return false;
+  const prototype = Object.getPrototypeOf(value) as object | null;
+  return prototype === Object.prototype || prototype === null;
+}
+
+function assertOnlyFields(
+  value: Record<string, unknown>,
+  allowed: readonly string[],
+  at: string,
+): void {
+  for (const key of Object.keys(value)) {
+    if (!allowed.includes(key)) throw new TypeError(at + " 含未知字段 " + key);
+  }
+}
+
+function assertMetric(metric: unknown, at: string): void {
+  const names = typeof metric === "string" ? [metric] : metric;
+  if (!Array.isArray(names) || names.length === 0) {
+    throw new TypeError(at + " 必须是非空字符串或非空字符串数组");
+  }
+  for (let index = 0; index < names.length; index += 1) {
+    if (!Object.hasOwn(names, index)) {
+      throw new TypeError(at + " 不得包含空洞");
+    }
+    const name = names[index];
+    if (typeof name !== "string" || name.trim().length === 0) {
+      throw new TypeError(at + " 必须由非空字符串组成");
+    }
+  }
+}
+
+function assertAggregationSpec(spec: unknown): asserts spec is AggregationSpec {
+  if (!isPlainRecord(spec)) {
+    throw new TypeError("aggregation spec 必须是普通对象");
+  }
+  assertOnlyFields(spec, ["dimensions", "threshold"], "aggregation spec");
+  if (!Array.isArray(spec.dimensions)) {
+    throw new TypeError("aggregation spec.dimensions 必须是数组");
+  }
+  if (spec.threshold !== undefined) {
+    if (
+      typeof spec.threshold !== "number" ||
+      !Number.isFinite(spec.threshold)
+    ) {
+      throw new TypeError("aggregation spec.threshold 必须是有限数");
+    }
+  }
+  for (let index = 0; index < spec.dimensions.length; index += 1) {
+    if (!Object.hasOwn(spec.dimensions, index)) {
+      throw new TypeError("aggregation spec.dimensions 不得包含空洞");
+    }
+    const dim = spec.dimensions[index];
+    const at = `aggregation spec.dimensions[${index}]`;
+    if (!isPlainRecord(dim)) {
+      throw new TypeError(at + " 必须是普通对象");
+    }
+    assertOnlyFields(dim, ["metric", "weight", "knockout", "absent"], at);
+    assertMetric(dim.metric, at + ".metric");
+    if (dim.weight !== undefined) {
+      if (typeof dim.weight !== "number" || !Number.isFinite(dim.weight)) {
+        throw new TypeError(at + ".weight 必须是有限数");
+      }
+    }
+    if (dim.knockout !== undefined && typeof dim.knockout !== "boolean") {
+      throw new TypeError(at + ".knockout 必须是 boolean");
+    }
+    if (
+      dim.absent !== undefined &&
+      dim.absent !== "zero" &&
+      dim.absent !== "pass" &&
+      dim.absent !== "fail"
+    ) {
+      throw new TypeError(at + ".absent 必须是 zero/pass/fail");
+    }
+  }
+}
+
 /** 求单个 metric 名的映射前三态：名下全过为 hit，有结果为 miss，无结果为 absent。 */
 function stateOfMetric(
   name: string,
@@ -111,17 +190,19 @@ function resolveDimension(
   };
 }
 
-/** 收集所有映射前缺席的引用名（供 reason 点名，发现拼写错误）。 */
+/** 收集所有未产出任何结果的引用名（供 reason 点名，发现拼写错误）。 */
 function collectAbsentNames(
   spec: AggregationSpec,
-  resolved: readonly ResolvedDimension[],
+  outcomes: readonly CriterionOutcome[],
 ): string[] {
+  const present = new Set(outcomes.map((outcome) => outcome.name));
   const names: string[] = [];
-  spec.dimensions.forEach((dim, index) => {
-    if (resolved[index]!.outcome.state !== "absent") return;
+  for (const dim of spec.dimensions) {
     const refs = typeof dim.metric === "string" ? [dim.metric] : dim.metric;
-    names.push(...refs);
-  });
+    for (const name of refs) {
+      if (!present.has(name)) names.push(name);
+    }
+  }
   return [...new Set(names)];
 }
 
@@ -133,6 +214,7 @@ export function resolveAggregate(
   outcomes: readonly CriterionOutcome[],
   spec: AggregationSpec,
 ): AggregateResult {
+  assertAggregationSpec(spec);
   const resolved = spec.dimensions.map((dim) =>
     resolveDimension(dim, outcomes),
   );
@@ -156,7 +238,7 @@ export function resolveAggregate(
     : spec.threshold !== undefined
       ? score >= spec.threshold
       : participants.every((dim) => dim.effectiveHit);
-  const reason = buildReason(pass, knockoutHit, coverage, spec, resolved);
+  const reason = buildReason(pass, knockoutHit, coverage, spec, outcomes);
   return {
     pass,
     score,
@@ -174,7 +256,7 @@ function buildReason(
   knockoutHit: boolean,
   coverage: { evaluated: number; total: number },
   spec: AggregationSpec,
-  resolved: readonly ResolvedDimension[],
+  outcomes: readonly CriterionOutcome[],
 ): string {
   const parts = [
     `${pass ? "通过" : "未通过"}；coverage ${coverage.evaluated}/${coverage.total}`,
@@ -182,7 +264,7 @@ function buildReason(
   if (knockoutHit) parts.push("knockout 维度未命中，整体否决");
   if (coverage.evaluated === 0)
     parts.push("无在场维度（空考，分数不代表能力）");
-  const absentNames = collectAbsentNames(spec, resolved);
+  const absentNames = collectAbsentNames(spec, outcomes);
   if (absentNames.length > 0) {
     parts.push(`无判据结果的引用：${absentNames.join("、")}`);
   }
