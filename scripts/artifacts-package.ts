@@ -5,6 +5,11 @@
  */
 import { posix } from "node:path";
 
+/** 对外核心聚合包身份与 CLI bin 的单一事实源。 */
+export const CORE_PACKAGE_NAME = "@xnightsky/x-agent-suite";
+export const CORE_BIN_NAME = "x-agent-suite";
+export const CORE_BIN_PATH = "./dist/cli.js";
+
 /** 核心聚合包的稳定子路径。 */
 export const CORE_EXPORT_NAMES = [
   "contracts",
@@ -98,7 +103,7 @@ export function createCorePackageManifest(version: string): PackageManifest {
     import: "./dist/profiles/pi-recall.js",
   };
   return {
-    name: "@xnightsky/x-agent-suite",
+    name: CORE_PACKAGE_NAME,
     version,
     description: "通用 Agent 测试套件框架的聚合分发包。",
     type: "module",
@@ -109,7 +114,7 @@ export function createCorePackageManifest(version: string): PackageManifest {
     },
     engines: { node: ">=24.0.0" },
     exports,
-    bin: { "x-agent-suite": "./dist/cli.js" },
+    bin: { [CORE_BIN_NAME]: CORE_BIN_PATH },
     files: ["dist", "types", "README.md", "LICENSE", ...CORE_RESOURCE_FILES],
     sideEffects: false,
     dependencies: CORE_EXTERNAL_DEPENDENCIES,

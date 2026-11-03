@@ -95,7 +95,7 @@ x-agent-suite 已拆为 12 个 workspace 包：
 ## 推荐拆分
 
 ```text
-@x-agent-suite/driver        → JsonlProcess / LfFramer / AsyncQueue（零原生）
+@x-agent-suite/driver        → JsonlProcess / LfFramer / AsyncQueue / JsonRpcPeer / LongLivedJsonRpcDriver（零原生）
 @x-agent-suite/pty-driver    → PtyProcess / 屏幕缓冲（依赖 node-pty + @xterm/headless）
 @x-agent-suite/harness        → 组合 driver，根据 profile 选择 jsonl / pty
 x-agent-suite/*               → 聚合分发子路径，覆盖全部零原生公共模块
@@ -398,7 +398,7 @@ pnpm exec x-agent-suite recall (--carrier <id> | --provider <id> | --model <id>)
 
 `@xnightsky/x-agent-suite/assertions` 在核心聚合包内分发，不新增第三个 tarball；新增 `assertions/evidence` 与 `assertions/judge` 独立 JS/声明子路径，安装态冒烟同时覆盖运行时与类型导入；原有 `criteria` 和 observation 检查入口仍可使用。`@xnightsky/x-agent-suite/profiles/pi-recall` 同样显式打包 JS/声明，消费者自行注册 `createPiRecallDriver`，不会因 carrier 名自动启用。仓库外安装冒烟使用 fake Judge 与 fake CLI 验证适配、配置继承和清理；Pi Recall 还执行两轮 `sendPrompt`，由 fake 宿主经原生 session 参数恢复首轮历史，并核对逐轮事件、正数 usage 与原生完成标记，不接真实 provider。`judge` 与 `assertions` 虽分别生成独立 bundle，跨入口 `JudgeModelError` 仍通过内部品牌与字段校验保留已知类别和重试预算；伪造、畸形与未知错误保持 `client`。对应回归只导入公开打包入口并使用 fake client/transport。
 
-需要任意目录可调用的全局 CLI 时，使用 `pnpm run install:global -- <制品目录>`：校验正式 manifest 与校验和后只安装核心包，不隐式构建、不发布、不初始化用户配置。全局 bin/PATH 须由执行者准备；详细前置、跨仓路径规则和验收边界见[全局 CLI 安装](./global-cli-install.md)。
+需要任意目录可调用的全局 CLI 时，使用 `pnpm run install:global -- <制品目录>`：校验正式 manifest、双重 SHA-256，以及 tarball 内 `package/package.json` 的包名、版本、非 `private` 和 `x-agent-suite` bin 后只安装核心包，不隐式构建、不发布、不初始化用户配置。身份不匹配时安装器不得被调用。全局 bin/PATH 须由执行者准备；详细前置、跨仓路径规则和验收边界见[全局 CLI 安装](./global-cli-install.md)。
 
 ## 版本管理
 
@@ -416,7 +416,7 @@ Git history 与稳定 tag 是版本真相源，核心包和 PTY 包采用 lockst
 6. 安装 PTY tarball，并在支持的平台运行 PTY 冒烟测试；
 7. 开通远程分发时，通过临时 HTTP 地址重复远程 tarball 安装；
 8. 发布 registry 前，通过临时 registry 重复按包名安装；
-9. 检查 tarball 内容、版本、commit 与 SHA-256 一致。
+9. 检查 tarball 内容、版本、commit 与 SHA-256 一致，并复核 tarball 内 `package/package.json` 的 name/version/private/bin 身份。
 
 只有 workspace 测试通过，不能替代制品安装验证。
 
