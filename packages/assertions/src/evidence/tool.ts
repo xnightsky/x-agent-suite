@@ -5,6 +5,7 @@
 import type { ToolCall, TurnObservation } from "@x-agent-suite/contracts";
 import { toolActionMatches, toolNameMatches } from "../checks.ts";
 import { inputContains } from "../deterministic.ts";
+import { assertJsonValue } from "../json-safe.ts";
 import type {
   ToolResultEvidenceExpect,
   WorkspaceResourceExpect,
@@ -83,6 +84,9 @@ export function parseToolResultExpect(
       : requiredEvidenceString(value.action, at + ".action");
   if (value.args !== undefined && !isEvidenceRecord(value.args)) {
     throw new TypeError(at + ".args 必须是对象");
+  }
+  if (value.args !== undefined) {
+    assertJsonValue(value.args, at + ".args");
   }
   return {
     tool,

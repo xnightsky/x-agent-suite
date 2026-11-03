@@ -12,6 +12,13 @@ import type {
   TurnCriterion,
 } from "@x-agent-suite/contracts";
 import { toolActionMatches, toolNameMatches } from "./checks.ts";
+import {
+  assertJsonValue,
+  isJsonObject,
+  isJsonValue,
+  jsonContains,
+  type JsonObject,
+} from "./json-safe.ts";
 
 /** tool-call 判据的 expect 形状。 */
 export interface ToolCallExpect {
@@ -52,17 +59,34 @@ function asExpectList(
  * @throws TypeError expect 不是含非空 tool 字段的对象时抛出。
  */
 function asToolCallExpect(expect: unknown): ToolCallExpect {
-  if (
-    typeof expect !== "object" ||
-    expect === null ||
-    typeof (expect as ToolCallExpect).tool !== "string" ||
-    (expect as ToolCallExpect).tool.length === 0
-  ) {
-    throw new TypeError(
-      `tool-call 的 expect 必须是含非空 tool 字段的对象，实际：${JSON.stringify(expect)}`,
-    );
+  if (!isJsonObject(expect)) {
+    throw new TypeError("tool-call 的 expect 必须是对象");
   }
-  return expect as ToolCallExpect;
+  for (const key of Object.keys(expect)) {
+    if (key !== "tool" && key !== "action" && key !== "args") {
+      throw new TypeError("tool-call 的 expect 含未知字段 " + key);
+    }
+  }
+  if (typeof expect.tool !== "string" || expect.tool.trim().length === 0) {
+    throw new TypeError("tool-call 的 expect.tool 必须是非空字符串");
+  }
+  if (
+    expect.action !== undefined &&
+    (typeof expect.action !== "string" || expect.action.trim().length === 0)
+  ) {
+    throw new TypeError("tool-call 的 expect.action 必须是非空字符串");
+  }
+  if (expect.args !== undefined && !isJsonObject(expect.args)) {
+    throw new TypeError("tool-call 的 expect.args 必须是普通对象");
+  }
+  if (expect.args !== undefined) {
+    assertJsonValue(expect.args, "tool-call 的 expect.args");
+  }
+  return {
+    tool: expect.tool,
+    ...(expect.action === undefined ? {} : { action: expect.action }),
+    ...(expect.args === undefined ? {} : { args: expect.args as JsonObject }),
+  };
 }
 
 /** 递归子集匹配：subset 的每个键值都在 target 中（对象递归，其余 JSON 相等）。 */
@@ -70,15 +94,8 @@ export function inputContains(
   target: unknown,
   subset: Record<string, unknown>,
 ): boolean {
-  if (typeof target !== "object" || target === null) return false;
-  const record = target as Record<string, unknown>;
-  return Object.entries(subset).every(([key, value]) => {
-    const actual = record[key];
-    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-      return inputContains(actual, value as Record<string, unknown>);
-    }
-    return JSON.stringify(actual) === JSON.stringify(value);
-  });
+  if (!isJsonObject(subset) || !isJsonValue(subset)) return false;
+  return jsonContains(target, subset);
 }
 
 /** 逐次调用分类判定：名称 → action → args → status。 */
@@ -90,9 +107,10 @@ function judgeCalls(
   if (named.length === 0) {
     return { pass: false, score: 0, reason: `未调用工具 "${expect.tool}"` };
   }
-  const acted = expect.action
-    ? named.filter((call) => toolActionMatches(call, expect.action!))
-    : named;
+  const acted =
+    expect.action !== undefined
+      ? named.filter((call) => toolActionMatches(call, expect.action!))
+      : named;
   if (acted.length === 0) {
     return {
       pass: false,
@@ -100,9 +118,10 @@ function judgeCalls(
       reason: `工具 "${expect.tool}" 未以 action "${expect.action}" 调用`,
     };
   }
-  const matched = expect.args
-    ? acted.filter((call) => inputContains(call.input, expect.args!))
-    : acted;
+  const matched =
+    expect.args !== undefined
+      ? acted.filter((call) => inputContains(call.input, expect.args!))
+      : acted;
   if (matched.length === 0) {
     return {
       pass: false,
