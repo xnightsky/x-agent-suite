@@ -75,7 +75,7 @@ expect:
 - 后续未执行轮次标记 skipped，不产生伪造通过、未命中或扣分。
 - case 最终断言若运行，其结果与分值也保留。
 - 因 onFail 停止时，最终 case 未通过；总分单独报告，不靠分数反推停止原因。
-- 未来 [Decision](./recall-decision-pre-design.md) 可给出派生成绩，但不能抹掉 onFail 已确认的失败终止。
+- 已因 onFail 停止时，不执行 [Decision](./recall-decision-pre-design.md) 放行计算；报告政策未执行，skipped 仍按上文处理。
 - 不引入缺席映射、分母排除或剩余轮次自动补分。
 
 ## 6. 报告与退出语义

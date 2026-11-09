@@ -33,21 +33,24 @@ cases:
     expect:
       output-shape:
         required: [summary, evidence]
-        score:
-          miss: -1
+        score: { hit: 2, miss: 0 }
 
       judge:
-        ownership:
-          rubric: 是否说明写新队列属于 author 侧
-          score:
-            hit: 3
-        polite:
-          rubric: 措辞是否礼貌
+        correct:
+          rubric: 核心结论是否正确
+          score: { hit: 3, miss: 0 }
+        explained:
+          rubric: 是否说明充分理由
+          score: { hit: 2, miss: 0 }
         concise:
           rubric: 是否简洁
 ```
 
-`output-shape` 是消费者注册的机械判据，不是框架内建名称；示例的 `required` 与 `score` 由该判据的输入协议解释。既有自定义判据输入继续原样透传，不强制包装历史输入，也不由 Recall 抢占插件已有字段。机械可配分值须在注册项上显式声明 `assertionScore?: (expect) => { hit?, miss? }` resolver；未声明时 Recall 不读取插件 `input.score`，仅按 pass 使用默认贡献。
+每个 `judge.<名称>` 是一个独立 boolean rubric，分别配置可选 `score`，不是多个裁判模型；同一评价点仍一次批量裁定。本例 AI 项分别使用 3、2、默认 1 的命中分，不需要 Decision 或评分维度表。一个复合 rubric 不会自动获得部分分，需将可独立评价的效果拆开。
+
+`output-shape` 是显式接入分值解析的消费者机械判据，不是框架内建名称；其 `required` 与可选 `score` 由插件输入协议解释。机械与 AI 采用同一贡献规则，省略分值时默认 hit=1/miss=-1。
+
+机械自定义分值须在注册项显式声明 `assertionScore?: (expect) => { hit?, miss? }` resolver；未声明时 Recall 不读取插件 `input.score`，仅使用默认贡献。已有接缝不等于所有机械判据都支持内嵌 score；不能给数组等既有输入任意加字段，也不强制包装历史输入。
 
 执行顺序：
 
@@ -139,6 +142,8 @@ expect:
 
 ## 断言直接计分
 
+`score` 配置命中/未命中的分值；`scope` 只标记 turn/session 评价范围，不参与赋分。AI rubric 和显式 opt-in 的机械判据都可省略 score；可选的是分值配置，不是断言是否必须通过。
+
 | 字段         | 默认值 | 语义                                                      |
 | ------------ | ------ | --------------------------------------------------------- |
 | `score.hit`  | `1`    | 断言通过时加多少分，可配置为 3，也可为 0。                |
@@ -222,9 +227,9 @@ casePass = 所有已声明断言细项的 pass 均为 true
 
 ## 后续设计
 
-### Decision：组合评分政策
+### Decision：分数验收政策
 
-`decision` 移到 [Recall Decision 预设计](./future/recall-decision-pre-design.md)，不属于一期。只有需要“允许部分失败但达到通过线”、组合结果、一票否决或跨阶段评分时再打开；不因机械与 AI 混合计分就引入它。
+不同效果分别得分已由多个 `judge.*` 与机械断言的可选 `score` 解决，不需要 Decision。[Decision 备忘](./future/recall-decision-pre-design.md) 仅保留“未来明确要求部分失败也按分数放行”这一独立触发条件，不是本次评分能力的前置，也没有可用 DSL。
 
 ### 分类、条件分支与提前终止
 
@@ -234,7 +239,7 @@ casePass = 所有已声明断言细项的 pass 均为 true
 - [条件分支预设计](./future/recall-conditional-branching-pre-design.md)：按条件执行内嵌子步骤，结束后自然继续外层，不暴露跳表。
 - [提前终止预设计](./future/recall-early-termination-pre-design.md)：onFail:stop 在明确失败后停止。
 
-重要分支通过多个 case 覆盖，模型方差通过 repeat 观察，不要求单次运行走完所有路径。原混合文档已改为 [预设计索引](./future/recall-classification-branching-pre-design.md)。
+重要分支通过多个 case 覆盖，模型方差通过 repeat 观察，不要求单次运行走完所有路径。后续设计统一由 [future 索引](./future/README.md) 导航。
 
 ### 独立 Judge 选择
 

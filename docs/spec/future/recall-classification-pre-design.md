@@ -19,7 +19,7 @@ tags: [recall, classification]
 
 - [条件分支](./recall-conditional-branching-pre-design.md) 读取分类并选择作者写好的内嵌子步骤，完成后继续外层。
 - [轮次级断言](../recall-turn-assertion.md) 决定在哪一轮产生结果。
-- [Decision](./recall-decision-pre-design.md) 组合 boolean 判断，不直接把类别当作 pass。
+- [Decision](./recall-decision-pre-design.md) 仅记录未来按分数放行的独立需求，不参与分类或逐项计分。
 
 ## 2. 作者形状
 
@@ -100,3 +100,9 @@ else 不是错误恢复入口，不应把任何解析失败都塞进 other。
 未来零 token 测试覆盖：显式类别、else、混合 boolean／分类批量响应、大小写与空白、未知类别、多选、缺项、字段冲突、评分参数不进入 prompt、分类不自动计分。
 
 真实质量单独测量：固定输出与人工分类标签、混淆矩阵、else 比例、重复裁定翻转率及类别说明重叠。本文未做原型、真实调用或质量校准。
+
+## 8. 分类与评级
+
+分类没有内建质量顺序：合理澄清或拒绝也可能是正确行为，choices 不自动赋分。
+
+不能自然拆成独立 boolean 效果时，才另议“模型选有限等级、代码映射分值”；等级须有互斥锚点，合格规则与分值分开，非法结果不能算最低档，也不能与同义细项双算。取舍和校准依据见 [补充调研](../../research/recall-effect-scoring-policy.md)。评级不作为 Decision 前置，本专题不预留评级字段或协议。

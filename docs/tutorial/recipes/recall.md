@@ -170,7 +170,7 @@ cases:
     expect:
       output-shape:
         required: [summary]
-        score: { miss: -1 }
+        score: { hit: 2, miss: 0 }
       judge:
         accurate:
           rubric: 是否准确
@@ -180,7 +180,9 @@ cases:
           score: { miss: 0 }
 ```
 
-机械判据只有显式 opt-in 才让 Recall 解析分值。resolver 的形状由消费者输入协议决定，例如这个插件从自己的 `score` 字段读取；另一个插件完全可以改读 `points`：
+多个 `judge.*` 分别判断效果并贡献分值，同一评价点仍批量裁定，不代表调用多个裁判模型。不同效果不同分数不需要 Decision；`score` 可选，`scope` 仅区分评价范围。
+
+上例 `output-shape` 是消费者注册、且显式 opt-in 分值解析的机械判据，不是所有机械判据都可直接添加 score。支持自定义分值的插件应允许省略 score，并沿用统一默认值；既有输入形状不变。resolver 按插件协议提取分值，例如：
 
 ```ts
 const criterion = {
