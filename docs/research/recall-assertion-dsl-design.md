@@ -101,7 +101,7 @@ casePass = 所有已声明断言细项均通过
 - OR、否决、阈值与缺席映射相互影响。
 - 内部聚合结构反过来主导作者 DSL。
 
-一期只有逐项判断与求和，不需要这些政策。未来真正需要“部分失败仍可过线”、组合证据或一票否决时，再打开 [Decision 预设计](../spec/future/recall-decision-pre-design.md)。旧字段只是候选，不是保留成本的理由。
+一期只有逐项判断与求和，不需要这些政策。未来真正需要“部分失败仍可过线”时，再按 [Decision 延后说明](../spec/recall-judge-dsl.md#decision-分数验收政策) 重新论证。旧字段只是候选，不是保留成本的理由。
 
 **【外部事实】**OpenAI Evals 将受约束裁定与 choice_scores 映射分开，说明“模型裁定、确定性计分”的分层可借鉴；它不要求本仓同时引入评分维度表。[Eval templates](https://github.com/openai/evals/blob/main/docs/eval-templates.md)
 

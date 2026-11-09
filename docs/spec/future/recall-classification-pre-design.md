@@ -19,7 +19,7 @@ tags: [recall, classification]
 
 - [条件分支](./recall-conditional-branching-pre-design.md) 读取分类并选择作者写好的内嵌子步骤，完成后继续外层。
 - [轮次级断言](../recall-turn-assertion.md) 决定在哪一轮产生结果。
-- [Decision](./recall-decision-pre-design.md) 仅记录未来按分数放行的独立需求，不参与分类或逐项计分。
+- [Decision 延后说明](../recall-judge-dsl.md#decision-分数验收政策) 仅记录未来按分数放行的独立需求，不参与分类或逐项计分。
 
 ## 2. 作者形状
 

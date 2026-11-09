@@ -7,7 +7,7 @@ tags: [research, recall, scoring, decision]
 
 # Recall 效果评分与通过政策补充调研
 
-> 调研日期：2026-11-09。仅使用公开一手资料与本仓文件，不收录仓库外消费者配置或业务内容。本文记录证据与取舍；本次评分主线以 [现行断言计分](../spec/recall-judge-dsl.md) 为准，不引入 Decision。
+> 调研日期：2026-11-09。仅使用公开一手资料与本仓文件，不收录仓库外消费者配置或业务内容。逐项可选 `score` 与统一求和方案已定稿并实现，正式契约见 [Recall 断言计分](../spec/recall-scoring.md)；本文保留证据与取舍，不作为待实施设计，不引入 Decision。
 
 ## 一、结论
 
@@ -22,11 +22,11 @@ tags: [research, recall, scoring, decision]
 
 | 证据                                                        | 已确认事实                                                        |
 | ----------------------------------------------------------- | ----------------------------------------------------------------- |
-| [Recall Judge DSL](../spec/recall-judge-dsl.md)             | 默认贡献 1/-1；当前全部断言通过才通过，正分不能补偿失败。         |
+| [Recall 断言计分](../spec/recall-scoring.md)                | 默认贡献 1/-1；当前全部断言通过才通过，正分不能补偿失败。         |
 | `packages/recall/src/assertion-results.ts:112–130`          | 报告投影求 rawScore，不用分数重算 hardPass。                      |
 | `packages/runner/src/run-scenario.ts:216–225`               | 通用 runner 有 aggregate 接缝，但不代表 Recall DSL 已开放该政策。 |
 | `packages/assertions/src/evidence/index.ts:223–271`         | allOf 保留子项原因，整体仍只产生一个 pass 和 0/1 标准分。         |
-| `packages/recall/tests/recall-turn-assertion.test.ts:84–87` | 测试源码明确覆盖 rawScore=6、hardPass=false；本轮只读，未执行。   |
+| `packages/recall/tests/recall-turn-assertion.test.ts:84–87` | 已执行零 token 回归，覆盖 rawScore=6、hardPass=false。            |
 | [一期 DSL 调研](./recall-assertion-dsl-design.md)           | 维度表、重复赋分与引用维护成本，是此前收缩接口的原因。            |
 
 过程事实应交给机械证据；只看回答文本的 Judge 不能证明工具操作真实发生。[通用聚合契约](../spec/scoring-aggregation.md) 的 weight、归一分和缺席映射也不等于 Recall 的 hit/miss 求和，不应为复用而混淆。
@@ -59,7 +59,7 @@ OpenAI 评估指南建议采用分类、成对比较或明确标准评分，并�
 
 OpenAI [Graders 指南](https://platform.openai.com/docs/guides/graders) 也支持部分分，但访问时已有弃用提示，且 score_model 对非数值输出默认给 0。本仓不建议增加该供应商依赖，也不沿用错误归零策略。
 
-## 四、候选取舍与收口
+## 四、方案取舍与收口
 
 | 方案                               | 取舍                                                       |
 | ---------------------------------- | ---------------------------------------------------------- |
@@ -69,17 +69,17 @@ OpenAI [Graders 指南](https://platform.openai.com/docs/guides/graders) 也支�
 | 模型直接报连续分                   | 接口看似短，但尺度锚点和审计性不足，不优先采用。           |
 | 有限等级加静态映射                 | 仅在独立效果不足以表达差异时另议，需要协议和质量证据。     |
 
-本次只采用独立效果计分与统一求和。先前把差异评分推进成 Decision 设计扩大了需求，已撤回字段、算法与算例；[future 备忘](../spec/future/recall-decision-pre-design.md) 只记录未来分数放行的独立触发条件。机械自定义分值仍经显式 resolver 接入，不为旧输入强加包装，也不把 score 误称为 scope。
+现行方案采用独立效果计分与统一求和，正式规格已迁出 future。先前把差异评分推进成 Decision 设计扩大了需求，已撤回字段、算法与算例；[后续设计说明](../spec/recall-judge-dsl.md#decision-分数验收政策) 只记录未来分数放行的独立触发条件。机械自定义分值仍经显式 resolver 接入，不为旧输入强加包装，也不把 score 误称为 scope。
 
-[分类专题](../spec/future/recall-classification-pre-design.md#8-分类与评级) 继续不自动赋分；评级尚无 DSL。现行契约和运行时未变，草案修订不等于批准实施。
+[分类专题](../spec/future/recall-classification-pre-design.md#8-分类与评级) 继续不自动赋分；评级尚无 DSL，不属于本次已定稿的逐项计分能力。
 
-## 五、实施前还缺什么
+## 五、使用与质量验证边界
 
-先用授权或合成的固定输出验证独立效果是否有区分度，并逐项确认消费者所用机械判据是否接入可选分值；未接入时不能宣称配置生效。只有另有分数放行需求才重新讨论验收政策，外部框架先例不代替本仓第二消费者论证。
+框架计分机制已实现，以下消费者接入与质量验证不是其转正前置条件。使用时应以授权或合成的固定输出验证独立效果是否有区分度，并逐项确认所用机械判据是否接入可选分值；未接入时不能宣称配置生效。只有另有分数放行需求才重新讨论验收政策，外部框架先例不代替该扩展的第二消费者论证。
 
 真实 Judge 另用人工标签、开发集与保留集校准，分别测误放行/误拒绝和重测翻转；Agent 输出方差与裁判方差分开。不同评分版本的原始分数不直接横比。详细方法沿用 [Judge 质量分层调研](./model-graded-assertion-testing.md)，不另建质量协议。
 
-已核验一手文档/源码和本仓语义；未验证真实评级准确率、作者体验、第二消费者适用性及运行接线。无真实 provider 调用，不将文档算例当成功能验证。
+已核验一手文档/源码和本仓语义，并通过 21 项零 token 定向测试，覆盖通用分值、机械 resolver、Judge schema、case 级 CLI 计分与逐轮断言接线。未运行全量回归，未验证真实 Judge 准确率、作者体验、具体消费者插件接入及分数放行的第二消费者适用性。无真实 provider 调用，不将文档算例或 fake 接线测试当作模型质量验证。
 
 ## 六、来源
 

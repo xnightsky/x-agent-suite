@@ -7,7 +7,7 @@ tags: [spec, recall-judge-dsl]
 
 # Recall 内置 Judge 与断言计分 DSL
 
-> 状态：现行契约。case 级第一阶段已有验证；线性逐轮扩展的评价时机、归因和验收以 [Recall 轮次级断言](./recall-turn-assertion.md) 为准，新增行为须完成对应验证后再宣称落地。
+> 状态：已定稿、已实现的现行契约。逐项可选 `score`、机械判据显式 opt-in 与统一求和属于当前能力，不是 future 预设计；分数不改变全部断言通过的验收规则。线性逐轮扩展的评价时机、归因和验收以 [Recall 轮次级断言](./recall-turn-assertion.md) 为准，后续新增行为须完成对应验证后再宣称落地。
 >
 > 一期不提供 `decision` DSL。机械断言与 AI 断言各自产生判断和独立贡献，所有已声明断言通过，测试才通过；真实 token、Judge 质量校准与消费者迁移不在默认验证范围内。
 
@@ -142,52 +142,7 @@ expect:
 
 ## 断言直接计分
 
-`score` 配置命中/未命中的分值；`scope` 只标记 turn/session 评价范围，不参与赋分。AI rubric 和显式 opt-in 的机械判据都可省略 score；可选的是分值配置，不是断言是否必须通过。
-
-| 字段         | 默认值 | 语义                                                      |
-| ------------ | ------ | --------------------------------------------------------- |
-| `score.hit`  | `1`    | 断言通过时加多少分，可配置为 3，也可为 0。                |
-| `score.miss` | `-1`   | 断言未通过时加多少分；省略默认扣 1，显式配置 0 才不扣分。 |
-
-score 是可选字段；省略 score 或写空对象时，等价于 `score: { hit: 1, miss: -1 }`。只覆盖其中一项时，另一项仍应用默认值；hit 与 miss 均须为有限数：
-
-- 不写 score：通过加 1，未通过扣 1；机械断言与 AI rubric 相同。
-- 只写 `hit: 3`：通过加 3，未通过仍扣 1，不自动扣 3。
-- 只写 `miss: 0`：通过默认加 1，未通过得 0。
-- 只写 `hit: 0`：通过得 0，未通过默认扣 1，只累计失败扣分。
-
-每项贡献与总分只有直接算术：
-
-```text
-本项得分 = pass ? hit : miss
-rawScore = 所有断言细项得分之和
-casePass = 所有已声明断言细项的 pass 均为 true
-```
-
-一期不需要 maxScore、分母排除、归一分或分数通过线。0 分不自动表示通过或失败，负分也不是唯一的失败标志；是否通过以 boolean 判断为准。正分不能抵消某项断言失败。
-
-### 机械与 AI 的统一汇总
-
-| 断言     | 类型 | 判断   | 得分           |
-| -------- | ---- | ------ | -------------- |
-| 字段正确 | 机械 | 通过   | +1             |
-| 产物有效 | 机械 | 未通过 | -1             |
-| 回答准确 | AI   | 通过   | +3             |
-| 信息完整 | AI   | 未通过 | 0，显式 miss=0 |
-
-总分为 `1 - 1 + 3 + 0 = 3`，但两项断言未通过，所以测试未通过。
-
-五项机械断言都配置 `hit: 0, miss: -1` 时，一项失败总分为 -1，两项失败为 -2；AI 细项可按同样规则加入求和。不需要先建评分维度或单独声明结果引用。
-
-报告至少保留断言名、机械／AI 来源、pass、reason、本项分值贡献、总分与失败项。总分不能替代逐项结果，也不能把一次 Judge 批量调用压成一个总布尔后再计细项分。
-
-### 通用断言职责与机械 resolver
-
-- `@x-agent-suite/assertions` 负责把 `JudgeOutcome` 展开为逐 rubric 的原始 name/pass/reason/0..1 结果，并提供 score 封闭校验、独立默认值与 `pass ? hit : miss` 贡献计算。既有 `createJudgeAssertion` 复用同一适配，公开行为不变。
-- `@x-agent-suite/observation` 的 `runCriteria` 在结果源校验机械与 AI 判据的 boolean pass、字符串 reason 和 0..1 有限 score；缺结果或畸形结果是评测错误。
-- Recall 只负责作者 YAML、各评价位置的文本选择、registry 装配、resolver 预检缓存和报告投影。静态 Criterion 与工厂都可在注册项声明 `assertionScore`；只对实际引用在装配期同步解析一次，按 execution、scenario 与判据出现位置缓存，运行/重试/报告阶段不再调用。
-- resolver 返回值必须是同步普通对象，只允许 hit/miss；Promise、null、数组、额外字段、非有限数和 resolver 抛错均为定义错误 CLI=2，在主 Driver 前拒绝。resolver 不进入 ScenarioSpec 或报告，不得启动 Driver 或联网。
-- 报告 `result.artifact.outcomes` 原样保留既有 0..1 标准分；`result.artifact.assertions` 另存 name/source/pass/reason/score 贡献，`result.artifact.rawScore` 为贡献之和。贡献不会回写 CriterionOutcome。
+逐项可选 `score` 的完整规则已迁入独立的 [Recall 断言计分](./recall-scoring.md) 正式规格：默认 hit=1／miss=-1，机械判据显式 opt-in，各细项贡献统一求和；所有已声明断言通过才通过，正总分不能抵消失败。该规格同时定义机械 resolver 的预检缓存与报告分值分层。
 
 ## 校验与错误语义
 
@@ -227,9 +182,15 @@ casePass = 所有已声明断言细项的 pass 均为 true
 
 ## 后续设计
 
-### Decision：分数验收政策
+### Decision 分数验收政策
 
-不同效果分别得分已由多个 `judge.*` 与机械断言的可选 `score` 解决，不需要 Decision。[Decision 备忘](./future/recall-decision-pre-design.md) 仅保留“未来明确要求部分失败也按分数放行”这一独立触发条件，不是本次评分能力的前置，也没有可用 DSL。
+本节只保留独立延后需求备忘，未实现，没有可用 DSL；不保留字段、算法或报告 schema 草案。不同效果分别得分已由 [现行断言计分](./recall-scoring.md) 解决，不需要 Decision。
+
+- 只有消费者明确要求“原断言存在失败，但总分达标也判最终通过”时，才重新讨论额外验收政策；不同效果不同分数、比较两个 FAIL 或调整贡献均不触发。
+- 不恢复维度表、第二套赋分或总分，不把标准分、scope 或机械插件任意输入当作贡献配置。
+- 不将原始失败改写为通过，不以其他正分吞掉评测错误，也不能放行已确认的失败提前停止。
+- 不因分支、分类或评级的存在而默认引入本能力。
+- 重新立项须先确认第二个独立消费者也需要分数放行，再决定是否由框架承载，另写设计、验收与实施计划；本节不提前选择 threshold/required 等字段。
 
 ### 分类、条件分支与提前终止
 

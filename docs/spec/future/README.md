@@ -9,6 +9,8 @@ tags: [future, pre-design]
 
 本目录集中保存明确延后、未来候选或不进入当前实施范围的设计。**归档不等于批准实现，也不代表现有公开契约。**
 
+评分正式规格已迁至 [Recall 断言计分](../recall-scoring.md)，不再作为 future 独立文档保留。Decision 分数放行仍未批准，延后边界见 [Judge DSL 后续设计](../recall-judge-dsl.md#decision-分数验收政策)。
+
 ## 收录边界
 
 - 整份设计文档明确标为未来、延后或不进入当前阶段时，放在本目录；状态、启用条件和未验证范围应写清楚。以字段、算法或执行契约草案为主要产出的 Recall 预设计属于此类。
@@ -24,7 +26,6 @@ tags: [future, pre-design]
 | [Recall 分类](./recall-classification-pre-design.md)            | choices／else、不自动计分；区分独立评级候选 | boolean 判断不能表达需要记录的有限类别         |
 | [Recall 条件分支](./recall-conditional-branching-pre-design.md) | 条件树、内嵌子步骤与自然汇合                | 有明确条件执行需求，并先解决可比性原则冲突     |
 | [Recall 提前终止](./recall-early-termination-pre-design.md)     | onFail:stop、报告与清理                     | 明确失败后继续执行的成本或风险不可接受         |
-| [Recall Decision](./recall-decision-pre-design.md)              | 分数放行的独立延后备忘，不保留 DSL          | 明确需要部分失败仍通过；差异评分无需此能力     |
 
 ## 未决边界与验证
 

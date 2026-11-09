@@ -24,6 +24,7 @@ tags: [spec]
 | [scenario-runner.md](./scenario-runner.md)                       | P3 设计：Registry 运行时、DSL 执行与 CLI                              |
 | [recall.md](./recall.md)                                         | 原生 `.recall`：发现、严格 YAML、ScenarioSpec 编译与执行              |
 | [recall-judge-dsl.md](./recall-judge-dsl.md)                     | 内置 Judge、逐项计分、固定全通过与独立裁定会话                        |
+| [recall-scoring.md](./recall-scoring.md)                         | 计分 DSL、完整配置示例、机械 registry、报告与错误验收                 |
 | [recall-turn-assertion.md](./recall-turn-assertion.md)           | 线性逐轮评价时机、完整归因、跨轮计分与树状设计空间                    |
 | [recall-runtime-composition.md](./recall-runtime-composition.md) | 待审方案：assertions 原生 client 装配与 Recall 同源依赖接线           |
 | [judge.md](./judge.md)                                           | 通用 AI Judge：批量 rubric、具名 verdict、失败分层与双 mode           |
