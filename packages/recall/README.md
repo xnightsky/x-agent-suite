@@ -90,6 +90,8 @@ CLI 默认在 case 完成时立即输出 `PASS/FAIL/ERROR`，结束后输出 `SU
 
 `--verbose=2` 与 `--verbose 2` 等价；不同形式混用时累加，总和只允许 0..3。高级别不改变执行和退出码，详细内容使用与报告一致的 Driver redactor。级别 3 在每轮返回后输出结构化事件，不代表通用逐 token 流。完整契约见 [Recall 流式输出与 verbosity](../../docs/spec/recall.md#流式输出与-verbosity)。
 
+TTY 下自动启用图标、颜色、case 运行状态行和最终汇总框；普通日志会先清除状态行再输出，避免被下一帧覆盖。`NO_COLOR` 或 `TERM=dumb` 仅关闭颜色。非 TTY 不写任何 ANSI/光标控制，仍输出纯文本 `PASS/FAIL/SUMMARY`。
+
 程序调用方可通过 `runRecall(options, listener)` 接收同一事件序列，或使用 `createRecallReporter(level, output)` 复用默认渲染。
 
 `score` 是判据的 0..1 归一化结果；`contribution` 是 `hit/miss` 配置产生的实际贡献；`rawScore` 是贡献总和，`assertions=通过数/总数` 表示通过覆盖。例：`score=1 contribution=3 rawScore=3 assertions=1/1`。没有断言时不显示总分，正总分也不替代全部断言通过的 `hardPass` 条件。

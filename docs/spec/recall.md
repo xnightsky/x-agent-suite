@@ -60,7 +60,8 @@ Recall 默认以行式事件流报告执行进度，不等待全部 target/case 
 - 程序事件中的 `contributions` 与 `criteria-completed.outcomes` 按索引一一对应；`repeat-completed.result` 与 case 结果一样使用 Recall 报告投影，包含可用的 `assertions/rawScore`。
 - 级别 3 是完整的人类诊断，不是机器 JSON reporter，也不保证逐 token 推送。每轮 `sendPrompt` 返回后立即输出该轮结构化 Observation；尚未返回的 Driver 原始内容仍由具体 Driver 自己管理。
 - 所有 prompt、Observation、判据理由、结果与错误堆栈在进入 CLI 前应用当前 case/repeat 已创建的 Driver redactor；判据继续消费原始 Observation。多 repeat 的 redactor 组合顺序与报告一致。
-- 输出不依赖 TTY 清屏或动态重绘，管道与交互终端使用同一行式事件语义。stdout/stderr 分开消费时不承诺跨文件描述符的统一全序。
+- TTY 自动使用图标、颜色、运行中状态行和汇总框；即使级别 0 也在 case 开始即显示状态。普通日志输出前清除状态行，case 完成或失败后清除状态再打印结果，避免动态帧覆盖中间日志。`NO_COLOR` 或 `TERM=dumb` 只关闭颜色，不取消实时状态。
+- 非 TTY 保持既有纯文本行式输出与 `SUMMARY`，不写 ANSI 颜色、清屏或光标控制序列，便于管道、CI 和脚本解析。stdout/stderr 分开消费时不承诺跨文件描述符的统一全序。
 
 业界依据与“测试事件流不等于原始内容流”的边界见 [测试运行器流式输出与详细级别调研](../research/test-runner-streaming-verbosity.md)。
 

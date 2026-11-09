@@ -39,4 +39,4 @@ pytest、Vitest 与 Jest 都没有把“流式”限定为逐 token 或逐字符
 3. **级别单调包含。** 高级别包含低级别信息：0=case 结果与汇总，1=case/repeat 生命周期与报告路径，2=turn/判据，3=完整脱敏诊断。
 4. **结构化诊断优先。** `-vvv` 输出 prompt、Observation、DriverEvent 和错误堆栈；Observation 在每轮返回后立即输出，不虚构通用逐 token 能力。
 5. **脱敏是输出前置条件。** 与报告一致，Driver redactor 必须应用于所有详细事件和错误堆栈，判据仍消费原始 Observation。
-6. **行式输出适合管道。** 不依赖 TTY 清屏或动态重绘；stdout/stderr 分开时，不声称跨文件描述符有统一全序。
+6. **交互与管道分形。** TTY 可用图标、颜色和动态状态增强可读性；管道保持纯文本行式输出，不写光标控制。stdout/stderr 分开时，不声称跨文件描述符有统一全序。

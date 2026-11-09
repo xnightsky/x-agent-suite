@@ -142,6 +142,8 @@ x-agent-suite recall --carrier consumer-carrier --registry registry.ts -vv .reca
 
 所有级别都保持相同执行顺序、报告和退出码。`-vvv` 在每轮完成时立即输出该轮结构化事件，不把某个宿主的原始 token 协议当作通用接口。完整级别表见 [Recall 规范](../../spec/recall.md#流式输出与-verbosity)。
 
+直接终端运行时会自动显示图标、颜色、运行中状态和汇总框；管道到文件或 CI 时保持纯文本，不包含动态清屏。需要关闭颜色时设置 `NO_COLOR=1`，实时 case 进度仍然保留。
+
 结果行会同时给出 `rawScore=贡献总和` 和 `assertions=通过数/总数`。`-vv` 的逐判据行中，`score` 是 0..1 归一化结果，`contribution` 才是 `hit/miss` 配置的实际贡献；例如通过且 `hit: 3` 时显示 `score=1 contribution=3`，case 对应 `rawScore=3`。
 
 ## 实际执行链

@@ -18,6 +18,7 @@ import type {
   RecallRunListener,
 } from "./run.ts";
 import type { RecallAssertionArtifact } from "./assertion-results.ts";
+import { createRecallTerminal } from "./terminal.ts";
 
 /** Recall 支持的详细级别；数值越高，严格包含越多诊断事件。 */
 export type RecallVerbosity = 0 | 1 | 2 | 3;
@@ -26,6 +27,12 @@ export type RecallVerbosity = 0 | 1 | 2 | 3;
 export interface RecallReporterOutput {
   readonly stdout: (message: string) => void;
   readonly stderr: (message: string) => void;
+  /** 是否为交互终端；仅 true 时启用美化与运行状态。 */
+  readonly isTTY?: boolean;
+  /** 是否启用 ANSI 颜色；默认遵循 TTY、TERM 与 NO_COLOR。 */
+  readonly color?: boolean;
+  /** TTY 状态行的原始写入出口，用于清行和即时重绘。 */
+  readonly writeStdout?: (chunk: string) => void;
 }
 
 interface ReporterContext {
@@ -407,10 +414,18 @@ export function createRecallReporter(
   output: RecallReporterOutput = {
     stdout: (message) => console.log(message),
     stderr: (message) => console.error(message),
+    isTTY: process.stdout.isTTY === true,
+    color:
+      process.stdout.isTTY === true &&
+      process.env.NO_COLOR === undefined &&
+      process.env.TERM !== "dumb",
+    writeStdout: (chunk) => process.stdout.write(chunk),
   },
 ): RecallRunListener {
-  const context = { verbosity, output };
+  const terminal = output.isTTY ? createRecallTerminal(output) : undefined;
+  const context = { verbosity, output: terminal?.output ?? output };
   return (event) => {
+    if (terminal?.handle(event)) return;
     if (event.type === "runner") {
       writeRunnerEvent(context, event);
     } else {
