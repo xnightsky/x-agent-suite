@@ -30,6 +30,7 @@ x-agent-suite recall \
   --carrier <id> [--provider <id>] [--model <id>] \
   [--live-config <path>] [--registry <module.ts>] [--plan <yaml|use:profile>] \
   [--execution-params <json-object>] [--approve-live] [--repeat <n>] [--out-dir <path>] [--root-dir <path>] \
+  [--verbose [0..3]] [-v|-vv|-vvv] \
   [YAML|目录]
 ```
 
@@ -41,6 +42,27 @@ x-agent-suite recall \
 - `kind: ephemeral-client` 的 Carrier 通过 `clientRef` 选择同 carrier 注册 Adapter，使用自定义 direct 路径；未注册或 carrier 不匹配即失败，不回退其他实现。详见 [ephemeral-client.md](./ephemeral-client.md)。
 - 考卷显式目标优先；否则读取 cwd 下 `.recall/*.{yaml,yml}` 第一层，不递归。显式 `--plan` 位于该目录时从默认考卷发现中排除。
 - 所有可选路径参数（`target/--live-config/--registry/--plan/--root-dir/--out-dir`、程序 API 的 `cwd/homeDir`）只在省略时使用缺省；一旦显式提供就必须是非空字符串。空串、空白串、null 或其他类型是定义错误，不得回退默认发现。`approveLive` 提供时必须是严格 boolean，不能用 truthy 字符串绕过 live 审批。
+
+## 流式输出与 verbosity
+
+Recall 默认以行式事件流报告执行进度，不等待全部 target/case 结束后集中打印。完成加载和判据装配后先输出运行头；每个 case 的报告写入或失败脱敏完成后立即输出结果；全部结束后输出 passed/failed/errors/total/duration 汇总。行为失败与基础设施失败继续分别使用 `FAIL/stdout` 和 `ERROR/stderr`，退出码规则不变。
+
+| 级别      | 参数示例                         | 在上一级基础上增加                                                                                 |
+| --------- | -------------------------------- | -------------------------------------------------------------------------------------------------- |
+| 0（默认） | 无参数、`--verbose 0`            | case `PASS/FAIL/ERROR`、耗时、`rawScore`、断言通过数、失败原因、最终汇总                           |
+| 1         | `-v`、`--verbose`、`--verbose 1` | case `RUN`、repeat 开始/结束及每次 `rawScore`、Markdown/JSON 报告路径                              |
+| 2         | `-vv`、`--verbose 2`             | turn 开始/结束、逐判据归一化 `score`、实际 `contribution` 与理由                                   |
+| 3         | `-vvv`、`--verbose 3`            | 完整 prompt、逐轮 Observation（含 toolCalls/events/usage/metadata）、repeat 结果与基础设施错误堆栈 |
+
+- `-v` 是可重复计数短标志：`-vv` 等价于两个 `-v`。`--verbose` 省略数值时增加 1；`--verbose 2` 与 `--verbose=2` 增加指定级数。不同形式混用时累加，总数必须是 0..3 的整数；`-vvvv` 或大于 3 的数值是定义错误。
+- 高级别严格包含低级别事件，verbosity 只改变渲染，不改变执行顺序、repeat、判据、报告或退出码。`runRecall` 通过可选事件监听器暴露同一事件序列，程序调用方可自行渲染。
+- 分数口径与报告完全一致：`score` 是 Criterion 的 0..1 归一化结果，布尔通过为 1；`contribution` 是按该断言 `hit/miss` 配置计算的实际贡献；`rawScore` 是当前 case/repeat 的全部贡献之和，`assertions=通过数/总数` 单独披露覆盖。没有断言时不虚构 `rawScore`。总分可以为 0 或负数，但 `hardPass` 仍要求全部断言通过，正分不能抵消失败。
+- 程序事件中的 `contributions` 与 `criteria-completed.outcomes` 按索引一一对应；`repeat-completed.result` 与 case 结果一样使用 Recall 报告投影，包含可用的 `assertions/rawScore`。
+- 级别 3 是完整的人类诊断，不是机器 JSON reporter，也不保证逐 token 推送。每轮 `sendPrompt` 返回后立即输出该轮结构化 Observation；尚未返回的 Driver 原始内容仍由具体 Driver 自己管理。
+- 所有 prompt、Observation、判据理由、结果与错误堆栈在进入 CLI 前应用当前 case/repeat 已创建的 Driver redactor；判据继续消费原始 Observation。多 repeat 的 redactor 组合顺序与报告一致。
+- 输出不依赖 TTY 清屏或动态重绘，管道与交互终端使用同一行式事件语义。stdout/stderr 分开消费时不承诺跨文件描述符的统一全序。
+
+业界依据与“测试事件流不等于原始内容流”的边界见 [测试运行器流式输出与详细级别调研](../research/test-runner-streaming-verbosity.md)。
 
 ## 实际执行链
 

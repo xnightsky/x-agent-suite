@@ -35,7 +35,7 @@ interface RecallAssertionMetadata {
   readonly turnAssertions?: readonly RecallTurnAssertionMetadata[];
 }
 
-interface ProjectedOutcome {
+export interface RecallAssertionProjection {
   readonly outcome: CriterionOutcome;
   readonly assertion: AssertionDetail;
 }
@@ -54,11 +54,12 @@ function rubricOf(
   return name ? [name, judge!.rubrics[name]!] : undefined;
 }
 
-function projectOutcome(
+/** 将单个 Runner outcome 投影为作者名、判据明细与实际贡献。 */
+export function projectRecallAssertionOutcome(
   spec: ScenarioSpec,
   outcome: CriterionOutcome,
   execution?: RecallResolvedExecution,
-): ProjectedOutcome {
+): RecallAssertionProjection {
   const metadata = assertionMetadata(spec);
   const turn =
     outcome.scope === "turn"
@@ -109,7 +110,7 @@ export function adaptRecallAssertionResult(
     return withoutUndefinedError(result);
   }
   const projected = result.artifact.outcomes.map((outcome) =>
-    projectOutcome(spec, outcome, execution),
+    projectRecallAssertionOutcome(spec, outcome, execution),
   );
   const outcomes = projected.map((item) => item.outcome);
   const assertions = projected.map((item) => item.assertion);

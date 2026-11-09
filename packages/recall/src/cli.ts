@@ -6,8 +6,11 @@
 import { runRecall } from "./run.ts";
 import type { LoadRecallOptions } from "./load.ts";
 import { parseExecutionParams } from "./execution-params.ts";
+import { createRecallReporter, type RecallVerbosity } from "./reporter.ts";
 
-type RecallArguments = Omit<LoadRecallOptions, "cwd">;
+type RecallArguments = Omit<LoadRecallOptions, "cwd"> & {
+  verbosity: RecallVerbosity;
+};
 
 /** Recall CLI 主入口；argv 不包含 recall 命令名。 */
 export async function main(
@@ -23,37 +26,15 @@ export async function main(
     return 2;
   }
   try {
-    const result = await runRecall({
-      cwd: options.cwd,
-      homeDir: options.homeDir,
-      ...args,
-    });
-    for (const run of result.runs) {
-      const implementation = run.cliRef
-        ? run.mode + "/" + run.cliRef
-        : run.mode;
-      console.log(
-        (run.hardPass ? "PASS " : "FAIL ") +
-          run.scenarioId +
-          " [" +
-          run.carrier +
-          "/" +
-          implementation +
-          "]",
-      );
-    }
-    for (const failure of result.failures) {
-      console.error(
-        "ERROR " +
-          failure.scenarioId +
-          " [" +
-          failure.carrier +
-          "/" +
-          failure.mode +
-          "]：" +
-          failure.error.message,
-      );
-    }
+    const { verbosity, ...loadArgs } = args;
+    const result = await runRecall(
+      {
+        cwd: options.cwd,
+        homeDir: options.homeDir,
+        ...loadArgs,
+      },
+      createRecallReporter(verbosity),
+    );
     return result.failures.length > 0 ? 1 : 0;
   } catch (cause) {
     console.error(errorMessage(cause));
@@ -62,7 +43,7 @@ export async function main(
 }
 
 function usage(): string {
-  return "用法：x-agent-suite recall (--carrier <id> | --provider <id> | --model <id>) [--live-config <yaml>] [--registry <module.ts>] [--plan <yaml|use:profile>] [--execution-params <json-object>] [--approve-live] [--repeat <n>] [--out-dir <path>] [--root-dir <path>] [YAML|目录]";
+  return "用法：x-agent-suite recall (--carrier <id> | --provider <id> | --model <id>) [--live-config <yaml>] [--registry <module.ts>] [--plan <yaml|use:profile>] [--execution-params <json-object>] [--approve-live] [--repeat <n>] [--out-dir <path>] [--root-dir <path>] [--verbose [0..3]] [-v|-vv|-vvv] [YAML|目录]";
 }
 
 function applyOption(
@@ -116,11 +97,51 @@ function applyOption(
   }
 }
 
+/** 累加 verbosity 并执行 0..3 的封闭区间校验。 */
+function addVerbosity(args: RecallArguments, raw: string): void {
+  if (!/^\d+$/.test(raw)) {
+    throw new Error("verbosity 必须是 0..3 的整数，实际：" + raw);
+  }
+  const value = Number(raw);
+  const total = args.verbosity + value;
+  if (!Number.isSafeInteger(value) || total > 3) {
+    throw new Error("verbosity 总和必须位于 0..3，实际：" + total);
+  }
+  args.verbosity = total as RecallVerbosity;
+}
+
+/** 判断可选 verbosity 数值是否跟随 --verbose；非数值仍按 target 解析。 */
+function isVerbosityValue(value: string): boolean {
+  return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value);
+}
+
 function parseArguments(argv: readonly string[]): RecallArguments {
-  const args = { selection: {} } as RecallArguments & { target?: string };
+  const args = { selection: {}, verbosity: 0 } as RecallArguments & {
+    target?: string;
+  };
   const seen = new Set<string>();
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]!;
+    if (/^-v+$/.test(argument)) {
+      addVerbosity(args, String(argument.length - 1));
+      continue;
+    }
+    if (argument === "--verbose" || argument.startsWith("--verbose=")) {
+      let value = argument.startsWith("--verbose=")
+        ? argument.slice("--verbose=".length)
+        : "1";
+      const next = argv[index + 1];
+      if (
+        argument === "--verbose" &&
+        next !== undefined &&
+        isVerbosityValue(next)
+      ) {
+        value = next;
+        index += 1;
+      }
+      addVerbosity(args, value);
+      continue;
+    }
     if (argument === "--config") {
       throw new Error(
         "--config 已移除；请使用 --registry 注册实现、--plan 声明 effects",

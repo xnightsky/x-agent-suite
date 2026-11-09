@@ -127,6 +127,23 @@ x-agent-suite recall   --carrier consumer-carrier   --live-config private-live.y
 - `--config`、`--mode`、`--cli-ref` 均不是合法 Recall 参数。
 - 单次运行参数经 `--execution-params <JSON对象>` 交给选中的 Profile/Adapter，不改路由或权限。例如思考强度由消费者映射到隔离配置；未指定时继承宿主默认，见[宿主配置保真](../../spec/host-config-projection.md)。
 
+## 流式进度与详细诊断
+
+默认模式已经逐 case 流式输出结果和最终汇总。排障时直接增加 verbosity，不需要另跑一套命令：
+
+```bash
+x-agent-suite recall --carrier consumer-carrier --registry registry.ts -vv .recall/project-rules.yaml
+```
+
+- `-v`：查看 case/repeat 开始与结束、耗时和报告路径；
+- `-vv`：继续查看每轮开始/结束和逐判据理由；
+- `-vvv`：继续查看完整脱敏 prompt、Observation、DriverEvent、repeat 结果与错误堆栈；
+- 也可使用 `--verbose`、`--verbose 2`、`--verbose=3`；混合出现时累加，最高 3。
+
+所有级别都保持相同执行顺序、报告和退出码。`-vvv` 在每轮完成时立即输出该轮结构化事件，不把某个宿主的原始 token 协议当作通用接口。完整级别表见 [Recall 规范](../../spec/recall.md#流式输出与-verbosity)。
+
+结果行会同时给出 `rawScore=贡献总和` 和 `assertions=通过数/总数`。`-vv` 的逐判据行中，`score` 是 0..1 归一化结果，`contribution` 才是 `hit/miss` 配置的实际贡献；例如通过且 `hit: 3` 时显示 `score=1 contribution=3`，case 对应 `rawScore=3`。
+
 ## 实际执行链
 
 ```text

@@ -17,6 +17,8 @@ export async function runOfficialCli(
   options: {
     readonly homeDir: string;
     readonly env?: Readonly<Record<string, string>>;
+    readonly onStdout?: (chunk: string) => void;
+    readonly onStderr?: (chunk: string) => void;
   },
 ): Promise<OfficialCliResult> {
   const child = spawn(
@@ -39,9 +41,11 @@ export async function runOfficialCli(
   child.stderr.setEncoding("utf8");
   child.stdout.on("data", (chunk: string) => {
     stdout += chunk;
+    options.onStdout?.(chunk);
   });
   child.stderr.on("data", (chunk: string) => {
     stderr += chunk;
+    options.onStderr?.(chunk);
   });
   const code = await new Promise<number | null>((resolve, reject) => {
     child.once("error", reject);

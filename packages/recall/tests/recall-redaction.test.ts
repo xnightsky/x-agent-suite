@@ -79,8 +79,12 @@ cases:
   );
   await writeFile(ws.registryPath, OBSERVATION_REGISTRY);
   const outDir = join(ws.cwd, "reports-redaction");
+  const stdout: string[] = [];
+  t.mock.method(console, "log", (message: unknown) =>
+    stdout.push(String(message)),
+  );
   assert.equal(
-    await main(args(ws, outDir), { cwd: ws.cwd, homeDir: ws.cwd }),
+    await main(args(ws, outDir, ["-vvv"]), { cwd: ws.cwd, homeDir: ws.cwd }),
     0,
   );
   const reports = await readReports(outDir);
@@ -93,6 +97,8 @@ cases:
     combined += "\n" + text;
   }
   assert.match(combined, /\[REDACTED\]/);
+  assert.doesNotMatch(stdout.join("\n"), new RegExp(SECRET));
+  assert.match(stdout.join("\n"), /\[REDACTED\]/);
 });
 
 test("Recall failure error 同样使用 driver.redactor", async (t) => {
@@ -144,7 +150,7 @@ export default {
   const errors: string[] = [];
   t.mock.method(console, "error", (message: string) => errors.push(message));
   assert.equal(
-    await main(args(ws, join(ws.cwd, "reports-redaction-cli")), {
+    await main(args(ws, join(ws.cwd, "reports-redaction-cli"), ["-vvv"]), {
       cwd: ws.cwd,
       homeDir: ws.cwd,
     }),

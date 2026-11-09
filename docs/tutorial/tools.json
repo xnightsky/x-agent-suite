@@ -735,8 +735,15 @@
         {
           "name": "runRecall",
           "category": "primary",
-          "purpose": "复用 Runner 执行 case/repeat 并写出现有双格式报告。",
+          "purpose": "复用 Runner 执行 case/repeat、写双格式报告并同步发出结构化进度事件。",
           "risk": "conditional",
+          "recipes": ["recall"]
+        },
+        {
+          "name": "createRecallReporter",
+          "category": "advanced",
+          "purpose": "把 Recall 结构化进度事件按 0..3 verbosity 渲染为行式流式输出。",
+          "risk": "safe",
           "recipes": ["recall"]
         },
         {

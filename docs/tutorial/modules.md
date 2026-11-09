@@ -147,7 +147,8 @@ Matrix 不加载 scenario、不创建 profile、不解释 criterion。它只编�
 | 工具                         | 分类     | 用法                                                       |
 | ---------------------------- | -------- | ---------------------------------------------------------- |
 | `loadRecall`                 | 主路径   | 全量校验显式 target、registry、effects Plan 与 Recall YAML |
-| `runRecall`                  | 主路径   | 单 Runner 逐 target/case/repeat 执行并写双格式报告         |
+| `runRecall`                  | 主路径   | 执行 case/repeat、写双格式报告并同步发出结构化进度事件     |
+| `createRecallReporter`       | 高级     | 按 0..3 verbosity 渲染脱敏后的行式流式事件                 |
 | `main`                       | 主路径   | 接入 `x-agent-suite recall`；无 target 参数拒绝            |
 | `loadRecallRegistry`         | live     | 加载独立 Criterion/profile/EffectsProfile 注册表           |
 | `emptyRecallRegistry`        | 底层原语 | 创建无判据、无 profile 的安全空注册表                      |

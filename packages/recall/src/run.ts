@@ -8,12 +8,17 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type {
   Criterion,
   Redactor,
+  RepeatStats,
   ReportPaths,
+  ScenarioResult,
   ScenarioSpec,
 } from "@x-agent-suite/contracts";
-import { redactLiveError } from "@x-agent-suite/llm-fixture";
+import { redactLiveError, redactValue } from "@x-agent-suite/llm-fixture";
 import { writeScenarioReports } from "@x-agent-suite/observation";
-import { runScenarioRepeat } from "@x-agent-suite/runner";
+import {
+  runScenarioRepeat,
+  type ScenarioRepeatEvent,
+} from "@x-agent-suite/runner";
 import { assembleRecallCriteria } from "./criterion-assembly.ts";
 import { createRecallDriver } from "./driver.ts";
 import type { RecallResolvedExecution } from "./execution.ts";
@@ -23,7 +28,11 @@ import {
   type LoadRecallOptions,
   type RecallLoadCore,
 } from "./load.ts";
-import { adaptRecallAssertionResult } from "./assertion-results.ts";
+import {
+  adaptRecallAssertionResult,
+  projectRecallAssertionOutcome,
+  type RecallAssertionArtifact,
+} from "./assertion-results.ts";
 import { encodeSafePathSegment } from "./validation.ts";
 
 /** 单个 case 的成功执行与报告位置。 */
@@ -61,6 +70,57 @@ export interface RecallRunResult {
   /** 基础设施失败。 */
   readonly failures: readonly RecallInfraFailure[];
 }
+
+/** 当前 target × case 的稳定进度归因；index/total 为 1-based 展示序号。 */
+export interface RecallCaseProgress {
+  readonly index: number;
+  readonly total: number;
+  readonly scenarioId: string;
+  readonly carrier: string;
+  readonly provider: string;
+  readonly model: string;
+  readonly mode: string;
+  readonly cliRef?: string;
+  readonly clientRef?: string;
+}
+
+/** Recall 全量结构化进度事件；CLI 与程序调用方共享同一时间序列。 */
+export type RecallRunEvent =
+  | {
+      readonly type: "run-started";
+      readonly targetCount: number;
+      readonly caseTotal: number;
+      readonly repeat: number;
+    }
+  | { readonly type: "case-started"; readonly case: RecallCaseProgress }
+  | {
+      readonly type: "runner";
+      readonly case: RecallCaseProgress;
+      readonly event: ScenarioRepeatEvent;
+      readonly contributions?: readonly number[];
+    }
+  | {
+      readonly type: "case-completed";
+      readonly case: RecallCaseProgress;
+      readonly run: RecallCaseRun;
+      readonly result: ScenarioResult<RecallAssertionArtifact>;
+      readonly repeat: RepeatStats;
+      readonly durationMs: number;
+    }
+  | {
+      readonly type: "case-failed";
+      readonly case: RecallCaseProgress;
+      readonly failure: RecallInfraFailure;
+      readonly durationMs: number;
+    }
+  | {
+      readonly type: "run-completed";
+      readonly result: RecallRunResult;
+      readonly durationMs: number;
+    };
+
+/** Recall 进度监听器；事件载荷已在出口应用可用 Driver redactor。 */
+export type RecallRunListener = (event: RecallRunEvent) => void;
 
 /** 推导单 target 的报告目录，所有路径分量必须保持为单个安全段。 */
 export function targetOutDir(
@@ -105,12 +165,60 @@ interface AssembledExecution {
   readonly criteria: readonly Criterion[];
 }
 
+/** runCase 的内部完整结果；公开 runRecall 汇总仍只返回 runs/failures。 */
+interface ExecutedRecallCase {
+  readonly run: RecallCaseRun;
+  readonly result: ScenarioResult<RecallAssertionArtifact>;
+  readonly repeat: RepeatStats;
+  readonly redact?: Redactor;
+}
+
+/** Runner 事件的 Recall 作者视图；贡献顺序与 criteria outcomes 一致。 */
+interface RecallRunnerProjection {
+  readonly event: ScenarioRepeatEvent;
+  readonly contributions?: readonly number[];
+}
+
+/** 投影 repeat 总分及逐判据贡献，复用报告使用的同一投影函数。 */
+function projectRunnerEvent(
+  spec: ScenarioSpec,
+  execution: RecallResolvedExecution,
+  event: ScenarioRepeatEvent,
+): RecallRunnerProjection {
+  if (event.type === "repeat-completed") {
+    return {
+      event: {
+        ...event,
+        result: adaptRecallAssertionResult(spec, event.result, execution),
+      },
+    };
+  }
+  if (event.type !== "scenario" || event.event.type !== "criteria-completed") {
+    return { event };
+  }
+  const projected = event.event.outcomes.map((outcome) =>
+    projectRecallAssertionOutcome(spec, outcome, execution),
+  );
+  return {
+    event: {
+      ...event,
+      event: {
+        ...event.event,
+        outcomes: projected.map((item) => item.outcome),
+      },
+    },
+    contributions: projected.map((item) => item.assertion.score),
+  };
+}
+
 async function runCase(
   spec: ScenarioSpec,
   execution: RecallResolvedExecution,
   criteria: readonly Criterion[],
   loaded: LoadedRecall,
-): Promise<RecallCaseRun> {
+  progress: RecallCaseProgress,
+  listener: RecallRunListener | undefined,
+): Promise<ExecutedRecallCase> {
   const redactors: Redactor[] = [];
   try {
     const executed = await runScenarioRepeat(spec, {
@@ -127,6 +235,15 @@ async function runCase(
       },
       criteria,
       repeat: loaded.repeat,
+      onEvent: (event) => {
+        if (!listener) return;
+        const projected = projectRunnerEvent(spec, execution, event);
+        listener({
+          type: "runner",
+          case: progress,
+          ...redactValue(projected, composeRedactors(redactors)),
+        });
+      },
     });
     const adapted = executed.results.map((item) =>
       adaptRecallAssertionResult(spec, item, execution),
@@ -159,13 +276,19 @@ async function runCase(
         ...(redact ? { redact } : {}),
       },
     );
-    return {
+    const run = {
       scenarioId: spec.id,
       hardPass: last.hardPass,
       reports,
       carrier: execution.target.carrier,
       mode: execution.mode,
       ...(execution.cliRef ? { cliRef: execution.cliRef } : {}),
+    };
+    return {
+      run,
+      result,
+      repeat: executed.stats,
+      ...(redact ? { redact } : {}),
     };
   } catch (cause) {
     const redact = composeRedactors(redactors);
@@ -198,28 +321,97 @@ async function assembleExecutions(
   return assembled;
 }
 
-/** 全量校验与判据装配后逐 target/case/repeat 执行并写出现有 Markdown + JSON 报告。 */
+/** 构造一个 target × case 的进度身份。 */
+function caseProgress(
+  spec: ScenarioSpec,
+  execution: RecallResolvedExecution,
+  index: number,
+  total: number,
+): RecallCaseProgress {
+  return {
+    index,
+    total,
+    scenarioId: spec.id,
+    carrier: execution.target.carrier,
+    provider: execution.target.channel.provider ?? "-",
+    model: execution.target.channel.model,
+    mode: execution.mode,
+    ...(execution.cliRef ? { cliRef: execution.cliRef } : {}),
+    ...(execution.clientRef ? { clientRef: execution.clientRef } : {}),
+  };
+}
+
+/** 全量校验后顺序执行，并在每个生命周期点同步发出结构化事件。 */
 export async function runRecall(
   options: LoadRecallOptions,
+  listener?: RecallRunListener,
 ): Promise<RecallRunResult> {
+  const startedAt = Date.now();
   const core = await loadRecallCore(options);
   const { loaded } = core;
   const executions = await assembleExecutions(loaded, core);
+  const total = executions.length * loaded.scenarios.length;
+  listener?.({
+    type: "run-started",
+    targetCount: executions.length,
+    caseTotal: total,
+    repeat: loaded.repeat,
+  });
   const runs: RecallCaseRun[] = [];
   const failures: RecallInfraFailure[] = [];
+  let index = 0;
   for (const { execution, criteria } of executions) {
     for (const spec of loaded.scenarios) {
+      index += 1;
+      const progress = caseProgress(spec, execution, index, total);
+      const caseStartedAt = Date.now();
       try {
-        runs.push(await runCase(spec, execution, criteria, loaded));
+        listener?.({ type: "case-started", case: progress });
+        const executed = await runCase(
+          spec,
+          execution,
+          criteria,
+          loaded,
+          progress,
+          listener,
+        );
+        const durationMs = Date.now() - caseStartedAt;
+        listener?.(
+          redactValue(
+            {
+              type: "case-completed",
+              case: progress,
+              run: executed.run,
+              result: executed.result,
+              repeat: executed.repeat,
+              durationMs,
+            },
+            executed.redact,
+          ),
+        );
+        runs.push(executed.run);
       } catch (cause) {
-        failures.push({
+        const failure = {
           scenarioId: spec.id,
           error: asError(cause),
           carrier: execution.target.carrier,
           mode: execution.mode,
+        };
+        failures.push(failure);
+        listener?.({
+          type: "case-failed",
+          case: progress,
+          failure,
+          durationMs: Date.now() - caseStartedAt,
         });
       }
     }
   }
-  return { runs, failures };
+  const result = { runs, failures };
+  listener?.({
+    type: "run-completed",
+    result,
+    durationMs: Date.now() - startedAt,
+  });
+  return result;
 }

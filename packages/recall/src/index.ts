@@ -13,8 +13,17 @@ export {
   type RecallCaseRun,
   type RecallInfraFailure,
   type RecallRunResult,
+  type RecallCaseProgress,
+  type RecallRunEvent,
+  type RecallRunListener,
 } from "./run.ts";
 export { main } from "./cli.ts";
+export {
+  createRecallReporter,
+  type RecallReporterOutput,
+  type RecallVerbosity,
+} from "./reporter.ts";
+export type { RecallAssertionArtifact } from "./assertion-results.ts";
 export {
   emptyRecallRegistry,
   loadRecallRegistry,

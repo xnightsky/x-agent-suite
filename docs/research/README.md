@@ -24,3 +24,4 @@ tags: [index, research]
 | [pi-models-auth-resolution.md](./pi-models-auth-resolution.md)                 | Pi models/auth 同键关联、凭据优先级与 MCP 显式 auth.provider       |
 | [model-graded-assertion-testing.md](./model-graded-assertion-testing.md)       | AI 断言的确定性接线、真实模型分层与 Judge 质量校准                 |
 | [recall-assertion-dsl-design.md](./recall-assertion-dsl-design.md)             | Recall 断言 DSL 的 KV、直接计分、固定全通过与范围收缩              |
+| [test-runner-streaming-verbosity.md](./test-runner-streaming-verbosity.md)     | pytest、Vitest、Jest 的流式生命周期输出、verbosity 与内容捕获边界  |

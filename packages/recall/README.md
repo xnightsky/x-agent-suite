@@ -15,7 +15,8 @@
 `src/index.ts` 是唯一入口（子路径 `@xnightsky/x-agent-suite/recall` 同形导出）：
 
 - `loadRecall` / `LoadedRecall` / `LoadRecallOptions` / `RecallExecutionPlan`：全部前置校验与装载，错误都发生在创建 Driver 之前。
-- `runRecall` / `RecallRunResult` / `RecallCaseRun` / `RecallInfraFailure` / `main`：逐 target/case/repeat 执行、写出 Markdown + JSON 报告，并提供 `x-agent-suite recall` 子命令。
+- `runRecall` / `RecallRunResult` / `RecallCaseRun` / `RecallInfraFailure` / `RecallRunEvent` / `RecallRunListener`：逐 target/case/repeat 执行、写出 Markdown + JSON 报告，并同步发出结构化进度事件。
+- `createRecallReporter` / `RecallReporterOutput` / `RecallVerbosity` / `main`：0..3 级行式流式渲染与 `x-agent-suite recall` 子命令。
 - `emptyRecallRegistry` / `loadRecallRegistry` / `RecallRegistry` / `RecallExecutionProfile` / `RecallProfileDriverContext`：独立注册表，只注册实现，不参与 target/mode 选择；`RecallAssertionScoreResolver` / `RecallAssertionScoreConfig` 为机械可配分值的显式 opt-in 类型。
 - `loadRecallEffectsPlan` / `RecallEffects` / `RecallEffectsProfile` / `isRecallCommandAllowed`：effects-only Plan DSL 与命令门禁。
 - `materializeRecallProvision` / `readRecallResources` / `RecallCompiledResource`：provision 资源校验与隔离 cwd 物化。
@@ -75,6 +76,23 @@ pnpm exec x-agent-suite recall --carrier consumer-carrier \
 ```
 
 `--carrier` / `--provider` / `--model` 至少一个，无参数直接报定义错误；carrier 等来自 live 配置（`.env.e2e.yaml` 或 `--live-config`），示例省略该文件。上例是消费者安装聚合包后的形态，本仓库源码内等价验证用 `pnpm tutorial:recall`；真实 provider 还需 `--approve-live` 授权。
+
+## 流式输出与详细级别
+
+CLI 默认在 case 完成时立即输出 `PASS/FAIL/ERROR`，结束后输出 `SUMMARY`，不再等待全量结果统一打印。详细级别单调包含：
+
+| 级别 | 用法                  | 增加的信息                                              |
+| ---- | --------------------- | ------------------------------------------------------- |
+| 0    | 默认、`--verbose 0`   | case 结果、耗时、`rawScore`、断言通过数、失败原因、汇总 |
+| 1    | `-v`、`--verbose`     | case/repeat 生命周期、每次 `rawScore`、报告路径         |
+| 2    | `-vv`、`--verbose 2`  | turn 生命周期、逐判据 `score` 与 `contribution`         |
+| 3    | `-vvv`、`--verbose 3` | 完整脱敏 prompt/Observation/repeat 结果/错误堆栈        |
+
+`--verbose=2` 与 `--verbose 2` 等价；不同形式混用时累加，总和只允许 0..3。高级别不改变执行和退出码，详细内容使用与报告一致的 Driver redactor。级别 3 在每轮返回后输出结构化事件，不代表通用逐 token 流。完整契约见 [Recall 流式输出与 verbosity](../../docs/spec/recall.md#流式输出与-verbosity)。
+
+程序调用方可通过 `runRecall(options, listener)` 接收同一事件序列，或使用 `createRecallReporter(level, output)` 复用默认渲染。
+
+`score` 是判据的 0..1 归一化结果；`contribution` 是 `hit/miss` 配置产生的实际贡献；`rawScore` 是贡献总和，`assertions=通过数/总数` 表示通过覆盖。例：`score=1 contribution=3 rawScore=3 assertions=1/1`。没有断言时不显示总分，正总分也不替代全部断言通过的 `hardPass` 条件。
 
 ## 判据、执行参数与路由
 
