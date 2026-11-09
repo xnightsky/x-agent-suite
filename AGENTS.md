@@ -112,7 +112,7 @@
 - 集成测试：`pnpm ittest`
 - 类型检查：`pnpm typecheck`
 - 边界守卫：`pnpm boundary`
-- 收口：`pnpm check`（boundary + typecheck + test + ittest；不含 token 级）
+- 默认回归收口：`pnpm check`（boundary + typecheck + test + ittest；不含 token 级）；Recall 功能完整验收还须满足“Recall 功能验收（本仓）”。
 
 ## 测试分层补充（本仓）
 
@@ -121,6 +121,14 @@
 - token 测试默认从仓库根 `.env.e2e.yaml`（已 gitignore）读取 live 配置；若确需借用本机登录态，测试必须自带显式 skip 闸门、最小权限 sandbox、现场清理和脱敏诊断。
 - 教程的可执行验证同样遵守该分层；“PTY/headless/子进程”本身不会自动升级为 `*.ittest.ts`，只有接入真实宿主才升级。
 - 完整判定表、位置与命令见 `docs/spec/testing.md`；命名分类决策依据见 `docs/research/test-file-naming-taxonomy.md`。
+
+## Recall 功能验收（本仓）
+
+- 修改 Recall 对外行为（DSL、执行、Judge 装配、计分、报告或资源生命周期）时，设计与实施计划必须同时列出零 token 回归和真实 token 验收；详细标准见 `docs/spec/testing.md` 的“Recall 新增行为的收口标准”。
+- 功能完整收口须同时满足：默认零 token 回归通过，以及经公开 Recall 入口完成与本次改动对应的真实 token 验证。fake、配置解析成功、历史 token 记录或 CLI 退出 0 均不能替代本次行为证据。
+- 作者可声明的新能力必须提供可运行考卷：优先扩展 `integrations/itrepos/` 中的现有场景；现有场景无法清晰承载时再新增。同步 README、预期结果、精确 `ittest:token:*` 入口及默认零 token 配置回归。
+- token 验收是交付门槛，不是调用授权。执行前须取得目标、范围、调用预算与费用授权；未获授权、缺少条件或被 skip 时，明确标记“实现完成，真实验收待完成”（仅在实现及默认回归已完成时），不得宣称功能已完整验收。
+- 仅文档、注释或不改变行为的修改不强制调用真实模型；仅设计任务须写清后续验收标准，不提前执行 token 验证。
 
 ## Git 补充（本仓）
 
