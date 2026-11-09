@@ -15,9 +15,36 @@ import type {
 } from "@x-agent-suite/contracts";
 import {
   runScenarioSpec,
-  type RunnerArtifact,
   type RunScenarioSpecDeps,
+  type RunnerArtifact,
+  type ScenarioRunEvent,
 } from "./run-scenario.ts";
+
+/** Repeat 执行过程事件；序号均为 0-based，场景事件保留嵌套顺序。 */
+export type ScenarioRepeatEvent =
+  | {
+      readonly type: "repeat-started";
+      readonly repeatIndex: number;
+      readonly repeatCount: number;
+    }
+  | {
+      readonly type: "repeat-completed";
+      readonly repeatIndex: number;
+      readonly repeatCount: number;
+      readonly result: ScenarioResult<RunnerArtifact>;
+    }
+  | {
+      readonly type: "scenario";
+      readonly repeatIndex: number;
+      readonly repeatCount: number;
+      readonly event: ScenarioRunEvent;
+    };
+
+/** runScenarioRepeat 注入依赖；进度监听器接收 repeat 归因后的事件。 */
+export type RunScenarioRepeatDeps = Omit<RunScenarioSpecDeps, "onEvent"> & {
+  readonly repeat: number;
+  readonly onEvent?: (event: ScenarioRepeatEvent) => void;
+};
 
 /** runScenarioRepeat 的返回：全部单次结果 + 稳定性统计。 */
 export interface RepeatRun {
@@ -57,14 +84,36 @@ export function summarizeRepeat(
 /** 同一场景顺序执行 N 次并汇总稳定性；repeat <= 1 时退化为单次执行。 */
 export async function runScenarioRepeat(
   spec: ScenarioSpec,
-  deps: RunScenarioSpecDeps & { readonly repeat: number },
+  deps: RunScenarioRepeatDeps,
 ): Promise<RepeatRun> {
   if (!Number.isInteger(deps.repeat) || deps.repeat < 1) {
     throw new Error(`repeat 必须是正整数，实际：${deps.repeat}`);
   }
   const results: ScenarioResult<RunnerArtifact>[] = [];
+  const { onEvent, ...scenarioDeps } = deps;
   for (let index = 0; index < deps.repeat; index += 1) {
-    results.push(await runScenarioSpec(spec, deps));
+    onEvent?.({
+      type: "repeat-started",
+      repeatIndex: index,
+      repeatCount: deps.repeat,
+    });
+    const result = await runScenarioSpec(spec, {
+      ...scenarioDeps,
+      onEvent: (event) =>
+        onEvent?.({
+          type: "scenario",
+          repeatIndex: index,
+          repeatCount: deps.repeat,
+          event,
+        }),
+    });
+    results.push(result);
+    onEvent?.({
+      type: "repeat-completed",
+      repeatIndex: index,
+      repeatCount: deps.repeat,
+      result,
+    });
   }
   return { results, stats: summarizeRepeat(results) };
 }

@@ -65,6 +65,8 @@ export interface RunScenarioSpecDeps {
   readonly criteria: readonly Criterion[];
   /** 默认轮超时（毫秒），缺省 60_000。 */
   readonly defaultTurnTimeoutMs?: number;
+  /** 可选结构化进度监听器。 */
+  readonly onEvent?: (event: ScenarioRunEvent) => void;
 }
 export function runScenarioSpec(
   spec: ScenarioSpec,
@@ -84,6 +86,19 @@ export function runScenarioSpec(
 - `dryPass` = 每轮 `dryChecks` 全过；`hardPass` = 聚合出口（无 `aggregate` 时 = 判据全过）；
   `fuzzyPass` = 判据全过；
 - driver 取得后由 runner 负责清理：`start()` 与逐轮 `sendPrompt` 同在 try 内，任何路径（含 start 失败、发送失败、轮次超时）都在 finally 中幂等 close。
+
+### 结构化进度事件
+
+`RunScenarioSpecDeps.onEvent` 是可选同步监听器，不改变执行、判定和清理顺序：
+
+- `turn-started` 在每次 `sendPrompt` 前发出，携带 0-based `turnIndex/turnCount` 与原始 prompt；
+- `turn-completed` 在每轮 `sendPrompt` 返回后立即发出，携带本轮完整 Observation 和耗时，然后才执行当前轮判据；
+- `criteria-completed` 在一批非空逐轮或会话判据结束后发出，携带具名 outcomes；没有声明评价点时不会产生空事件；
+- 监听器抛错属于基础设施失败，逐轮阶段沿用现有 primary error + finally close 语义。
+
+`runScenarioRepeat` 通过自身 `onEvent` 发出 `repeat-started/repeat-completed`，并把上述事件包装为带 `repeatIndex/repeatCount` 的 `scenario` 事件。单次结果仍在 `repeat-completed.result` 中，稳定率统计与原有返回值不变。
+
+该事件面不调用或消费 `driver.events()`，也不承诺通用逐 token 流。级别 3 诊断使用每轮 `Observation.events`，因此一次性回放型与长驻队列型 Driver 具有一致的轮次出口语义；原始载荷是否脱敏由上层出口负责，Recall 的组合 redactor 规则见 [Recall 流式输出](./recall.md#流式输出与-verbosity)。
 
 ## CLI 形态（未决事项的暂定答案）
 
@@ -111,5 +126,6 @@ CLI 逐场景执行并写报告，任一场景基础设施失败即非零退出�
 
 - Registry / runScenarioSpec 单测覆盖：注册冲突、未注册查找、逐轮执行、超时、
   expect 引用完整性（经 runCriteria）、聚合接线、close 幂等；
+- 结构化事件：turn 开始/Observation/判据顺序、repeat 归因与单次结果载荷；
 - CLI 端到端：mock config 声明 3 场景，一条命令跑出 md/json 报告且含 coverage；
 - 教程登记与四关门禁绿。

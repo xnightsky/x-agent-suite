@@ -24,6 +24,35 @@ import type {
 import { dryChecks } from "@x-agent-suite/assertions";
 import { resolveAggregate, runCriteria } from "@x-agent-suite/observation";
 
+/** 单轮开始事件：prompt 原文仅供上层脱敏后诊断。 */
+export interface ScenarioTurnStartedEvent {
+  readonly type: "turn-started";
+  readonly turnIndex: number;
+  readonly turnCount: number;
+  readonly prompt: string;
+}
+
+/** 单轮完成事件：携带本轮完整结构化 Observation。 */
+export interface ScenarioTurnCompletedEvent {
+  readonly type: "turn-completed";
+  readonly turnIndex: number;
+  readonly turnCount: number;
+  readonly observation: Observation;
+  readonly durationMs: number;
+}
+
+/** 一批非空判据完成事件：逐轮或会话判定后立即发出。 */
+export interface ScenarioCriteriaCompletedEvent {
+  readonly type: "criteria-completed";
+  readonly outcomes: readonly CriterionOutcome[];
+}
+
+/** Scenario 执行过程事件；监听器异常按基础设施失败处理。 */
+export type ScenarioRunEvent =
+  | ScenarioTurnStartedEvent
+  | ScenarioTurnCompletedEvent
+  | ScenarioCriteriaCompletedEvent;
+
 /** runScenarioSpec 注入依赖。 */
 export interface RunScenarioSpecDeps {
   /** 消费者 driver 工厂（每场景调用一次；runner 负责其生命周期）。 */
@@ -34,6 +63,8 @@ export interface RunScenarioSpecDeps {
   readonly criteria: readonly Criterion[];
   /** 默认轮超时（毫秒），缺省 60_000。 */
   readonly defaultTurnTimeoutMs?: number;
+  /** 结构化进度监听器；不改变执行与判定语义。 */
+  readonly onEvent?: (event: ScenarioRunEvent) => void;
 }
 
 /** runner 产出的 artifact：判定明细 + 可选聚合出口。 */
@@ -105,7 +136,20 @@ export async function runScenarioSpec(
       const timeoutMs =
         turn.timeoutMs ?? spec.timeoutMs ?? deps.defaultTurnTimeoutMs ?? 60_000;
       const turnStart = Date.now();
+      deps.onEvent?.({
+        type: "turn-started",
+        turnIndex: index,
+        turnCount: spec.turns.length,
+        prompt: turn.send,
+      });
       const observation = await sendWithTimeout(driver, turn.send, timeoutMs);
+      deps.onEvent?.({
+        type: "turn-completed",
+        turnIndex: index,
+        turnCount: spec.turns.length,
+        observation,
+        durationMs: Date.now() - turnStart,
+      });
       observations.push(observation);
       turns.push({
         index,
@@ -117,15 +161,20 @@ export async function runScenarioSpec(
         endedAt: Date.now(),
         metadata: observation.metadata ?? {},
       });
-      outcomes.push(
-        ...(await runCriteria({
-          session: createSessionObservation(spec, turns),
-          criteria: deps.criteria,
-          turnExpects: turns.map((_, current) =>
-            current === index ? turn.expect : undefined,
-          ),
-        })),
-      );
+      const currentOutcomes = await runCriteria({
+        session: createSessionObservation(spec, turns),
+        criteria: deps.criteria,
+        turnExpects: turns.map((_, current) =>
+          current === index ? turn.expect : undefined,
+        ),
+      });
+      outcomes.push(...currentOutcomes);
+      if (currentOutcomes.length > 0) {
+        deps.onEvent?.({
+          type: "criteria-completed",
+          outcomes: currentOutcomes,
+        });
+      }
     }
   } catch (error) {
     primaryError = error;
@@ -155,13 +204,15 @@ export async function runScenarioSpec(
   }
 
   const session = createSessionObservation(spec, turns);
-  outcomes.push(
-    ...(await runCriteria({
-      session,
-      criteria: deps.criteria,
-      sessionExpect: spec.expect,
-    })),
-  );
+  const sessionOutcomes = await runCriteria({
+    session,
+    criteria: deps.criteria,
+    sessionExpect: spec.expect,
+  });
+  outcomes.push(...sessionOutcomes);
+  if (sessionOutcomes.length > 0) {
+    deps.onEvent?.({ type: "criteria-completed", outcomes: sessionOutcomes });
+  }
   const aggregate = spec.aggregate
     ? resolveAggregate(outcomes, spec.aggregate)
     : undefined;

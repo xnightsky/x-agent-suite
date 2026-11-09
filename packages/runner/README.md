@@ -24,8 +24,8 @@
 `src/index.ts` 是唯一入口（子路径 `@xnightsky/x-agent-suite/runner` 同形导出）：
 
 - `createRegistry` / `RuntimeRegistry`：契约写侧 + runner 需要的读侧。
-- `runScenarioSpec` / `RunScenarioSpecDeps` / `RunnerArtifact`：单场景执行与产物（判定明细 + 可选聚合）。
-- `runScenarioRepeat` / `summarizeRepeat` / `RepeatRun`：重复执行与统计。
+- `runScenarioSpec` / `RunScenarioSpecDeps` / `RunnerArtifact` / `ScenarioRunEvent`：单场景执行、产物与 turn/判据进度事件。
+- `runScenarioRepeat` / `summarizeRepeat` / `RepeatRun` / `RunScenarioRepeatDeps` / `ScenarioRepeatEvent`：重复执行、统计与带 repeat 归因的事件。
 - `main` / `loadRunConfig` / `RunConfig`：CLI 与 config 模块装载。
 
 ## 最小示例
@@ -73,6 +73,8 @@ import { runScenarioSpec } from "@xnightsky/x-agent-suite/runner";
 
 const result = await runScenarioSpec(scenario, { createDriver, criteria });
 ```
+
+需要流式进度时，在同一依赖对象传入 `onEvent`：单场景事件为 `turn-started`、`turn-completed`、`criteria-completed`；`runScenarioRepeat` 额外发出 repeat 开始/结束并包装嵌套事件。回调不改变返回结果；完整时序见 [Scenario Runner 规范](../../docs/spec/scenario-runner.md#结构化进度事件)。
 
 上例命令是消费者安装聚合包后的形态，本仓库源码内等价验证用 `pnpm tutorial:runner`。真实 provider 与真实宿主 CLI 需要 live 审批/显式授权，最小示例只覆盖零 token 的 fake 路径。
 

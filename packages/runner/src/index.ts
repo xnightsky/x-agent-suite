@@ -7,10 +7,16 @@ export {
   runScenarioSpec,
   type RunScenarioSpecDeps,
   type RunnerArtifact,
+  type ScenarioCriteriaCompletedEvent,
+  type ScenarioRunEvent,
+  type ScenarioTurnCompletedEvent,
+  type ScenarioTurnStartedEvent,
 } from "./run-scenario.ts";
 export {
   runScenarioRepeat,
   summarizeRepeat,
   type RepeatRun,
+  type RunScenarioRepeatDeps,
+  type ScenarioRepeatEvent,
 } from "./repeat.ts";
 export { main, loadRunConfig, type RunConfig } from "./cli.ts";
