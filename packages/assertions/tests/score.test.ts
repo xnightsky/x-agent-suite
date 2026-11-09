@@ -33,3 +33,9 @@ test("非普通对象、Promise、额外字段与非有限分值显式拒绝", (
     assert.throws(() => parseAssertionScore(value), /普通对象|有限|未知字段/);
   }
 });
+
+test("非法 rejected Promise 显式拒绝，不留下未处理的异步错误", async () => {
+  const value = Promise.reject(new Error("resolver-private-detail"));
+  assert.throws(() => parseAssertionScore(value), /同步普通对象/);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+});

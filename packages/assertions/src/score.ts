@@ -31,6 +31,8 @@ export function parseAssertionScore(
   }
   const prototype = Object.getPrototypeOf(value) as unknown;
   if (prototype !== Object.prototype && prototype !== null) {
+    // 非法 Promise 仍按定义错误拒绝；接住其异步拒绝，避免覆盖错误通道或泄漏堆栈。
+    if (value instanceof Promise) void value.catch(() => undefined);
     throw new Error(path + " 必须是同步普通对象");
   }
   const record = value as Record<string, unknown>;

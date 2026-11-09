@@ -280,6 +280,7 @@ export default registry;
 
 - `assertionScore` 仅对实际引用，在装配期按 execution、scenario、scope 与出现位置同步解析并缓存；运行、重试和报告不再次调用 resolver。
 - resolver 读取原始 expect，必须返回只含 hit/miss 的同步普通对象；省略分值时返回 `{}`。不能返回 undefined、null、数组、Promise、额外字段或非有限数，也不能联网、启动 Driver。
+- 误返回 Promise 时立即按定义错误拒绝，不等待异步完成；其后续拒绝不产生未处理异常，不得覆盖 CLI=2 或泄漏原始异常堆栈。
 - `evaluate` 返回的 `score` 仍是 0..1 标准分，不是 YAML 配置的贡献；不能返回 2 或 -1 来代替 resolver。
 - `text` 和 `score` 是这个示例插件自己的输入协议，不是所有机械判据必须接受的字段；真实输入格式和校验由插件负责。
 
@@ -428,6 +429,6 @@ expect:
 5. 逐轮时机、同名归因、跨轮累计、repeat 独立、错误后停止与清理。
 6. 原始标准分不变、贡献与 rawScore 对齐、失败原因和错误不被分数覆盖。
 
-现有回归入口为 `packages/assertions/tests/score.test.ts`，以及 `packages/recall/tests/` 下的 `recall-assertion-scoring.test.ts`、`recall-judge-schema.test.ts`、`recall-judge-assertion.test.ts`、`recall-turn-assertion.test.ts`。文档示例还须经真实解析/编译、示例 registry 类型检查与固定 boolean 的计分核验，不能只证明 YAML 可解析。
+现有回归入口为 `packages/assertions/tests/score.test.ts`，以及 `packages/recall/tests/` 下的 `recall-assertion-scoring.test.ts`、`recall-judge-schema.test.ts`、`recall-judge-assertion.test.ts`、`recall-turn-assertion.test.ts`。非法异步 resolver 同时验证 CLI=2、零主执行与异常不泄漏。文档示例还须经真实解析/编译、示例 registry 类型检查与固定 boolean 的计分核验，不能只证明 YAML 可解析。
 
 真实 Judge 准确率、消费者所用机械插件的接入、作者体验与模型方差另行验证；固定 boolean 算例和 fake 接线均不证明模型会稳定作出这些判断。本规格不代表已执行全量回归、真实宿主或收费 provider 测试。

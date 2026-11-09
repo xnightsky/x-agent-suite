@@ -58,6 +58,8 @@ PTY、headless、sandbox 是机制，smoke 是抽样范围，contract 是验证�
 
 AI 断言完整场景以 [`docs/spec/recall-judge-dsl.md`](./recall-judge-dsl.md) 与 [`docs/spec/recall-turn-assertion.md`](./recall-turn-assertion.md) 为准：使用 turn/case 级 expect、内置 Judge 与注册机械判据，验证各评价点文本、当前轮先于下一次 send、完整归因、独立得分和跨轮求和。覆盖可选 score 的默认 hit=1／miss=-1、命中加 3、miss 默认扣 1、显式 miss=0、五项机械检查失败一项扣 1／两项扣 2、混合求和及正总分仍不掩盖失败；全部断言通过测试才通过。裁定缺项、机械结果畸形与整体不可评测仍报评测错误，错误后不再发送后续轮次。`packages/recall/tests/recall-turn-assertion.test.ts` 经官方 CLI 覆盖线性逐轮调用顺序、turn/case 同时评价与错误收口，`packages/runner/tests/run-scenario.test.ts` 覆盖即时调度和部分 session；均为零 token 单元测试。decision、评分维度、阈值、否决、归一分、缺席映射及树状执行不在本轮默认验收范围。
 
+`packages/assertions/tests/score.test.ts` 与 `packages/recall/tests/recall-judge-schema.test.ts` 验证非法 rejected Promise 立即按定义错误拒绝、CLI=2、零主执行与异步异常不泄漏；不将异步 resolver 扶正为合法协议。
+
 `packages/recall/tests/execution-resolution.test.ts` 与 `execution-params.test.ts` 用合成 catalog/registry 覆盖执行实现唯一选择、live 审批语义与执行参数归一，不创建 Driver、零 provider 请求。
 
 `packages/recall/tests/resource-install-schema.test.ts` 与 `resource-install-materialize.test.ts` 使用临时文件和隔离工作区，验证 install 的默认兼容、显式启停、destination 条件必填与禁用互斥、禁用项不读取来源、目标路径约束及安装现场无残留。它们属于零 token 单元测试，不运行原生安装器、不启动真实宿主。

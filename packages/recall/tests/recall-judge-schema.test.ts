@@ -221,3 +221,37 @@ test("turn Judge 的非法 score 与 rubric 不绕过封闭校验", () => {
     );
   }
 });
+
+test("rejected Promise resolver 保持 CLI=2、零主执行且不泄漏异步异常", async (t) => {
+  const fixtureUrl = new URL(
+    "./fixtures/recall-judge.registry.ts",
+    import.meta.url,
+  ).href;
+  const ws = await workspace(t);
+  const requestLog = join(ws.cwd, "requests.jsonl");
+  const outDir = join(ws.cwd, "reports");
+  for (const resolver of [
+    "() => Promise.reject(new Error('resolver-private-detail'))",
+    "async () => { await Promise.resolve(); throw new Error('resolver-private-detail'); }",
+  ]) {
+    await writeFile(requestLog, "");
+    await writeFile(ws.recallPath, yaml({ "bad-resolver": {} }));
+    await writeFile(
+      ws.registryPath,
+      `import base from ${JSON.stringify(fixtureUrl)};
+export default { ...base, criteria: [...base.criteria, {
+  name: 'bad-resolver', scope: 'session', assertionScore: ${resolver},
+  evaluate: () => ({ pass: true, score: 1, reason: '' }),
+}] };
+`,
+    );
+    const executed = await runOfficialCli(args(ws, outDir), {
+      homeDir: ws.cwd,
+      env: { XAS_RECALL_TEST_JUDGE_LOG: requestLog },
+    });
+    assert.equal(executed.code, 2, executed.stdout + executed.stderr);
+    assert.match(executed.stderr, /assertionScore.*同步普通对象/);
+    assert.doesNotMatch(executed.stderr, /resolver-private-detail/);
+    assert.deepEqual(await readJudgeRequests(requestLog), []);
+  }
+});
