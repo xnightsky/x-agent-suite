@@ -44,6 +44,7 @@
     "ittest:token:judge": "tsx --test \"packages/judge/tests/client-live.token.ittest.ts\"",
     "ittest:token:recall-scoring": "tsx packaging/cli.ts recall integrations/itrepos/recall-scoring/.recall.yaml --root-dir integrations/itrepos/recall-scoring",
     "ittest:token:recall-scoring-mechanical": "tsx packaging/cli.ts recall integrations/itrepos/recall-scoring/mechanical/.recall.yaml --root-dir integrations/itrepos/recall-scoring",
+    "ittest:token:recall-first-of": "tsx packaging/cli.ts recall integrations/itrepos/recall-scoring/first-of/.recall.yaml --root-dir integrations/itrepos/recall-scoring/first-of --plan use:evidence-readonly",
     "ittest:token:cedar": "tsx packaging/cli.ts recall integrations/itrepos/cedar/.recall.yaml --root-dir integrations/itrepos/cedar --registry integrations/pi.registry.ts",
     "ittest:token:cedar-judge": "tsx packaging/cli.ts recall integrations/itrepos/cedar/judge/.recall.yaml --root-dir integrations/itrepos/cedar --registry integrations/pi.registry.ts --plan use:skill-readonly",
     "ittest:token:evidence": "tsx packaging/cli.ts recall integrations/itrepos/evidence/.recall.yaml --root-dir integrations/itrepos/evidence --registry integrations/pi.registry.ts --plan use:evidence-readonly",

@@ -4,23 +4,21 @@
  * 不变量：动态判据装配（每 target 一次）完成于任何主 Driver 创建之前；
  * 装配失败中止本次运行，不记入 RecallRunResult.failures（该列表只承载单 case 基础设施失败）。
  */
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import type { ScenarioRepeatEvent } from "@x-agent-suite/runner";
+import { runRecallCase } from "./case-run.ts";
+import { targetOutDir } from "./report-path.ts";
+import { RecallDiagnosticError } from "./composition-report.ts";
+import type { RecallCompositionEvent } from "./first-of-records.ts";
+export { targetOutDir } from "./report-path.ts";
 import type {
   Criterion,
-  Redactor,
   RepeatStats,
   ReportPaths,
   ScenarioResult,
   ScenarioSpec,
 } from "@x-agent-suite/contracts";
-import { redactLiveError, redactValue } from "@x-agent-suite/llm-fixture";
-import { writeScenarioReports } from "@x-agent-suite/observation";
-import {
-  runScenarioRepeat,
-  type ScenarioRepeatEvent,
-} from "@x-agent-suite/runner";
+import { redactValue } from "@x-agent-suite/llm-fixture";
 import { assembleRecallCriteria } from "./criterion-assembly.ts";
-import { createRecallDriver } from "./driver.ts";
 import type { RecallResolvedExecution } from "./execution.ts";
 import {
   loadRecallCore,
@@ -28,12 +26,7 @@ import {
   type LoadRecallOptions,
   type RecallLoadCore,
 } from "./load.ts";
-import {
-  adaptRecallAssertionResult,
-  projectRecallAssertionOutcome,
-  type RecallAssertionArtifact,
-} from "./assertion-results.ts";
-import { encodeSafePathSegment } from "./validation.ts";
+import type { RecallAssertionArtifact } from "./assertion-results.ts";
 
 /** 单个 case 的成功执行与报告位置。 */
 export interface RecallCaseRun {
@@ -57,6 +50,8 @@ export interface RecallInfraFailure {
   readonly scenarioId: string;
   /** 已分类错误。 */
   readonly error: Error;
+  /** 使用组合的 case 的错误诊断路径。 */
+  readonly reports?: ReportPaths;
   /** 当前 target 的 carrier。 */
   readonly carrier: string;
   /** 当前访问模式。 */
@@ -86,6 +81,11 @@ export interface RecallCaseProgress {
 
 /** Recall 全量结构化进度事件；CLI 与程序调用方共享同一时间序列。 */
 export type RecallRunEvent =
+  | {
+      readonly type: "composition";
+      readonly case: RecallCaseProgress;
+      readonly event: RecallCompositionEvent;
+    }
   | {
       readonly type: "run-started";
       readonly targetCount: number;
@@ -122,178 +122,10 @@ export type RecallRunEvent =
 /** Recall 进度监听器；事件载荷已在出口应用可用 Driver redactor。 */
 export type RecallRunListener = (event: RecallRunEvent) => void;
 
-/** 推导单 target 的报告目录，所有路径分量必须保持为单个安全段。 */
-export function targetOutDir(
-  base: string,
-  execution: RecallResolvedExecution,
-): string {
-  const { target } = execution;
-  const root = resolve(base);
-  const outDir = join(
-    root,
-    encodeSafePathSegment(target.carrier, "Recall report carrier 路径段"),
-    encodeSafePathSegment(
-      target.channel.provider ?? "-",
-      "Recall report provider 路径段",
-    ),
-    encodeSafePathSegment(target.channel.model, "Recall report model 路径段"),
-  );
-  const nested = relative(root, outDir);
-  if (
-    !nested ||
-    nested === ".." ||
-    nested.startsWith(`..${sep}`) ||
-    isAbsolute(nested)
-  ) {
-    throw new Error("Recall report target 目录逃逸 outDir");
-  }
-  return outDir;
-}
-
-/** 按 driver 创建顺序组合去重后的 redactor。 */
-function composeRedactors(
-  redactors: readonly Redactor[],
-): Redactor | undefined {
-  const unique = [...new Set(redactors)];
-  if (unique.length === 0) return undefined;
-  return (text) => unique.reduce((current, redact) => redact(current), text);
-}
-
 /** 一个 target 的装配结果：执行实现与其复用的判据数组。 */
 interface AssembledExecution {
   readonly execution: RecallResolvedExecution;
   readonly criteria: readonly Criterion[];
-}
-
-/** runCase 的内部完整结果；公开 runRecall 汇总仍只返回 runs/failures。 */
-interface ExecutedRecallCase {
-  readonly run: RecallCaseRun;
-  readonly result: ScenarioResult<RecallAssertionArtifact>;
-  readonly repeat: RepeatStats;
-  readonly redact?: Redactor;
-}
-
-/** Runner 事件的 Recall 作者视图；贡献顺序与 criteria outcomes 一致。 */
-interface RecallRunnerProjection {
-  readonly event: ScenarioRepeatEvent;
-  readonly contributions?: readonly number[];
-}
-
-/** 投影 repeat 总分及逐判据贡献，复用报告使用的同一投影函数。 */
-function projectRunnerEvent(
-  spec: ScenarioSpec,
-  execution: RecallResolvedExecution,
-  event: ScenarioRepeatEvent,
-): RecallRunnerProjection {
-  if (event.type === "repeat-completed") {
-    return {
-      event: {
-        ...event,
-        result: adaptRecallAssertionResult(spec, event.result, execution),
-      },
-    };
-  }
-  if (event.type !== "scenario" || event.event.type !== "criteria-completed") {
-    return { event };
-  }
-  const projected = event.event.outcomes.map((outcome) =>
-    projectRecallAssertionOutcome(spec, outcome, execution),
-  );
-  return {
-    event: {
-      ...event,
-      event: {
-        ...event.event,
-        outcomes: projected.map((item) => item.outcome),
-      },
-    },
-    contributions: projected.map((item) => item.assertion.score),
-  };
-}
-
-async function runCase(
-  spec: ScenarioSpec,
-  execution: RecallResolvedExecution,
-  criteria: readonly Criterion[],
-  loaded: LoadedRecall,
-  progress: RecallCaseProgress,
-  listener: RecallRunListener | undefined,
-): Promise<ExecutedRecallCase> {
-  const redactors: Redactor[] = [];
-  try {
-    const executed = await runScenarioRepeat(spec, {
-      createDriver: async (current) => {
-        const driver = await createRecallDriver(current, {
-          execution,
-          effects: loaded.plan.effects,
-          registry: loaded.registry,
-          config: loaded.config,
-          executionParams: loaded.executionParams,
-        });
-        if (driver.redactor) redactors.push(driver.redactor);
-        return driver;
-      },
-      criteria,
-      repeat: loaded.repeat,
-      onEvent: (event) => {
-        if (!listener) return;
-        const projected = projectRunnerEvent(spec, execution, event);
-        listener({
-          type: "runner",
-          case: progress,
-          ...redactValue(projected, composeRedactors(redactors)),
-        });
-      },
-    });
-    const adapted = executed.results.map((item) =>
-      adaptRecallAssertionResult(spec, item, execution),
-    );
-    const last = adapted[adapted.length - 1]!;
-    const result = {
-      ...last,
-      observation: {
-        ...last.observation,
-        metadata: {
-          ...last.observation.metadata,
-          recall: spec.metadata?.recall,
-        },
-      },
-    };
-    const redact = composeRedactors(redactors);
-    const reports = await writeScenarioReports(
-      [
-        {
-          scenario: spec.id,
-          carrier: execution.target.carrier,
-          promptVariant: "default",
-          result,
-          ...(loaded.repeat > 1 ? { repeat: executed.stats } : {}),
-        },
-      ],
-      {
-        scenarioId: spec.id,
-        outDir: targetOutDir(loaded.outDir, execution),
-        ...(redact ? { redact } : {}),
-      },
-    );
-    const run = {
-      scenarioId: spec.id,
-      hardPass: last.hardPass,
-      reports,
-      carrier: execution.target.carrier,
-      mode: execution.mode,
-      ...(execution.cliRef ? { cliRef: execution.cliRef } : {}),
-    };
-    return {
-      run,
-      result,
-      repeat: executed.stats,
-      ...(redact ? { redact } : {}),
-    };
-  } catch (cause) {
-    const redact = composeRedactors(redactors);
-    throw redact ? redactLiveError(cause, redact) : cause;
-  }
 }
 
 function asError(cause: unknown): Error {
@@ -367,13 +199,14 @@ export async function runRecall(
       const caseStartedAt = Date.now();
       try {
         listener?.({ type: "case-started", case: progress });
-        const executed = await runCase(
+        const executed = await runRecallCase(
           spec,
           execution,
           criteria,
           loaded,
           progress,
           listener,
+          targetOutDir(loaded.outDir, execution),
         );
         const durationMs = Date.now() - caseStartedAt;
         listener?.(
@@ -396,6 +229,9 @@ export async function runRecall(
           error: asError(cause),
           carrier: execution.target.carrier,
           mode: execution.mode,
+          ...(cause instanceof RecallDiagnosticError
+            ? { reports: cause.reports }
+            : {}),
         };
         failures.push(failure);
         listener?.({

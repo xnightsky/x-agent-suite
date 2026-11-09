@@ -54,3 +54,9 @@ export {
   readRecallResources,
   type RecallCompiledResource,
 } from "./resources.ts";
+export type { RecallAssertionDetail } from "./assertion-results.ts";
+export type {
+  RecallComposition,
+  RecallCompositionEvent,
+  RecallRepeatSnapshot,
+} from "./first-of-records.ts";

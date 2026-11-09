@@ -21,7 +21,7 @@ Observation 层：判据调度、分数聚合与报告落盘。
 | -------- | ----------------------------------------------------------------------------------------------------------------- |
 | 判据调度 | `runCriteria`、`RunCriteriaOptions`                                                                               |
 | 聚合     | `resolveAggregate`                                                                                                |
-| 报告     | `writeScenarioReports`                                                                                            |
+| 报告     | `writeScenarioReports`、`renderScenarioMarkdown`、`writeReportDocument`                                           |
 | 报告对比 | `diffScenarioReports`、`ReportDiffLens`、`FieldChange`、`ScenarioReportDiff`                                      |
 | 检查原语 | `dryChecks`、`hardChecks`、`fuzzyChecks`、`checkListResult`、`toolNameMatches`、`toolActionMatches`（兼容重导出） |
 
@@ -50,7 +50,9 @@ const paths = await writeScenarioReports(rows, {
 - 聚合机只做算术：`knockout` 短路优先，归一分不截断，`coverage` 强制披露。
 - 报告默认输出到仓库根 `.tmp/reports/`。
 - `scenarioId` 经 URI 编码后作为单个文件名段，报告内容保留原始值。
-- 报告中的私密信息应由调用方在传入 `ScenarioReportRow` 前完成脱敏。
+- `writeReportDocument` 复用通用严格 JSON、递归脱敏与路径检查，支持无正常结果行的诊断；`renderScenarioMarkdown` 供上层复用基础结论表。
+- 设置 `WriteReportsOptions.redact` 可递归脱敏键和值；调用方仍须提供正确的 redactor，不应直接传入未受保护的秘密。
+- 每个文件以 0600 临时文件原子替换，迟到清理更新不会截断正在读取的 JSON；失败时清理临时文件并显式抛错。md/json 是各自完整版本，不承诺双文件事务或断电持久性。
 
 ## 依赖与边界
 

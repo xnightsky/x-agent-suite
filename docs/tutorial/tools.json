@@ -590,6 +590,20 @@
           "recipes": ["criteria-aggregation"]
         },
         {
+          "name": "renderScenarioMarkdown",
+          "category": "advanced",
+          "purpose": "复用基础结论表渲染，供 Recall 附加组合明细而不复制通用报告逻辑。",
+          "risk": "safe",
+          "reason": "高级报告渲染入口，firstOf 场景经公开 CLI 回归验证；见 docs/spec/recall-first-of.md。"
+        },
+        {
+          "name": "writeReportDocument",
+          "category": "advanced",
+          "purpose": "复用严格 JSON、递归脱敏、安全路径与 0600 写盘，支持无正常结果行的诊断。",
+          "risk": "safe",
+          "reason": "通用安全写盘核心，Recall ERROR 复用；见 firstOf 与 observation report 单元测试。"
+        },
+        {
           "name": "diffScenarioReports",
           "category": "primary",
           "purpose": "对比两份 JSON 报告产出维度级变化清单（lens 注入聚合视图）。",

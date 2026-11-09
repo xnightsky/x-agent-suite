@@ -1,4 +1,4 @@
-/** 统一 CLI 子进程测试工具：只运行本地 TypeScript 入口并隔离 HOME。 */
+/** 统一 CLI 子进程测试工具：本地 Node/tsx 入口并隔离 HOME，不经包管理器联网安装。 */
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -22,8 +22,8 @@ export async function runOfficialCli(
   },
 ): Promise<OfficialCliResult> {
   const child = spawn(
-    "pnpm",
-    ["exec", "tsx", "packaging/cli.ts", "recall", ...args],
+    process.execPath,
+    ["--import", "tsx", "packaging/cli.ts", "recall", ...args],
     {
       cwd: REPO_ROOT,
       env: {

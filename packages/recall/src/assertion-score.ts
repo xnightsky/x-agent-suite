@@ -3,6 +3,12 @@
  * Recall 装配接缝：调用通用 resolver、逐 execution/scenario 缓存配置；不做分值算法。
  */
 import {
+  isFirstOfKey,
+  mechanicalEntries,
+  type RecallFirstOfBranch,
+} from "./first-of-dsl.ts";
+import type { ExpectBlock } from "@x-agent-suite/contracts";
+import {
   assertionContribution,
   parseAssertionScore,
   type AssertionScoreConfig,
@@ -76,6 +82,31 @@ function resolveIfReferenced(
   if (score) scores.set(key, score);
 }
 
+function preflightBranches(
+  block: ExpectBlock | undefined,
+  index: ReadonlyMap<string, RecallCriterionRegistration>,
+  path: string,
+): void {
+  for (const [name, value] of Object.entries(block ?? {})) {
+    if (!isFirstOfKey(name)) continue;
+    for (const [branchIndex, branch] of (
+      value as readonly RecallFirstOfBranch[]
+    ).entries()) {
+      for (const [metric, input] of mechanicalEntries(branch.expect)) {
+        const registration = index.get(
+          path.startsWith("turn:") ? "turn:" + metric : "session:" + metric,
+        );
+        if (registration)
+          resolve(
+            registration,
+            input,
+            `${path}:${name}:${branchIndex}:${metric}`,
+          );
+      }
+    }
+  }
+}
+
 /** 只解析实际引用的 opt-in 注册项；任何错误都发生在主 Driver 创建之前。 */
 export function preflightRecallAssertionScores(
   options: PreflightRecallAssertionScoresOptions,
@@ -89,6 +120,7 @@ export function preflightRecallAssertionScores(
   for (const scenario of options.scenarios) {
     const scores: ScenarioScores = new Map();
     for (const [turnIndex, turn] of scenario.turns.entries()) {
+      preflightBranches(turn.expect, index, "turn:" + turnIndex);
       for (const [name, expect] of Object.entries(turn.expect ?? {})) {
         resolveIfReferenced(index, scores, "turn", name, expect, turnIndex);
       }
@@ -96,6 +128,7 @@ export function preflightRecallAssertionScores(
     for (const [name, expect] of Object.entries(scenario.expect ?? {})) {
       resolveIfReferenced(index, scores, "session", name, expect);
     }
+    preflightBranches(scenario.expect, index, "session");
     byScenario.set(scenario, scores);
   }
 }

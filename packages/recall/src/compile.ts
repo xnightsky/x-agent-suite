@@ -2,6 +2,7 @@
  * @module @x-agent-suite/recall/compile
  * RecallDefinition → ScenarioSpec；编译场景 provision 并绑定静态变量上下文，不创建 Driver 或合并执行资源。
  */
+import { FIRST_OF_PREFIX, mechanicalEntries } from "./first-of-dsl.ts";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type { ScenarioSpec } from "@x-agent-suite/contracts";
@@ -68,15 +69,23 @@ function assertRegisteredMetrics(
         "）",
     );
   };
+  if (
+    criteria.some(
+      (item) =>
+        item.name === "firstOf" ||
+        item.name.startsWith("firstOf.") ||
+        item.name.startsWith(FIRST_OF_PREFIX),
+    )
+  ) {
+    throw new Error("Recall firstOf 保留名与注册判据冲突，请先迁移名称");
+  }
   for (const item of definition.cases) {
     for (const turn of item.turns) {
-      for (const metric of Object.keys(turn.expect ?? {})) {
-        if (metric !== "judge") assertRegistered("turn", metric, item.id);
-      }
+      for (const [metric] of mechanicalEntries(turn.expect))
+        assertRegistered("turn", metric, item.id);
     }
-    for (const metric of Object.keys(item.expect ?? {})) {
-      if (metric !== "judge") assertRegistered("session", metric, item.id);
-    }
+    for (const [metric] of mechanicalEntries(item.expect))
+      assertRegistered("session", metric, item.id);
   }
 }
 

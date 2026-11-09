@@ -103,3 +103,7 @@ expected: {
 ```
 
 如果想把「不许衰减」做成门禁——比如「后三轮至少两轮 pass」——需要框架提供「序列级 criterion」，把某 criterion 的逐轮 `{ pass, score }` 按序交给 consumer 的 criterion 去判阈值。阈值属于领域，留在 consumer。
+
+## Recall 的局部择档评价
+
+`firstOf` 是 [Recall 有序择档断言](./recall-first-of.md) 的局部评价结构，不改变 ScenarioSpec 控制流：同档 AND、档间只按合法内容失败 fallback，编译为一个普通 Criterion。Runner 仍线性发送一次主任务、每轮评价后再 send、主会话关闭后评价 session；外层断言仍 AND，组合内部失败只作原始诊断，不摊成独立必过项。执行错误始终中止，不启用另一套任务执行或条件分支引擎。

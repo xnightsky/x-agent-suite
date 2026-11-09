@@ -354,3 +354,9 @@ Recall 捕获每个主 Driver 暴露的可选 `redactor`，按创建顺序去重
 - Driver、超时、报告写入等基础设施错误：退出码 1。
 - 行为判据不通过：`hardPass=false`，退出码仍为 0。
 - 默认测试使用临时配置、合成 TargetTags、fake transport 和 MockDriver，零 token；覆盖 ephemeral-client 自定义 Adapter、缺注册拒绝与 provision/Plan 接线。`pnpm ittest:token:cedar` 显式运行真实场景考卷，不进入默认回归，且脚本本身不预填渠道。
+
+## 有序择档断言实施补充
+
+`turn.expect.firstOf` 与 `case.expect.firstOf` 的本次实施契约见 [有序择档断言](./recall-first-of.md)。普通兄弟断言仍全部执行且必过；每个组合档内 AND、档间按数组顺序只在合法内容失败时 fallback，首个通过后跳过本组后档。组合只提交一个顶层结果和一份 hit/共同 miss 贡献，内部原始失败保留为诊断而不独立计分；执行/缺裁定/清理错误不触发降级。evidence 节点、平铺 rubric 和主执行线性顺序保持原义。
+
+本扩展开发与验收中，不能据此视为已获真实 token 验证。实现收口须同时通过默认零 token 回归与另行授权的真实 token 验收；报告、进度、repeat 和错误诊断同属交付范围。

@@ -125,3 +125,7 @@ pnpm ittest:token:recall-scoring \
 随后只把负例 rubric 改为明确的“包含才通过、不包含必须 false”，保留判据名、预期 boolean 与分数，不修改通用 Judge 或计分实现。复验严格检查通过：`all-pass` 为 6 分且 PASS，`positive-score-fail` 为 5 分且 FAIL，原始标准分与逐项贡献完全匹配；5 次调用共 3146 个原生 totalTokens（prompt 2847、completion 299），零工具调用且 5 个 sandbox 全部清理。
 
 两轮累计 10 次逻辑调用、6239 个原生 totalTokens；未取得供应商实际账单金额，不估算费用。CLI 两次均为 0，但首轮严格检查失败、复验通过，不能用退出码或后续一次通过抹去首轮错误。问句、命名与批量组合对裁定的具体影响尚未分别隔离，本记录不能证明模型稳定或将该现象归因于某个单一因素。
+
+## 局部有序择档
+
+新增独立 [first-of 场景](./first-of/README.md)：标准 +3、降级 +1、全失败 -1 的单次有效贡献，档外证据仍必过；含可运行考卷、合成规则、零 token 官方 CLI 回归和独立 token 入口。与本页旧计分考卷分别计预算，firstOf 的真实 token 验收尚未进行。

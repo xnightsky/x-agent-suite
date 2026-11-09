@@ -5,7 +5,8 @@
  * 不变量：写入前递归建目录；stamp 默认可生成、测试可钉死；
  * json 保留完整 Observation / artifact / tool 入参与 stdout/stderr tail（排查用）。
  */
-import { chmod, mkdir, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { chmod, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cloneJsonValue } from "@x-agent-suite/assertions";
@@ -62,7 +63,6 @@ function mark(pass: boolean): string {
   return pass ? "✓" : "✗";
 }
 
-/** 渲染 md 结论表。 */
 /** 递归脱敏 JSON 值的键和值。 */
 function redactJsonValue(
   value: unknown,
@@ -110,13 +110,13 @@ function redactSerializationCause(
 }
 
 /** 先按 JSON 语义复制，再递归脱敏报告中的全部字符串。 */
-function prepareRows<Artifact>(
-  rows: readonly ScenarioReportRow<Artifact>[],
+function prepareReportValue<Value>(
+  value: Value,
   redact: NonNullable<WriteReportsOptions["redact"]> | undefined,
-): readonly ScenarioReportRow<Artifact>[] {
+): Value {
   let copied: unknown;
   try {
-    copied = cloneJsonValue(rows, "报告数据", {
+    copied = cloneJsonValue(value, "报告数据", {
       omitUnsupportedObjectProperties: true,
     });
   } catch (cause) {
@@ -124,13 +124,11 @@ function prepareRows<Artifact>(
       cause: redactSerializationCause(cause, redact),
     });
   }
-  return (
-    redact ? redactJsonValue(copied, redact) : copied
-  ) as ScenarioReportRow<Artifact>[];
+  return (redact ? redactJsonValue(copied, redact) : copied) as Value;
 }
 
 /** 渲染 md 结论表。 */
-function renderMarkdown<Artifact = Record<string, unknown>>(
+export function renderScenarioMarkdown<Artifact = Record<string, unknown>>(
   rows: readonly ScenarioReportRow<Artifact>[],
   scenarioId: string,
   stamp: string,
@@ -169,34 +167,69 @@ export async function writeScenarioReports<Artifact = Record<string, unknown>>(
   rows: readonly ScenarioReportRow<Artifact>[],
   options: WriteReportsOptions,
 ): Promise<ReportPaths> {
+  return writeReportDocument(rows, options, {
+    suffix: "report",
+    json: (safeRows, scenarioId, stamp) => ({
+      scenario: scenarioId,
+      stamp,
+      rows: safeRows,
+    }),
+    markdown: renderScenarioMarkdown,
+  });
+}
+
+/** 单文件原子发布：读者只见完整旧版或新版；不承诺 md/json 双文件事务。 */
+async function publishReportFile(path: string, content: string): Promise<void> {
+  const temporary = path + "." + randomUUID() + ".tmp";
+  try {
+    await writeFile(temporary, content, {
+      encoding: "utf8",
+      mode: 0o600,
+      flag: "wx",
+    });
+    await chmod(temporary, 0o600);
+    await rename(temporary, path);
+  } catch (cause) {
+    try {
+      await rm(temporary, { force: true });
+    } catch (cleanup) {
+      throw new AggregateError(
+        [cause, cleanup],
+        "报告发布与临时文件清理均失败",
+      );
+    }
+    throw cause;
+  }
+}
+
+/** 通用安全文档写盘：同源路径、严格 JSON、递归脱敏与 0600；不伪造结果行。 */
+export async function writeReportDocument<Value>(
+  value: Value,
+  options: WriteReportsOptions,
+  render: {
+    readonly suffix: "report" | "diagnostic";
+    readonly json: (safe: Value, scenario: string, stamp: string) => unknown;
+    readonly markdown: (safe: Value, scenario: string, stamp: string) => string;
+  },
+): Promise<ReportPaths> {
   const outDir = options.outDir ?? DEFAULT_OUT_DIR;
   const rawStamp =
     options.stamp ?? new Date().toISOString().replaceAll(/[:.]/g, "-");
   const stamp = options.redact?.(rawStamp) ?? rawStamp;
   assertSafeStamp(stamp);
   const scenarioId = options.redact?.(options.scenarioId) ?? options.scenarioId;
-  const safeRows = prepareRows(rows, options.redact);
-  const scenarioSegment = encodeURIComponent(scenarioId);
-  const mdPath = resolveReportPath(
-    outDir,
-    `${stamp}-${scenarioSegment}-report.md`,
-  );
-  const jsonPath = resolveReportPath(
-    outDir,
-    `${stamp}-${scenarioSegment}-report.json`,
-  );
+  const safe = prepareReportValue(value, options.redact);
+  const stem = `${stamp}-${encodeURIComponent(scenarioId)}-${render.suffix}`;
+  const mdPath = resolveReportPath(outDir, stem + ".md");
+  const jsonPath = resolveReportPath(outDir, stem + ".json");
+  const json = JSON.stringify(render.json(safe, scenarioId, stamp), null, 2);
+  const markdown = render.markdown(safe, scenarioId, stamp);
   await mkdir(outDir, { recursive: true });
-  const json = JSON.stringify(
-    { scenario: scenarioId, stamp, rows: safeRows },
-    null,
-    2,
-  );
   for (const [path, content] of [
-    [mdPath, renderMarkdown(safeRows, scenarioId, stamp)],
+    [mdPath, markdown],
     [jsonPath, json],
   ] as const) {
-    await writeFile(path, content, { encoding: "utf8", mode: 0o600 });
-    await chmod(path, 0o600);
+    await publishReportFile(path, content);
   }
   return { mdPath, jsonPath };
 }

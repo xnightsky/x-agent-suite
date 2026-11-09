@@ -138,7 +138,7 @@ expect:
 - 支持同步／异步 profile 工厂；创建受 abort 管理，取消后迟到的 Driver 仍须关闭。
 - attempt 结束必须清理，不共享主 Driver，不做路径 fallback。
 
-一期不增加 Judge 专用 target、grader、Driver 或 fallback DSL。
+一期不增加 Judge 专用 target、grader、Driver 或模型/渠道故障转移 DSL；内容级有序择档由外层 firstOf 组合提供，见文末实施补充。
 
 ## 断言直接计分
 
@@ -205,3 +205,9 @@ expect:
 ### 独立 Judge 选择
 
 出现明确需求后，再设计 Judge target 覆盖、固定答案输入、离线校准与显式 token 质量门禁；一期不预设这些配置。
+
+## 有序择档断言实施补充
+
+`turn.expect.firstOf` 与 `case.expect.firstOf` 的本次实施契约见 [有序择档断言](./recall-first-of.md)。普通兄弟断言仍全部执行且必过；每个组合档内 AND、档间按数组顺序只在合法内容失败时 fallback，首个通过后跳过本组后档。组合只提交一个顶层结果和一份 hit/共同 miss 贡献，内部原始失败保留为诊断而不独立计分；执行/缺裁定/清理错误不触发降级。evidence 节点、平铺 rubric 和主执行线性顺序保持原义。
+
+本扩展开发与验收中，不能据此视为已获真实 token 验证。实现收口须同时通过默认零 token 回归与另行授权的真实 token 验收；报告、进度、repeat 和错误诊断同属交付范围。

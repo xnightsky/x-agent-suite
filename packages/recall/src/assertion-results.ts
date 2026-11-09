@@ -2,6 +2,12 @@
  * @module @x-agent-suite/recall/assertion-results
  * Recall 报告投影：还原本轮/case 作者名并组合通用贡献细项；原始标准分不改写。
  */
+import type {
+  RecallCompositeAssertion,
+  RecallCompositePayload,
+  RecallComposition,
+  RecallRepeatSnapshot,
+} from "./first-of-records.ts";
 import {
   assertionContribution,
   type AssertionDetail,
@@ -20,9 +26,14 @@ import {
 import { recallMechanicalAssertionScore } from "./assertion-score.ts";
 import type { RecallResolvedExecution } from "./execution.ts";
 
+/** Recall 的有效明细允许组合来源，不更改通用断言契约。 */
+export type RecallAssertionDetail = AssertionDetail | RecallCompositeAssertion;
+
 /** 带 Recall 报告投影的 Runner artifact；不改变 RunnerArtifact 本身。 */
 export interface RecallAssertionArtifact extends RunnerArtifact {
-  readonly assertions?: readonly AssertionDetail[];
+  readonly assertions?: readonly RecallAssertionDetail[];
+  readonly compositions?: readonly RecallComposition[];
+  readonly repeats?: readonly RecallRepeatSnapshot[];
   readonly rawScore?: number;
 }
 
@@ -35,9 +46,11 @@ interface RecallAssertionMetadata {
   readonly turnAssertions?: readonly RecallTurnAssertionMetadata[];
 }
 
+/** 作者视图投影：只保留唯一有效贡献，组合诊断独立挂载。 */
 export interface RecallAssertionProjection {
   readonly outcome: CriterionOutcome;
-  readonly assertion: AssertionDetail;
+  readonly assertion: RecallAssertionDetail;
+  readonly composition?: RecallComposition;
 }
 
 function assertionMetadata(spec: ScenarioSpec): RecallAssertionMetadata {
@@ -60,6 +73,14 @@ export function projectRecallAssertionOutcome(
   outcome: CriterionOutcome,
   execution?: RecallResolvedExecution,
 ): RecallAssertionProjection {
+  const { __recallComposition: composite, ...base } =
+    outcome as CriterionOutcome & Partial<RecallCompositePayload>;
+  if (composite)
+    return {
+      outcome: { ...base, name: composite.assertion.name } as CriterionOutcome,
+      assertion: composite.assertion,
+      composition: composite.composition,
+    };
   const metadata = assertionMetadata(spec);
   const turn =
     outcome.scope === "turn"
@@ -127,7 +148,19 @@ export function adaptRecallAssertionResult(
   const { error: _existingError, ...base } = result;
   return {
     ...base,
-    artifact: { ...result.artifact, outcomes, assertions, rawScore },
+    artifact: {
+      ...result.artifact,
+      outcomes,
+      assertions,
+      rawScore,
+      ...(projected.some((item) => item.composition)
+        ? {
+            compositions: projected.flatMap((item) =>
+              item.composition ? [item.composition] : [],
+            ),
+          }
+        : {}),
+    },
     ...(error === undefined ? {} : { error }),
   };
 }

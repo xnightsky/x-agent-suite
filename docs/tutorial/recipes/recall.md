@@ -281,3 +281,35 @@ const registry = {
 - 报告 mode 为 `borrowed`、provision 为 `plan:local`、effects 为 `none`。
 
 完整 CLI、effects.use/inline、TargetTags、报告分目录和失败语义见[原生 Recall 规范](../../spec/recall.md)。默认教程、单测和 CI 不调用真实 provider；真实场景仓入口见 [`integrations/README.md`](../../../integrations/README.md)。
+
+## 局部标准 / 降级：firstOf
+
+将参与降级的条件圈在 `expect.firstOf.<评价点>` 下，其他普通机械断言、平铺 Judge 和其他评价点仍全部必过。数组顺序决定优先级，不按 hit 大小排序。
+
+```yaml
+expect:
+  judge:
+    honesty: { rubric: 不得虚报未运行的验证 }
+  firstOf:
+    quality:
+      - name: standard
+        score: { hit: 3, miss: -1 }
+        expect:
+          judge:
+            complete: { rubric: 入口、完整清单及所有安全底线均正确 }
+      - name: downgrade
+        score: { hit: 1, miss: -1 }
+        expect:
+          judge:
+            minimum: { rubric: 入口与安全底线均正确，允许省略清单 }
+```
+
+标准通过后不请求降级 Judge；完整合法的内容失败才进入下一档，缺裁定、超时、解析或清理错误不能降级。一个组合只贡献 +3、+1 或一次 -1；普通 honesty 的贡献另算，它失败时总分为正也不能通过。档内 rubric 不允许独立 score，不支持嵌套 firstOf。`turn.expect` 同样支持，且完成评价后才允许下一轮 send。
+
+完整可运行考卷、素材、预期结果和授权 token 入口见 [firstOf 场景](../../../integrations/itrepos/recall-scoring/first-of/README.md)，契约见 [firstOf 规格](../../spec/recall-first-of.md)。先运行默认安全回归：
+
+```sh
+pnpm exec tsx --test scripts/tests/recall-first-of-config.test.ts
+```
+
+该回归使用临时配置、fake Driver/裁定、真实 provision 与消费者 evidence，经官方 CLI 核对 11 个样本；不产生 token。真实模型验收必须另行授权，不能用 skip 或 fake 回归替代。

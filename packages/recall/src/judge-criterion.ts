@@ -75,7 +75,8 @@ function turnJudge(
   return judge;
 }
 
-async function evaluateBatch(
+/** 复用既有 Judge 批次协议；调用者负责批次隔离与原始诊断留存。 */
+export async function evaluateRecallJudgeBatch(
   output: string,
   definition: RecallJudgeDefinition,
   client: JudgeModelClient,
@@ -125,8 +126,12 @@ function createSessionCriterion(
       if (!last) throw new Error("Recall case Judge 缺少最终输出");
       let pending = cache.get(session);
       if (!pending) {
-        pending = evaluateBatch(last.text, sessionJudge(session), client).then(
-          (outcome) => judgeAssertionResults(outcome, "Recall case Judge"),
+        pending = evaluateRecallJudgeBatch(
+          last.text,
+          sessionJudge(session),
+          client,
+        ).then((outcome) =>
+          judgeAssertionResults(outcome, "Recall case Judge"),
         );
         cache.set(session, pending);
       }
@@ -146,7 +151,7 @@ function createTurnCriterion(
     async evaluate(turn, context): Promise<CriterionResult> {
       let pending = cache.get(turn);
       if (!pending) {
-        pending = evaluateBatch(
+        pending = evaluateRecallJudgeBatch(
           turn.text,
           turnJudge(context.session, turn.index),
           client,

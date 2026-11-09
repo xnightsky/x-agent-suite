@@ -3,6 +3,7 @@
  * Recall 行式流式 reporter：verbosity 只控制展示，不反向影响执行。
  * 不变量：高级别包含低级别；所有内容输入均已在事件出口脱敏。
  */
+import { writeCompositionEvent } from "./composition-reporter.ts";
 import { inspect } from "node:util";
 import type { ScenarioResult } from "@x-agent-suite/contracts";
 import type {
@@ -147,6 +148,13 @@ function writeCaseFailed(
       " durationMs=" +
       event.durationMs,
   );
+  if (context.verbosity >= 1 && event.failure.reports)
+    context.output.stderr(
+      "DIAGNOSTIC md=" +
+        event.failure.reports.mdPath +
+        " json=" +
+        event.failure.reports.jsonPath,
+    );
   if (context.verbosity >= 3) {
     writeBlock(
       context,
@@ -426,6 +434,10 @@ export function createRecallReporter(
   const context = { verbosity, output: terminal?.output ?? output };
   return (event) => {
     if (terminal?.handle(event)) return;
+    if (event.type === "composition") {
+      writeCompositionEvent(context, event.event);
+      return;
+    }
     if (event.type === "runner") {
       writeRunnerEvent(context, event);
     } else {

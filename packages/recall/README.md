@@ -107,6 +107,21 @@ TTY 下自动启用图标、颜色、case 运行状态行和最终汇总框；�
 
 依赖 `assertions`（Judge 结果与直接贡献原语）、`contracts`（类型）、`judge`（批量裁定核心）、`llm-fixture`（live target 与 TargetTags 决策）、`harness`（宿主 hooks）、`observation`（判据调度与报告）、`runner`（复用 Runner）、`yaml`；`criteria` / `driver` / `sandbox` 只作测试期 devDependency。本包不读写消费者仓库，也不感知其目录结构。
 
+## 局部有序择档
+
+`turn.expect.firstOf.<评价点>` 与 `case.expect.firstOf.<评价点>` 接受至少两档的有序数组，每档为 `{ name, score?, expect }`。档内条件全部评价且 AND，只有齐全合法的内容 false 才进入后档；首个通过后跳过本组后档，不预创建 Judge、不影响兄弟断言。
+
+- 各档有效 miss 必须一致；默认 `{ hit: 1, miss: -1 }`，支持 YAML 锚点。子 rubric 不允许 score，避免重复计分。
+- 一个组合只产生一个顶层结果与唯一贡献；低档通过不删除标准档 false。执行、缺裁定、解析和清理错误仍为 ERROR，不降级。
+- JSON 的 `assertions` 记录有效贡献，`compositions` 记录诊断树，`repeats` 记录各次完整结果；ERROR 以独立 diagnostic 文档保全，不伪造正常成绩。
+- `firstOf`、`firstOf.*` 和内部组合前缀为保留名；注册判据重名会在主执行前显式拒绝，旧消费者须先迁移而不能静默换含义。
+
+完整语法见 [firstOf 规格](../../docs/spec/recall-first-of.md)，可运行的合成示例与真实验收入口见 [firstOf 场景](../../integrations/itrepos/recall-scoring/first-of/README.md)。默认零 token 验证：
+
+```sh
+pnpm exec tsx --test scripts/tests/recall-first-of-config.test.ts
+```
+
 ## 测试与类型检查
 
 ```bash

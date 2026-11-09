@@ -7,6 +7,8 @@
  * - 工厂返回的 name/scope 必须与声明严格一致，装配不得增减判据或改变考卷选择；
  * - 装配错误只含 scope:name 与阶段（create / 形状校验），不回显 context/config 或插件异常内容。
  */
+import { createRecallFirstOfCriteria } from "./first-of-criterion.ts";
+import { mechanicalEntries } from "./first-of-dsl.ts";
 import type { Criterion, ScenarioSpec } from "@x-agent-suite/contracts";
 import type {
   LiveConfigOptions,
@@ -21,7 +23,6 @@ import type {
   RecallRegistry,
 } from "./registry.ts";
 import { isRecord } from "./validation.ts";
-import { recallJudgeCriterionName } from "./assertion-dsl.ts";
 import { createRecallJudgeCriteria } from "./judge-criterion.ts";
 import { preflightRecallAssertionScores } from "./assertion-score.ts";
 import { recallVariableResolver } from "./recall-var.ts";
@@ -59,18 +60,12 @@ function collectReferences(
   const referenced = new Set<string>();
   for (const scenario of scenarios) {
     for (const turn of scenario.turns) {
-      for (const name of Object.keys(turn.expect ?? {})) {
+      for (const [name] of mechanicalEntries(turn.expect)) {
         referenced.add("turn:" + name);
       }
     }
-    const recall = scenario.metadata?.recall as
-      { judge?: { rubrics?: Record<string, unknown> } } | undefined;
-    const judgeKeys = new Set(
-      Object.keys(recall?.judge?.rubrics ?? {}).map(recallJudgeCriterionName),
-    );
-    for (const name of Object.keys(scenario.expect ?? {})) {
-      if (!judgeKeys.has(name)) referenced.add("session:" + name);
-    }
+    for (const [name] of mechanicalEntries(scenario.expect))
+      referenced.add("session:" + name);
   }
   return referenced;
 }
@@ -152,5 +147,9 @@ export async function assembleRecallCriteria(
     if (!referenced.has(key)) continue;
     assembled.push(await createFromFactory(registration, context, key));
   }
-  return [...assembled, ...createRecallJudgeCriteria(options)];
+  return [
+    ...assembled,
+    ...createRecallJudgeCriteria(options),
+    ...createRecallFirstOfCriteria(options, assembled),
+  ];
 }

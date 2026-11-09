@@ -436,3 +436,9 @@ expect:
 2026-11-09 的限定真实验证见上述考卷的实测记录：真实主执行与 turn/case Judge 经 Pi borrowed 路径调用单一已批准 provider/model，复验得到正例 6 分 PASS、负例 5 分 FAIL，逐项原始分与贡献、原生 usage 和资源清理均已核对。首轮原始 Judge JSON 曾出现 boolean 与理由矛盾，明确 rubric 通过条件后的复验不能抹去该失败。
 
 这只证明该目标下的合成接线与计分，不证明真实 Judge 准确率、模型稳定性、其他渠道或所有消费者机械插件接入；作者体验与模型方差仍需单独验证。固定 boolean 算例和 fake 接线更不能替代这些证据。
+
+## 有序择档断言实施补充
+
+`turn.expect.firstOf` 与 `case.expect.firstOf` 的本次实施契约见 [有序择档断言](./recall-first-of.md)。普通兄弟断言仍全部执行且必过；每个组合档内 AND、档间按数组顺序只在合法内容失败时 fallback，首个通过后跳过本组后档。组合只提交一个顶层结果和一份 hit/共同 miss 贡献，内部原始失败保留为诊断而不独立计分；执行/缺裁定/清理错误不触发降级。evidence 节点、平铺 rubric 和主执行线性顺序保持原义。
+
+本扩展开发与验收中，不能据此视为已获真实 token 验证。实现收口须同时通过默认零 token 回归与另行授权的真实 token 验收；报告、进度、repeat 和错误诊断同属交付范围。
