@@ -429,6 +429,6 @@ expect:
 5. 逐轮时机、同名归因、跨轮累计、repeat 独立、错误后停止与清理。
 6. 原始标准分不变、贡献与 rawScore 对齐、失败原因和错误不被分数覆盖。
 
-现有回归入口为 `packages/assertions/tests/score.test.ts`，以及 `packages/recall/tests/` 下的 `recall-assertion-scoring.test.ts`、`recall-judge-schema.test.ts`、`recall-judge-assertion.test.ts`、`recall-turn-assertion.test.ts`。非法异步 resolver 同时验证 CLI=2、零主执行与异常不泄漏。文档示例还须经真实解析/编译、示例 registry 类型检查与固定 boolean 的计分核验，不能只证明 YAML 可解析。
+现有回归入口为 `packages/assertions/tests/score.test.ts`，以及 `packages/recall/tests/` 下的 `recall-assertion-scoring.test.ts`、`recall-mechanical-scoring.test.ts`、`recall-judge-schema.test.ts`、`recall-judge-assertion.test.ts`、`recall-turn-assertion.test.ts`。机械配置矩阵须通过官方 CLI 验证六种配置及有限小数、turn/case、repeat 独立、resolver 缓存、未 opt-in 默认贡献，以及标准分与贡献分离；非法异步 resolver 同时验证 CLI=2、零主执行与异常不泄漏。文档示例还须经真实解析/编译、示例 registry 类型检查与固定 boolean 的计分核验，不能只证明 YAML 可解析。
 
 真实 Judge 准确率、消费者所用机械插件的接入、作者体验与模型方差另行验证；固定 boolean 算例和 fake 接线均不证明模型会稳定作出这些判断。本规格不代表已执行全量回归、真实宿主或收费 provider 测试。
