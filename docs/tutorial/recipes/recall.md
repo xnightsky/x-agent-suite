@@ -198,6 +198,8 @@ resolver 仅对实际引用在装配预检同步调用并按 case 缓存；非�
 
 报告 `artifact.outcomes` 保留原始 0..1 分数，`artifact.assertions` 保存 name/source/pass/reason/贡献，`artifact.rawScore` 为贡献和；所有断言通过才通过，正总分不抵消失败。缺裁定/判据结果与调用、超时、解析失败为 CLI=1，非法定义为 CLI=2，内容失败为 CLI=0。计分正式契约见 [Recall 断言计分](../../spec/recall-scoring.md)，Judge 执行契约见 [Judge DSL](../../spec/recall-judge-dsl.md)。
 
+可复制的真实场景仓见 [Recall 断言计分示例](../../../integrations/itrepos/recall-scoring/README.md)：`mechanical/.recall.yaml` 覆盖六种机械分值各自的命中/未命中，根 `.recall.yaml` 演示机械/AI 混合及逐轮/最终同名归因。README 给出字段说明、全部预期贡献、零 token 回归与各自独立的显式 token 入口；扩展机械示例不增加最小混合考卷的五次调用预算。
+
 > 本 recipe 的 `pnpm tutorial:recall` 仍展示消费者手动组合 Judge client 与 Assertions；一期内置 DSL 的默认验证位于 `packages/recall/tests`，使用 fake transport 和官方 CLI 子进程，零 token。
 >
 > 真实宿主补充验证：`E2E_PI_RECALL=1 pnpm exec tsx --test examples/tutorial/18-recall-judge-host.ittest.ts`。该用例默认 skip，显式开启后使用真实 Pi headless + loopback fake provider，验证两次主单轮请求、独立 Judge、报告和清理，零 token；不覆盖共享 PTY 历史。真实 provider 另有 Cedar 单轮 live smoke，见 integrations/itrepos/cedar/README.md。

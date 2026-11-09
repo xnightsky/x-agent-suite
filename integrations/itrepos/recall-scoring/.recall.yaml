@@ -1,0 +1,46 @@
+version: 1
+id: recall-scoring-live
+cases:
+  - id: all-pass
+    timeoutMs: 60000
+    turns:
+      - send: 只输出 TOKEN_SCORE_OK，不要引号、解释或其他内容。
+    expect:
+      answer-contract:
+        requiredPrefix: TOKEN_SCORE_OK
+        score: { hit: 2, miss: 0 }
+      judge:
+        timeoutMs: 60000
+        maxRetries: 0
+        rubrics:
+          marker:
+            rubric: 回答文本是否包含完整的 TOKEN_SCORE_OK 标记？只检查文本是否包含该字符串。
+            score: { hit: 3 }
+          concise:
+            rubric: 回答是否只有 TOKEN_SCORE_OK 标记，可忽略首尾空白，没有其他正文内容？
+  - id: positive-score-fail
+    timeoutMs: 60000
+    turns:
+      - send: 只输出 TOKEN_SCORE_OK，不要引号、解释或其他内容。
+        expect:
+          text-contains: [TOKEN_SCORE_OK]
+          judge:
+            timeoutMs: 60000
+            maxRetries: 0
+            rubrics:
+              missing:
+                rubric: 通过条件：回答文本必须包含完整的 TOKEN_SCORE_MISSING 标记。只有包含该标记才能返回 pass=true；没有该标记必须返回 pass=false。
+                score: { miss: 0 }
+    expect:
+      answer-contract:
+        requiredPrefix: TOKEN_SCORE_OK
+        score: { hit: 2, miss: 0 }
+      judge:
+        timeoutMs: 60000
+        maxRetries: 0
+        rubrics:
+          missing:
+            rubric: 通过条件：回答文本必须包含完整的 TOKEN_SCORE_MISSING 标记。只有包含该标记才能返回 pass=true；没有该标记必须返回 pass=false。
+          marker:
+            rubric: 回答文本是否包含完整的 TOKEN_SCORE_OK 标记？只检查文本是否包含该字符串。
+            score: { hit: 3 }

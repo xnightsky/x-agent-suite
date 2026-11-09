@@ -1,0 +1,99 @@
+# 机械分值的六种配置各演示命中和未命中；score 不影响 boolean 通过条件。
+# 运行真实模型会收费；零 token 验证入口及预期结果见上级 README。
+version: 1
+id: recall-scoring-mechanical
+cases:
+  - id: omitted-hit
+    timeoutMs: 60000
+    turns:
+      - send: 只输出 TOKEN_SCORE_OK，不要引号、解释或其他内容。
+    expect:
+      answer-contract:
+        requiredPrefix: TOKEN_SCORE_OK
+  - id: omitted-miss
+    timeoutMs: 60000
+    turns:
+      - send: 只输出 TOKEN_SCORE_OK，不要引号、解释或其他内容。
+    expect:
+      answer-contract:
+        requiredPrefix: TOKEN_SCORE_MISSING
+  - id: empty-hit
+    timeoutMs: 60000
+    turns:
+      - send: 只输出 TOKEN_SCORE_OK，不要引号、解释或其他内容。
+    expect:
+      answer-contract:
+        requiredPrefix: TOKEN_SCORE_OK
+        score: {}
+  - id: empty-miss
+    timeoutMs: 60000
+    turns:
+      - send: 只输出 TOKEN_SCORE_OK，不要引号、解释或其他内容。
+    expect:
+      answer-contract:
+        requiredPrefix: TOKEN_SCORE_MISSING
+        score: {}
+  - id: hit-only-hit
+    timeoutMs: 60000
+    turns:
+      - send: 只输出 TOKEN_SCORE_OK，不要引号、解释或其他内容。
+    expect:
+      answer-contract:
+        requiredPrefix: TOKEN_SCORE_OK
+        score: { hit: 3 }
+  - id: hit-only-miss
+    timeoutMs: 60000
+    turns:
+      - send: 只输出 TOKEN_SCORE_OK，不要引号、解释或其他内容。
+    expect:
+      answer-contract:
+        requiredPrefix: TOKEN_SCORE_MISSING
+        score: { hit: 3 }
+  - id: miss-only-hit
+    timeoutMs: 60000
+    turns:
+      - send: 只输出 TOKEN_SCORE_OK，不要引号、解释或其他内容。
+    expect:
+      answer-contract:
+        requiredPrefix: TOKEN_SCORE_OK
+        score: { miss: 0 }
+  - id: miss-only-miss
+    timeoutMs: 60000
+    turns:
+      - send: 只输出 TOKEN_SCORE_OK，不要引号、解释或其他内容。
+    expect:
+      answer-contract:
+        requiredPrefix: TOKEN_SCORE_MISSING
+        score: { miss: 0 }
+  - id: both-hit
+    timeoutMs: 60000
+    turns:
+      - send: 只输出 TOKEN_SCORE_OK，不要引号、解释或其他内容。
+    expect:
+      answer-contract:
+        requiredPrefix: TOKEN_SCORE_OK
+        score: { hit: 2, miss: 0 }
+  - id: both-miss
+    timeoutMs: 60000
+    turns:
+      - send: 只输出 TOKEN_SCORE_OK，不要引号、解释或其他内容。
+    expect:
+      answer-contract:
+        requiredPrefix: TOKEN_SCORE_MISSING
+        score: { hit: 2, miss: 0 }
+  - id: penalty-hit
+    timeoutMs: 60000
+    turns:
+      - send: 只输出 TOKEN_SCORE_OK，不要引号、解释或其他内容。
+    expect:
+      answer-contract:
+        requiredPrefix: TOKEN_SCORE_OK
+        score: { hit: 0, miss: -1 }
+  - id: penalty-miss
+    timeoutMs: 60000
+    turns:
+      - send: 只输出 TOKEN_SCORE_OK，不要引号、解释或其他内容。
+    expect:
+      answer-contract:
+        requiredPrefix: TOKEN_SCORE_MISSING
+        score: { hit: 0, miss: -1 }

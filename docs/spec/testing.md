@@ -72,6 +72,10 @@ AI 断言完整场景以 [`docs/spec/recall-judge-dsl.md`](./recall-judge-dsl.md
 
 真实 Recall live 调用会消耗 token，只能在显式选择渠道、已有 live 配置和 `--approve-live`（策略为 review-required 时）下执行。`pnpm ittest:token:cedar --carrier pi --approve-live` 精确运行场景仓的 `.recall.yaml`，复用 CLI 而非包装另一层驱动；脚本未提供渠道时失败，不发出请求。计费分类在 borrowed 测试阶段暂不设为条件，live 策略检查继续执行。不得以 fake transport 或 MockDriver 的成功推断真实 direct/borrowed/ephemeral-client 已获 live 验证。
 
+`pnpm ittest:token:recall-scoring` 精确运行 [评分合成考卷](../../integrations/itrepos/recall-scoring/README.md)，须显式提供 registry、唯一已批准 target 与本次 live 批准；不内置渠道，不展开多个默认模型。它用两个 case 验证真实机械/AI 混合评分和正总分仍 FAIL，成功路径五次逻辑模型调用，Judge 零重试、repeat=1；`scripts/tests/recall-scoring-token-config.test.ts` 只校验入口、调用预算与配置编译，不访问真实 provider。
+
+机械作者示例独立保存在 `integrations/itrepos/recall-scoring/mechanical/.recall.yaml`，覆盖六种配置各自的命中/未命中，共 12 个 case。`scripts/tests/itrepos-scoring-config.test.ts` 读取真实考卷和消费者判据，经官方 CLI + fake transport 核对全部标准分、贡献、总分与 hardPass，属于零 token 单元测试；另检验精确入口与集成索引。`pnpm ittest:token:recall-scoring-mechanical` 仅在另行显式批准后调用真实模型，repeat=1 的成功路径为 12 次主执行、无 Judge；不扩展上述两 case 考卷或混同其已取得的真实 token 证据。
+
 `pnpm ittest:token:cedar-skill --carrier pi --approve-live` 精确运行 Skill 自带考卷，显式引用 `use:skill-readonly` 权限。
 
 `pnpm ittest:token:evidence --carrier pi --approve-live` 精确运行 `integrations/itrepos/evidence/.recall.yaml`，显式引用 `use:evidence-readonly`；正向 case 验证检索、实读与引用，反向 case 验证无目标访问痕迹。零 token 配置回归为 `scripts/tests/itrepos-evidence-config.test.ts`。
