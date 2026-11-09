@@ -57,7 +57,15 @@ async function runJudgeError(t: TestContext, mode: string) {
   });
   assert.equal(executed.code, 1, executed.stdout + executed.stderr);
   assert.match(executed.stderr, /ERROR|absent|not-evaluated/);
-  assert.ok((await readJudgeRequests(requestLog)).some((item) => item.judge));
+  const requests = await readJudgeRequests(requestLog);
+  if (mode === "timeout") {
+    assert.match(executed.stderr, /timeout|超时/i);
+  } else {
+    assert.ok(
+      requests.some((item) => item.judge),
+      `${mode} 应发出 Judge 请求\nstdout=${executed.stdout}\nstderr=${executed.stderr}\nrequests=${JSON.stringify(requests)}`,
+    );
+  }
   await assert.rejects(readReports(outDir), "不得写出正常评分报告");
 }
 

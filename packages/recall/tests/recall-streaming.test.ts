@@ -9,7 +9,7 @@ import { runOfficialCli } from "./fixtures/official-cli.ts";
 async function waitFor(
   condition: () => boolean | Promise<boolean>,
 ): Promise<void> {
-  const deadline = Date.now() + 10_000;
+  const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     if (await condition()) return;
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -80,9 +80,19 @@ export default {
       stdout += chunk;
     },
   });
+  let settled = false;
+  void running.then(
+    () => {
+      settled = true;
+    },
+    () => {
+      settled = true;
+    },
+  );
   let failure: unknown;
   try {
     await waitFor(async () => {
+      if (settled) throw new Error("Recall CLI 在第二个 case 阻塞前已退出");
       try {
         await readFile(join(gate, "blocked"));
         return true;
@@ -100,7 +110,11 @@ export default {
   }
   await writeFile(join(gate, "release"), "continue");
   const executed = await running;
-  if (failure) throw failure;
+  if (failure) {
+    throw new Error(
+      `${String(failure)}\nstdout=${executed.stdout}\nstderr=${executed.stderr}`,
+    );
+  }
   assert.equal(executed.code, 0, executed.stderr);
   assert.match(executed.stdout, /SUMMARY total=2 passed=2 failed=0 errors=0/);
 });

@@ -11,6 +11,23 @@ import { cleanupPtyDriverResources } from "../src/pty-cleanup.ts";
 const delay = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+/** 阶段超时返回后，后台清理仍可能进行；等待其实际终态而非竞猜耗时。 */
+async function assertSandboxRemoved(
+  homeDir: string,
+  cwd: string,
+): Promise<void> {
+  const deadline = Date.now() + 5_000;
+  while ((existsSync(homeDir) || existsSync(cwd)) && Date.now() < deadline) {
+    await delay(10);
+  }
+  assert.equal(
+    existsSync(homeDir),
+    false,
+    "超时后仍必须继续清理 sandbox.homeDir",
+  );
+  assert.equal(existsSync(cwd), false, "超时后仍必须继续清理 sandbox.cwd");
+}
+
 test("cleanupPtyDriverResources：阶段超时后继续后续阶段并聚合错误", async () => {
   const sandbox = await createSandbox();
   let backendStopped = false;
@@ -42,11 +59,7 @@ test("cleanupPtyDriverResources：阶段超时后继续后续阶段并聚合错�
       assert.match(String(outcome.error), /sandboxTeardown.*超时/);
     }
     assert.equal(backendStopped, true, "超时后仍必须调用 backend.stop");
-    assert.equal(
-      existsSync(sandbox.homeDir),
-      false,
-      "超时后仍必须继续清理 sandbox",
-    );
+    await assertSandboxRemoved(sandbox.homeDir, sandbox.cwd);
   } finally {
     if (existsSync(sandbox.homeDir) || existsSync(sandbox.cwd)) {
       await cleanupSandbox(sandbox);
