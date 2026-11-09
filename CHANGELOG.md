@@ -4,6 +4,17 @@
 
 ## Unreleased
 
+## 0.13.0 - 2026-11-09
+
+### Added
+
+- Runner 的 `runScenarioSpec` 与 `runScenarioRepeat` 新增可选 `onEvent` 结构化进度事件，依次暴露 turn 开始/完成、判据完成及 repeat 生命周期；事件携带原始 prompt、完整 Observation、具名 outcomes 和 repeat 归因，不改变既有返回值与稳定率统计。
+- Recall 新增 `runRecall` 事件监听器与 `createRecallReporter`，CLI 支持 `--verbose [0..3]`、`-v/-vv/-vvv`，按级别展示 case/repeat/turn/判据进度，以及归一化 `score`、实际 `contribution`、汇总 `rawScore` 和断言通过数。
+
+### Changed
+
+- Recall 默认改为逐 case 行式流式输出，不再等待全量执行结束；TTY 自动增加图标、颜色、运行状态行和汇总框，非 TTY 保持无 ANSI 的纯文本。详细诊断中的 prompt、Observation、判据理由和错误堆栈统一经过 Driver redactor，执行顺序、报告内容与退出码保持不变。
+
 ## 0.12.1 - 2026-11-03
 
 ### Added
