@@ -135,3 +135,9 @@ pnpm --filter @x-agent-suite/assertions test
 - [打分聚合](../../docs/spec/scoring-aggregation.md)：判据结果如何变成出口分
 - [通用 AI Judge](../../docs/spec/judge.md)：AI 断言的底层执行器
 - [打包与分发](../../docs/spec/packaging.md)：聚合子路径机制
+
+## 有序择档原语
+
+`evaluateFirstOf(branches, onEvent?)` 顺序调用懒分支，只有合法的 `pass=false` 才继续；首个通过短路，任何异常或非法结果都抛出。返回原始 0/1 结果与唯一 `contribution`、接受档和分支诊断；共同 miss 必须一致，不将跳过分支变为 false/0 分。阶段事件是深拷贝快照，监听器异常仍显式失败。
+
+`assertCriterionResult` 是通用结果形状校验，Observation 调度与择档原语共用它；不预置任何领域判据。Recall 的 DSL/Driver 装配仍留在 Recall，见 [firstOf 规格](../../docs/spec/recall-first-of.md)。

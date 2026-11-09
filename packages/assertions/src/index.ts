@@ -56,3 +56,11 @@ export {
   type AssertionScoreConfig,
   type AssertionScoreResolver,
 } from "./score.ts";
+export { assertCriterionResult } from "./result.ts";
+export {
+  evaluateFirstOf,
+  type FirstOfBranch,
+  type FirstOfBranchTrace,
+  type FirstOfEvent,
+  type FirstOfResult,
+} from "./first-of.ts";

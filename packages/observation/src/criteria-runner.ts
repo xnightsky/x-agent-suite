@@ -7,10 +7,10 @@
  * - 本模块不解释判据名与 expect 值的语义，调度即全部职责；
  * - 离线可用：不起 driver，已有 Observation 即可判分。
  */
+import { assertCriterionResult } from "@x-agent-suite/assertions";
 
 import type {
   Criterion,
-  CriterionResult,
   CriterionOutcome,
   ExpectBlock,
   SessionObservation,
@@ -51,22 +51,6 @@ function assertExpectIntegrity(
     if (!index.has(`${scope}:${key}`)) {
       throw new Error(`expect 引用了未注册的 ${scope} 判据：${key}`);
     }
-  }
-}
-function assertCriterionResult(result: CriterionResult, key: string): void {
-  if (typeof result?.pass !== "boolean") {
-    throw new Error("判据结果缺少 boolean pass：" + key);
-  }
-  if (
-    typeof result.score !== "number" ||
-    !Number.isFinite(result.score) ||
-    result.score < 0 ||
-    result.score > 1
-  ) {
-    throw new Error("判据结果 score 必须是 0..1 有限数：" + key);
-  }
-  if (typeof result.reason !== "string") {
-    throw new Error("判据结果缺少字符串 reason：" + key);
   }
 }
 
