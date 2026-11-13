@@ -15,7 +15,7 @@ tags: [plan, 2026-10-31-ai-assertion-complete-scenarios]
 
 **Tech Stack:** TypeScript、Node `node:test`、YAML、pnpm workspace、现有 fake transport / 合成 registry / AgentDriver。
 
-**Spec:** [Recall 内置 Judge 与断言计分 DSL](../spec/recall-judge-dsl.md)
+**Spec:** [Recall 内置 Judge 与断言计分 DSL](../spec/recall/recall-judge-dsl.md)
 
 ## Global Constraints
 
@@ -199,7 +199,7 @@ Run: `pnpm exec tsx --test packages/assertions/tests/judge-results.test.ts packa
 
 **Files:**
 
-- Modify: `docs/spec/recall-judge-dsl.md`、`docs/tutorial/recipes/recall.md`、`packages/recall/README.md`（仅同步已实现行为）
+- Modify: `docs/spec/recall/recall-judge-dsl.md`、`docs/tutorial/recipes/recall.md`、`packages/recall/README.md`（仅同步已实现行为）
 - Modify: 本计划的实际证据记录
 
 - [x] **Step 1: 同步实际行为与验证说明**

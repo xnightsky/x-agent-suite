@@ -21,7 +21,7 @@ tags: [spec, recall]
 | `.env.e2e.yaml`       | 复用 carrier/provider/model、Carrier kind/clientRef/channelsFrom、凭据与私密 TargetTags，不建立第二套模型配置。               |
 | 本次命令执行参数      | `--execution-params <JSON对象>`，仅交给已选 Profile/Adapter；不参与渠道、权限或执行路径选择。                                 |
 
-不读取、发现或兼容 `x-agent-suite.config.ts`。旧 `--config` 会返回定义错误。Recall 不预置 metric、具体宿主 profile 或领域 EffectsProfile；独立消费者配置投影入口见 [宿主配置保真](./host-config-projection.md)。
+不读取、发现或兼容 `x-agent-suite.config.ts`。旧 `--config` 会返回定义错误。Recall 不预置 metric、具体宿主 profile 或领域 EffectsProfile；独立消费者配置投影入口见 [宿主配置保真](../host-config-projection.md)。
 
 ## CLI 与 target 选择
 
@@ -39,7 +39,7 @@ x-agent-suite recall \
 - `--provider` 在已选范围继续过滤 defaults；`--model` 从可选目录继续定位具体模型，歧义时失败。显式选择不追加其他 default。
 - `--live-config` 映射为本次 `E2E_LIVE_CONFIG_PATH`；省略时沿用既有配置发现链。
 - CLI 不提供 `--mode/--cli-ref`。路径只由 Carrier kind 决定：`cli`（含省略 kind）必须 borrowed，`ephemeral-client` 必须注册自定义 direct Adapter；effects/provision 只约束执行能力，不改变路径。
-- `kind: ephemeral-client` 的 Carrier 通过 `clientRef` 选择同 carrier 注册 Adapter，使用自定义 direct 路径；未注册或 carrier 不匹配即失败，不回退其他实现。详见 [ephemeral-client.md](./ephemeral-client.md)。
+- `kind: ephemeral-client` 的 Carrier 通过 `clientRef` 选择同 carrier 注册 Adapter，使用自定义 direct 路径；未注册或 carrier 不匹配即失败，不回退其他实现。详见 [ephemeral-client.md](../ephemeral-client.md)。
 - 考卷显式目标优先；否则读取 cwd 下 `.recall/*.{yaml,yml}` 第一层，不递归。显式 `--plan` 位于该目录时从默认考卷发现中排除。
 - 所有可选路径参数（`target/--live-config/--registry/--plan/--root-dir/--out-dir`、程序 API 的 `cwd/homeDir`）只在省略时使用缺省；一旦显式提供就必须是非空字符串。空串、空白串、null 或其他类型是定义错误，不得回退默认发现。`approveLive` 提供时必须是严格 boolean，不能用 truthy 字符串绕过 live 审批。
 
@@ -63,7 +63,7 @@ Recall 默认以行式事件流报告执行进度，不等待全部 target/case 
 - TTY 自动使用图标、颜色、运行中状态行和汇总框；即使级别 0 也在 case 开始即显示状态。普通日志输出前清除状态行，case 完成或失败后清除状态再打印结果，避免动态帧覆盖中间日志。`NO_COLOR` 或 `TERM=dumb` 只关闭颜色，不取消实时状态。
 - 非 TTY 保持既有纯文本行式输出与 `SUMMARY`，不写 ANSI 颜色、清屏或光标控制序列，便于管道、CI 和脚本解析。stdout/stderr 分开消费时不承诺跨文件描述符的统一全序。
 
-业界依据与“测试事件流不等于原始内容流”的边界见 [测试运行器流式输出与详细级别调研](../research/test-runner-streaming-verbosity.md)。
+业界依据与“测试事件流不等于原始内容流”的边界见 [测试运行器流式输出与详细级别调研](../../research/test-runner-streaming-verbosity.md)。
 
 ## 实际执行链
 
@@ -325,7 +325,7 @@ Skill 的原生安装由操作者按各场景仓自己的 README 准备；Recall
 消费者判据 `skill-loaded` 使用 `{name, loaded}`：按名字匹配原生读取的 `SKILL.md`，不绑定源目录或安装目录；当前假设名字唯一，路径原样保留作诊断。
 `cedar/skills-def/change-report/.recall.yaml` 覆盖带脚本的生成、无关任务、仅解释方法与非法输入；显式命令许可通过 `use:skill-script` 选择。
 Skill 与 scripts 作为只读安装态快照，输入只读，输出目录不预置。消费者 Profile 在清理前采集输出文件到观测 metadata，注册判据分别检查原生命令事件和实际 JSON，不把模型回复当作产物证据。
-入口、带规则/无规则对照和真实 token 命令见 [`integrations/README.md`](../../integrations/README.md)。
+入口、带规则/无规则对照和真实 token 命令见 [`integrations/README.md`](../../../integrations/README.md)。
 
 ### 执行结果
 

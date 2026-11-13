@@ -82,7 +82,7 @@ export function runScenarioSpec(
 执行语义：
 
 - 逐轮 `sendPrompt`，超时显式抛错（基础设施失败抛错；评分不达标进 Result 不抛）；
-- Recall 一期已保留每个机械细项与 AI rubric 的具名判断和独立贡献，统一求和且全部断言通过才通过，不要求 decision 或配置聚合维度。多值裁定由 Assertions 的 `judgeAssertionResults` 展开，CriterionResult 形状由 Observation 校验；既有 Criterion 调度和独立 aggregate 调用保持原行为。详见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
+- Recall 一期已保留每个机械细项与 AI rubric 的具名判断和独立贡献，统一求和且全部断言通过才通过，不要求 decision 或配置聚合维度。多值裁定由 Assertions 的 `judgeAssertionResults` 展开，CriterionResult 形状由 Observation 校验；既有 Criterion 调度和独立 aggregate 调用保持原行为。详见 [Recall 内置 Judge 与断言计分 DSL](./recall/recall-judge-dsl.md)。
 - `dryPass` = 每轮 `dryChecks` 全过；`hardPass` = 聚合出口（无 `aggregate` 时 = 判据全过）；
   `fuzzyPass` = 判据全过；
 - driver 取得后由 runner 负责清理：`start()` 与逐轮 `sendPrompt` 同在 try 内，任何路径（含 start 失败、发送失败、轮次超时）都在 finally 中幂等 close。
@@ -98,7 +98,7 @@ export function runScenarioSpec(
 
 `runScenarioRepeat` 通过自身 `onEvent` 发出 `repeat-started/repeat-completed`，并把上述事件包装为带 `repeatIndex/repeatCount` 的 `scenario` 事件。单次结果仍在 `repeat-completed.result` 中，稳定率统计与原有返回值不变。
 
-该事件面不调用或消费 `driver.events()`，也不承诺通用逐 token 流。级别 3 诊断使用每轮 `Observation.events`，因此一次性回放型与长驻队列型 Driver 具有一致的轮次出口语义；原始载荷是否脱敏由上层出口负责，Recall 的组合 redactor 规则见 [Recall 流式输出](./recall.md#流式输出与-verbosity)。
+该事件面不调用或消费 `driver.events()`，也不承诺通用逐 token 流。级别 3 诊断使用每轮 `Observation.events`，因此一次性回放型与长驻队列型 Driver 具有一致的轮次出口语义；原始载荷是否脱敏由上层出口负责，Recall 的组合 redactor 规则见 [Recall 流式输出](./recall/recall.md#流式输出与-verbosity)。
 
 ## CLI 形态（未决事项的暂定答案）
 
@@ -119,7 +119,7 @@ export default {
 ```
 
 **选「代码模块」而非 YAML/独立 config 格式**：判据与 driver 工厂本就是代码，
-YAML 放不下函数。`eval` 继续显式加载上述 config；原生 [Recall](./recall.md) 则使用独立 registry 与 effects-only Plan，不共享或发现 `x-agent-suite.config.ts`。
+YAML 放不下函数。`eval` 继续显式加载上述 config；原生 [Recall](./recall/recall.md) 则使用独立 registry 与 effects-only Plan，不共享或发现 `x-agent-suite.config.ts`。
 CLI 逐场景执行并写报告，任一场景基础设施失败即非零退出。
 
 ## 验收

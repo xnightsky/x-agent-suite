@@ -80,7 +80,7 @@ await criterion.evaluate(turn, {
 
 rubric 清单来自该轮 `expect`，形状由 `judge()` 现有校验把关。执行失败抛 `[not-evaluated:<kind>]`，模型未返回某项 rubric 抛 `[absent]`，只有明确 `pass:false` 才产出 0 分。
 
-Recall 的内置 case 级 `expect.judge` 与完整执行配置已实现，`expect.decision` 不属于一期，见 [`docs/spec/recall-judge-dsl.md`](../../docs/spec/recall-judge-dsl.md)。该路径复用本包的 `judgeAssertionResults` 多值 verdict 适配与直接贡献原语；作者侧 KV 在编译层转换为现有数组接口。
+Recall 的内置 case 级 `expect.judge` 与完整执行配置已实现，`expect.decision` 不属于一期，见 [`docs/spec/recall/recall-judge-dsl.md`](../../docs/spec/recall/recall-judge-dsl.md)。该路径复用本包的 `judgeAssertionResults` 多值 verdict 适配与直接贡献原语；作者侧 KV 在编译层转换为现有数组接口。
 
 ### AI 断言的两种 client 入口（互斥）
 
@@ -140,4 +140,4 @@ pnpm --filter @x-agent-suite/assertions test
 
 `evaluateFirstOf(branches, onEvent?)` 顺序调用懒分支，只有合法的 `pass=false` 才继续；首个通过短路，任何异常或非法结果都抛出。返回原始 0/1 结果与唯一 `contribution`、接受档和分支诊断；共同 miss 必须一致，不将跳过分支变为 false/0 分。阶段事件是深拷贝快照，监听器异常仍显式失败。
 
-`assertCriterionResult` 是通用结果形状校验，Observation 调度与择档原语共用它；不预置任何领域判据。Recall 的 DSL/Driver 装配仍留在 Recall，见 [firstOf 规格](../../docs/spec/recall-first-of.md)。
+`assertCriterionResult` 是通用结果形状校验，Observation 调度与择档原语共用它；不预置任何领域判据。Recall 的 DSL/Driver 装配仍留在 Recall，见 [firstOf 规格](../../docs/spec/recall/recall-first-of.md)。

@@ -266,7 +266,7 @@ Judge 与 Assertions 来自独立公开 bundle 时，`JudgeModelError` 仍保留
 
 ## 与 Criterion、断言计分、Recall 的关系
 
-Judge 的结果不是 `CriterionResult`。可用 `@x-agent-suite/assertions/judge` 的 `createJudgeAssertion` 适配为 `TurnCriterion`，或用 `judgeAssertionResults` 展开逐 rubric 原始结果；根入口 `@x-agent-suite/assertions` 保持兼容；缺证据与不可评测显式抛错。Recall 在 turn 与 case 级 `expect.judge` 使用同一 KV rubric 与可选 score：逐轮评价只读当前轮并在下一次 send 前完成，case 评价只读最后一轮；每项裁定与机械结果独立计分，默认 hit=1／miss=-1，统一求和且全部通过才通过，不需要 decision。score 配置留在断言侧，不进入 Judge prompt 或协议；必需裁定缺失时报评测错误。详见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md) 与 [Recall 轮次级断言](./recall-turn-assertion.md)。原生 Judge 的诊断与生命周期未改写。
+Judge 的结果不是 `CriterionResult`。可用 `@x-agent-suite/assertions/judge` 的 `createJudgeAssertion` 适配为 `TurnCriterion`，或用 `judgeAssertionResults` 展开逐 rubric 原始结果；根入口 `@x-agent-suite/assertions` 保持兼容；缺证据与不可评测显式抛错。Recall 在 turn 与 case 级 `expect.judge` 使用同一 KV rubric 与可选 score：逐轮评价只读当前轮并在下一次 send 前完成，case 评价只读最后一轮；每项裁定与机械结果独立计分，默认 hit=1／miss=-1，统一求和且全部通过才通过，不需要 decision。score 配置留在断言侧，不进入 Judge prompt 或协议；必需裁定缺失时报评测错误。详见 [Recall 内置 Judge 与断言计分 DSL](./recall/recall-judge-dsl.md) 与 [Recall 轮次级断言](./recall/recall-turn-assertion.md)。原生 Judge 的诊断与生命周期未改写。
 
 公开入口已支持 `createJudgeClient({mode:"borrowed"}) + profiles/pi-recall.createPiRecallDriver + createJudgeAssertion` 的直接组合。消费者的 `createDriver` 只需把 `backend/target/cliRef` 显式适配到 Pi 工厂，并提供独立的单轮 spec 与 `effects:none`；不得复制裁判生命周期、复用主运行 spec/provision/workspace，或把原考卷、评分实现和秘密环境交给裁判。最小可执行接法及合成宿主验证见 [Judge + Pi borrowed + Assertions](../tutorial/recipes/recall.md#judge--pi-borrowed--assertions)。该组合不改变不可评测/absent 语义，也不提供 judge()/assertion 级外部 signal。
 

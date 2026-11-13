@@ -70,7 +70,7 @@ LLM 不允许当控制器：标签到动作的映射必须是场景里声明好�
 没有同名 criterion → 这一轮不跑任何判据 → 场景绿了
 ```
 
-这是评估工具最坏的失效模式：**假绿**。loader 必须在加载期把每个 `expect` 键与已注册 criterion 名做交叉校验，未注册即报错。内置标准字段由对应 DSL 提供并单独校验，例如 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)；其他自定义键继续执行上述引用完整性检查。
+这是评估工具最坏的失效模式：**假绿**。loader 必须在加载期把每个 `expect` 键与已注册 criterion 名做交叉校验，未注册即报错。内置标准字段由对应 DSL 提供并单独校验，例如 [Recall 内置 Judge 与断言计分 DSL](./recall/recall-judge-dsl.md)；其他自定义键继续执行上述引用完整性检查。
 
 ## 参数化不需要模板语法
 
@@ -85,7 +85,7 @@ export const scenarios = cases.map((q, i) =>
 
 展开在跑之前完成，每个被测系统拿到的展开结果完全一致，**可比性零代价**。
 
-本节只否决把模板语法用于**执行前场景参数化**。执行后在显式支持变量的判据 expect 中引用静态上下文和实际 Observation 属于另一问题，待审设计见 [Recall 变量机制](./recall-variables.md)；该设计不得反向用于 prompt、provision 或 effects。[Evidence 有序调用与局部捕获](./future/evidence-sequence.md) 已独立为延后设计，不作为当前变量机制或队列迁移的前置。
+本节只否决把模板语法用于**执行前场景参数化**。执行后在显式支持变量的判据 expect 中引用静态上下文和实际 Observation 属于另一问题，待审设计见 [Recall 变量机制](./recall/recall-variables.md)；该设计不得反向用于 prompt、provision 或 effects。[Evidence 有序调用与局部捕获](./future/evidence-sequence.md) 已独立为延后设计，不作为当前变量机制或队列迁移的前置。
 
 ## 衰减看得见，也要断言得了
 
@@ -106,4 +106,4 @@ expected: {
 
 ## Recall 的局部择档评价
 
-`allOf/anyOf/firstOf` 是 [Recall 组合断言与计分](./recall-composition-scoring.md) 的局部评价结构，不改变 ScenarioSpec 控制流；该扩展当前处于文档先行阶段，运行时尚未完成迁移。组合编译为一个普通 Criterion，Runner 仍线性发送一次主任务、每轮评价后再 send、主会话关闭后评价 session；外层断言仍 AND，组合内部失败只作原始诊断，不摊成独立必过项。执行错误始终中止，不启用另一套任务执行或条件分支引擎。
+`allOf/anyOf/firstOf` 是 [Recall 组合断言与计分](./recall/recall-composition-scoring.md) 的局部评价结构，不改变 ScenarioSpec 控制流；该扩展当前处于文档先行阶段，运行时尚未完成迁移。组合编译为一个普通 Criterion，Runner 仍线性发送一次主任务、每轮评价后再 send、主会话关闭后评价 session；外层断言仍 AND，组合内部失败只作原始诊断，不摊成独立必过项。执行错误始终中止，不启用另一套任务执行或条件分支引擎。

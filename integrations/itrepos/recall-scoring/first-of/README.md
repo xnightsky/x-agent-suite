@@ -82,4 +82,4 @@ pnpm ittest:token:recall-first-of \
 
 最终 `pnpm check` 已通过：929 个单元用例通过，1 个单元用例及 3 个真实宿主集成用例按前置条件 skip；skip 不计为行为通过。断网暴露的测试启动器联网依赖已移除；迟到诊断更新改为单文件原子替换，并新增回归。未验证项包括被 skip 的集成路径、Judge 的普遍准确性/模型稳定性、供应商内部 HTTP 重试和实际账单。
 
-完整契约见 [firstOf 规格](../../../../docs/spec/recall-first-of.md)，测试分层及收口见 [测试规范](../../../../docs/spec/testing.md)。
+完整契约见 [firstOf 规格](../../../../docs/spec/recall/recall-first-of.md)，测试分层及收口见 [测试规范](../../../../docs/spec/testing.md)。

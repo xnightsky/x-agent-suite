@@ -149,7 +149,7 @@ snapshot 只允许来自干净且已提交的 HEAD，格式为 `<自动推导稳
 
 - 核心包携带公共 `config/target-tags/keys.yaml` 和 `instances.yaml`，默认从自身包根加载，不要求消费者复制源码仓或准备同名目录。显式 `dictionaryPath/instancesPath` 优先于 `repoRoot`，未覆盖时使用包内资源；显式资源失败不静默回退。
 - 私有实例按公共目录 → home 的 `.env.target-tags.instances.yaml` → 已选 live 配置内 `targetTags` 合并；公共目录出现某实例不代表其 live 已授权，unknown/disallowed 不自动放行。详见 [target-tags.md](./target-tags.md)。
-- Recall 与 Judge 均为本次首次发布。Recall 不读 `x-agent-suite.config.ts`，按显式目标、独立 registry 和 effects-only Plan 执行；曾试用未发布中间态的调用方按 [recall.md](./recall.md) 调整，但这些中间态不列作相对 `0.6.1` 的删除接口。
+- Recall 与 Judge 均为本次首次发布。Recall 不读 `x-agent-suite.config.ts`，按显式目标、独立 registry 和 effects-only Plan 执行；曾试用未发布中间态的调用方按 [recall.md](./recall/recall.md) 调整，但这些中间态不列作相对 `0.6.1` 的删除接口。
 - Recall 的 `kind: cli`（含省略 kind）只走消费者注册的唯一 borrowed Profile；原试用态 HTTP direct 调用需迁移为 `kind: ephemeral-client + clientRef`，详见 [临时 Client](./ephemeral-client.md)。
 - `--execution-params` / `executionParams` 只对本次执行透传偏好，不更改渠道、权限或路由；消费者 Profile/Adapter 负责解释，原生宿主配置投影的边界见 [宿主配置保真](./host-config-projection.md)。
 - Recall、Plan 与 TargetTags 的 YAML 版本保持 `1`，live 配置继续兼容旧结构，不因制品升到 `0.7.0` 就机械修改 schema 版本。

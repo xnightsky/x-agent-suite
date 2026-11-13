@@ -53,7 +53,7 @@ tags: [spec, recall, assertions, scoring, composition]
 
 ### 2.3 暂不 bundled 的参考能力
 
-显式 thread 块、主流程 if/then/else、命名故障 callback、`stop_after`、跨进程 usage 合并和报告指纹都有独立价值，但不属于组合计分前置。其中条件分支仍须先解决 [Scenario DSL 可比性](./scenario-dsl.md) 与 [条件分支预设计](./future/recall-conditional-branching-pre-design.md) 的冲突；不得借本轮计分改动悄然启用。
+显式 thread 块、主流程 if/then/else、命名故障 callback、`stop_after`、跨进程 usage 合并和报告指纹都有独立价值，但不属于组合计分前置。其中条件分支仍须先解决 [Scenario DSL 可比性](../scenario-dsl.md) 与 [条件分支预设计](../future/recall-conditional-branching-pre-design.md) 的冲突；不得借本轮计分改动悄然启用。
 
 ## 3. 作者 DSL
 

@@ -36,10 +36,7 @@ x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenari
 | [`research/agent-messaging-layers.md`](./research/agent-messaging-layers.md)       | Agent 消息通信：传输层与入站触达层的拆分                     |
 | [`spec/contracts.md`](./spec/contracts.md)                                         | 核心契约：Observation、Driver、Scenario、Criterion、Registry |
 | [`spec/scenario-dsl.md`](./spec/scenario-dsl.md)                                   | Scenario DSL 设计原则：可比性轴、分歧点、LLM 控制器禁区      |
-| [`spec/recall.md`](./spec/recall.md)                                               | 原生 `.recall` 声明式考卷、发现与执行规则                    |
-| [`spec/recall-judge-dsl.md`](./spec/recall-judge-dsl.md)                           | 内置 Judge、断言直接计分、统一汇总与独立裁定会话             |
-| [`spec/recall-scoring.md`](./spec/recall-scoring.md)                               | Recall 断言计分正式规格、机械分值接入与统一汇总              |
-| [`spec/recall-composition-scoring.md`](./spec/recall-composition-scoring.md)   | 组合断言、allOf/anyOf/firstOf 计分与 repeat/suite 汇总             |
+| [`spec/recall/README.md`](./spec/recall/README.md)                           | Recall 规格索引：考卷、Judge、逐轮断言、变量与组合计分             |
 | [`spec/judge.md`](./spec/judge.md)                                                 | 通用 AI Judge：批量 rubric、具名 verdict、direct/borrowed    |
 | [`spec/target-tags.md`](./spec/target-tags.md)                                     | 四层能力标签、实例与 direct/borrowed/live 决策               |
 | [`spec/driver.md`](./spec/driver.md)                                               | 子进程 / JSONL / PTY 基座                                    |
@@ -48,7 +45,6 @@ x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenari
 | [`spec/ephemeral-client.md`](./spec/ephemeral-client.md)                           | 同级 Carrier 与临时 Client 配置、Adapter 和报告归因          |
 | [`spec/scenario-evaluation.md`](./spec/scenario-evaluation.md)                     | 评分层与报告格式                                             |
 | [`spec/evidence-assertions.md`](./spec/evidence-assertions.md)                     | 访问痕迹证据断言：非空读取、路径、引用与组合                 |
-| [`spec/recall-variables.md`](./spec/recall-variables.md)                           | 待审设计：Recall 变量、动态 Provider 与两阶段解析            |
 | [`spec/process-execution-evidence.md`](./spec/process-execution-evidence.md)       | 待审设计：进程证据入口、完整性、wrapper 与安装矩阵           |
 | [`spec/future/README.md`](./spec/future/README.md)                                 | 未来与延后设计：有序证据、Recall 分类/分支/停止/组合政策     |
 | [`spec/matrix.md`](./spec/matrix.md)                                               | 同场景多宿主对照表                                           |

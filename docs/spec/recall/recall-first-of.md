@@ -22,6 +22,6 @@ tags: [recall, assertions, first-of, scoring]
 
 ## 历史验证边界
 
-旧 firstOf 的运行时与真实验证记录仅证明迁移前行为，不能作为新组合或新 firstOf 语义的验收证据。历史回执保留在 [first-of 场景](../../integrations/itrepos/recall-scoring/first-of/README.md#本次真实验收回执)；其中已知的 Judge 误判仍按原记录保留，不因文档迁移改写。
+旧 firstOf 的运行时与真实验证记录仅证明迁移前行为，不能作为新组合或新 firstOf 语义的验收证据。历史回执保留在 [first-of 场景](../../../integrations/itrepos/recall-scoring/first-of/README.md#本次真实验收回执)；其中已知的 Judge 误判仍按原记录保留，不因文档迁移改写。
 
 新行为实施完成后，必须按新规格提供可运行考卷、默认零 token 回归和另行授权的真实 token 验收；在此之前不得宣称本文所述迁移已经完整交付。

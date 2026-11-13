@@ -26,7 +26,7 @@ tags: [recall, scoring, examples, token]
 | `score.hit`              | boolean 为 true 时的贡献；省略时独立默认 1                            |
 | `score.miss`             | boolean 为 false 时的贡献；省略时独立默认 -1；显式 0 也不代表断言通过 |
 
-`hit/miss` 是有限 number，可为正、负、零或小数；不允许字符串、NaN/Infinity 或额外计分字段。规则只有 `pass ? hit : miss`，不设置权重、阈值或按总分放行。完整输入与 resolver 错误边界见 [计分规格](../../../docs/spec/recall-scoring.md)。
+`hit/miss` 是有限 number，可为正、负、零或小数；不允许字符串、NaN/Infinity 或额外计分字段。规则只有 `pass ? hit : miss`，不设置权重、阈值或按总分放行。完整输入与 resolver 错误边界见 [计分规格](../../../docs/spec/recall/recall-scoring.md)。
 
 下面是一条完整 case 的输入层级；复制进含 `version/id/cases` 的文件即可，完整文件见机械考卷。
 

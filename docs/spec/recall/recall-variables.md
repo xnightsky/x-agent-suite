@@ -20,13 +20,13 @@ tags: [spec, recall-variables]
 - `run/resources` 动态 Provider；
 - 定义错误、动态缺席、Observation 损坏和脱敏语义。
 
-`assertions/evidence` 不拥有 Recall 变量机制，也不反向依赖 Recall。有序断言与局部捕获独立维护在 [Evidence 有序调用与局部捕获](./future/evidence-sequence.md)，本文不定义其接口或验收。
+`assertions/evidence` 不拥有 Recall 变量机制，也不反向依赖 Recall。有序断言与局部捕获独立维护在 [Evidence 有序调用与局部捕获](../future/evidence-sequence.md)，本文不定义其接口或验收。
 
 ## 当前阶段裁决
 
 只读盘点表明，既有消费者迁移首先需要非空读取、正确资源身份、禁止误触发和答案判定；旧场景没有真实进程结果、局部返回值引用、可执行顺序断言或变量引用。该结论只用于确定通用能力边界，不记录消费者名称、内部队列、业务规则或 case 分布，也不建立运行时依赖。
 
-因此迁移优先解决上述通用行为；变量只在字段确实需要动态期望时启用，不能把顺序基础设施设为迁移前置条件。`sequence/steps/seq` 不列入本期验收、不开实现占位。重新启用的条件见 [有序断言的阶段裁决](./future/evidence-sequence.md#重新启用条件)。
+因此迁移优先解决上述通用行为；变量只在字段确实需要动态期望时启用，不能把顺序基础设施设为迁移前置条件。`sequence/steps/seq` 不列入本期验收、不开实现占位。重新启用的条件见 [有序断言的阶段裁决](../future/evidence-sequence.md#重新启用条件)。
 
 ## 所有权与依赖方向
 
@@ -342,9 +342,9 @@ cases:
 - 不含 `{{` 的现有声明保持原义。
 - 不调用变量解析接口的判据完全不变。
 - `toolResult/citation/not/allOf` 的现有语义不变。
-- [Scenario DSL](./scenario-dsl.md) 的执行前参数化决策不变；本文只增加结果评估期的变量解析。
-- [Evidence assertions](./evidence-assertions.md) 是当前行为契约；阶段 1 可用语法仅限上述显式字段，教程不得将其扩展为全局插值。
-- [脚本与 CLI 进程执行证据](./process-execution-evidence.md) 定义独立证据基座；[Evidence 有序调用与局部捕获](./future/evidence-sequence.md) 保存延后的顺序设计，不属于本文实施范围。
+- [Scenario DSL](../scenario-dsl.md) 的执行前参数化决策不变；本文只增加结果评估期的变量解析。
+- [Evidence assertions](../evidence-assertions.md) 是当前行为契约；阶段 1 可用语法仅限上述显式字段，教程不得将其扩展为全局插值。
+- [脚本与 CLI 进程执行证据](../process-execution-evidence.md) 定义独立证据基座；[Evidence 有序调用与局部捕获](../future/evidence-sequence.md) 保存延后的顺序设计，不属于本文实施范围。
 - 不新增公开 package、子路径导出或顶层 criterion 名。
 
 ## 本期验收用例

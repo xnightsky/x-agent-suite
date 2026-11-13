@@ -157,4 +157,4 @@ Matrix 不加载 scenario、不创建 profile、不解释 criterion。它只编�
 | `readRecallResources`        | 高级     | 校验场景资源 source realpath、逃逸与类型                   |
 | `materializeRecallProvision` | 高级     | 把 ScenarioSpec.provision 只读物化到隔离 cwd               |
 
-Recall 不读取 `x-agent-suite.config.ts`。Recall YAML 管场景资源，执行 Plan 只管 effects，独立 registry 管实现；没有执行级 ProvisionPlan，Runner 不合并 provision。完整契约见[原生 Recall 规范](../spec/recall.md)，可运行示例见 [Recall recipe](./recipes/recall.md)。
+Recall 不读取 `x-agent-suite.config.ts`。Recall YAML 管场景资源，执行 Plan 只管 effects，独立 registry 管实现；没有执行级 ProvisionPlan，Runner 不合并 provision。完整契约见[原生 Recall 规范](../spec/recall/recall.md)，可运行示例见 [Recall recipe](./recipes/recall.md)。

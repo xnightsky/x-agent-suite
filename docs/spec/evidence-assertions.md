@@ -16,7 +16,7 @@ tags: [spec, evidence-assertions]
 - 不要求通用 Driver 增加完成信号或 workspace 字段；轮次完成性由 Driver/消费者观察守卫负责。
 - 不增加结构化子项结果。整体仍返回 `CriterionResult { pass, score, reason }`，组合诊断写入 `reason`。
 
-> 当前变量能力仅限显式注入后的 `toolResult.contains`，不包含进程节点或顺序节点。静态变量行为见 [Recall 变量机制](./recall-variables.md)，进程快照入口及覆盖完整性见 [脚本与 CLI 进程执行证据](./process-execution-evidence.md)；`sequence`、局部 `steps` 和严格 `seq` 已整体延后，独立保存在 [Evidence 有序调用与局部捕获](./future/evidence-sequence.md)。
+> 当前变量能力仅限显式注入后的 `toolResult.contains`，不包含进程节点或顺序节点。静态变量行为见 [Recall 变量机制](./recall/recall-variables.md)，进程快照入口及覆盖完整性见 [脚本与 CLI 进程执行证据](./process-execution-evidence.md)；`sequence`、局部 `steps` 和严格 `seq` 已整体延后，独立保存在 [Evidence 有序调用与局部捕获](./future/evidence-sequence.md)。
 
 ## 公开入口
 
@@ -193,6 +193,6 @@ pnpm ittest:token:evidence-variables --carrier <carrier> --provider <provider> -
 
 ## 有序择档断言实施补充
 
-`turn.expect` 与 `case.expect` 的 `allOf/anyOf/firstOf` 已确认迁移契约统一见 [Recall 组合断言与计分](./recall-composition-scoring.md)。该文档当前处于文档先行阶段，运行时尚未完成迁移。普通兄弟断言仍全部执行且必过；组合只提交一个顶层结果和有效贡献，内部原始失败保留为诊断而不独立计分。执行、缺裁定与清理错误不触发降级，也不被其他分支结果吞掉。evidence 节点、平铺 rubric 和主执行线性顺序保持原义。
+`turn.expect` 与 `case.expect` 的 `allOf/anyOf/firstOf` 已确认迁移契约统一见 [Recall 组合断言与计分](./recall/recall-composition-scoring.md)。该文档当前处于文档先行阶段，运行时尚未完成迁移。普通兄弟断言仍全部执行且必过；组合只提交一个顶层结果和有效贡献，内部原始失败保留为诊断而不独立计分。执行、缺裁定与清理错误不触发降级，也不被其他分支结果吞掉。evidence 节点、平铺 rubric 和主执行线性顺序保持原义。
 
 本扩展开发与验收中，不能据此视为已获真实 token 验证。实现收口须同时通过默认零 token 回归与另行授权的真实 token 验收；报告、进度、repeat 和错误诊断同属交付范围。

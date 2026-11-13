@@ -196,11 +196,11 @@ expect:
 
 线性 [轮次级断言](./recall-turn-assertion.md) 已转为现行契约，其文档第 9 节保留树状 turn 设计空间，但不把树状执行提前变成当前能力。其他后续能力按职责分别设计，不要求先实现 decision：
 
-- [分类预设计](./future/recall-classification-pre-design.md)：choices／else 产出受约束类别。
-- [条件分支预设计](./future/recall-conditional-branching-pre-design.md)：按条件执行内嵌子步骤，结束后自然继续外层，不暴露跳表。
-- [提前终止预设计](./future/recall-early-termination-pre-design.md)：onFail:stop 在明确失败后停止。
+- [分类预设计](../future/recall-classification-pre-design.md)：choices／else 产出受约束类别。
+- [条件分支预设计](../future/recall-conditional-branching-pre-design.md)：按条件执行内嵌子步骤，结束后自然继续外层，不暴露跳表。
+- [提前终止预设计](../future/recall-early-termination-pre-design.md)：onFail:stop 在明确失败后停止。
 
-重要分支通过多个 case 覆盖，模型方差通过 repeat 观察，不要求单次运行走完所有路径。后续设计统一由 [future 索引](./future/README.md) 导航。
+重要分支通过多个 case 覆盖，模型方差通过 repeat 观察，不要求单次运行走完所有路径。后续设计统一由 [future 索引](../future/README.md) 导航。
 
 ### 独立 Judge 选择
 

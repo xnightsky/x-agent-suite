@@ -183,4 +183,4 @@ await runMatrix(
 pnpm artifacts:pack
 ```
 
-具体 tarball 文件名、固定版本重打和外部 `pnpm add` 方式见[打包规范](../spec/packaging.md)，统一 CLI 与声明式配置见[原生 Recall 规范](../spec/recall.md)。
+具体 tarball 文件名、固定版本重打和外部 `pnpm add` 方式见[打包规范](../spec/packaging.md)，统一 CLI 与声明式配置见[原生 Recall 规范](../spec/recall/recall.md)。

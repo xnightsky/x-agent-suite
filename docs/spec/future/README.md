@@ -9,7 +9,7 @@ tags: [future, pre-design]
 
 本目录集中保存明确延后、未来候选或不进入当前实施范围的设计。**归档不等于批准实现，也不代表现有公开契约。**
 
-评分正式规格已迁至 [Recall 断言计分](../recall-scoring.md)，不再作为 future 独立文档保留。Decision 分数放行仍未批准，延后边界见 [Judge DSL 后续设计](../recall-judge-dsl.md#decision-分数验收政策)。
+评分正式规格已迁至 [Recall 断言计分](../recall/recall-scoring.md)，不再作为 future 独立文档保留。Decision 分数放行仍未批准，延后边界见 [Judge DSL 后续设计](../recall/recall-judge-dsl.md#decision-分数验收政策)。
 
 ## 收录边界
 

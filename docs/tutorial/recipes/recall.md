@@ -79,7 +79,7 @@ cases:
 
 当前轮断言在下一次 `send` 前完成。上例产生 `turn.0.judge.ready`、`turn.1.judge.grounded`、机械判据原名 `text-contains` 和 `judge.final_quality`；各评价点独立调用和计分。既有旧考卷不需要补任何标识字段。
 
-可直接验收的落盘考卷是 [`packages/recall/tests/fixtures/turn-assertion/.recall.yaml`](../../../packages/recall/tests/fixtures/turn-assertion/.recall.yaml)，由 `packages/recall/tests/recall-turn-assertion.test.ts` 经官方 CLI 验证位置归因、调用顺序和 rawScore。完整契约见 [Recall 轮次级断言](../../spec/recall-turn-assertion.md)。
+可直接验收的落盘考卷是 [`packages/recall/tests/fixtures/turn-assertion/.recall.yaml`](../../../packages/recall/tests/fixtures/turn-assertion/.recall.yaml)，由 `packages/recall/tests/recall-turn-assertion.test.ts` 经官方 CLI 验证位置归因、调用顺序和 rawScore。完整契约见 [Recall 轮次级断言](../../spec/recall/recall-turn-assertion.md)。
 
 ## 控制资源安装状态与位置
 
@@ -140,7 +140,7 @@ x-agent-suite recall --carrier consumer-carrier --registry registry.ts -vv .reca
 - `-vvv`：继续查看完整脱敏 prompt、Observation、DriverEvent、repeat 结果与错误堆栈；
 - 也可使用 `--verbose`、`--verbose 2`、`--verbose=3`；混合出现时累加，最高 3。
 
-所有级别都保持相同执行顺序、报告和退出码。`-vvv` 在每轮完成时立即输出该轮结构化事件，不把某个宿主的原始 token 协议当作通用接口。完整级别表见 [Recall 规范](../../spec/recall.md#流式输出与-verbosity)。
+所有级别都保持相同执行顺序、报告和退出码。`-vvv` 在每轮完成时立即输出该轮结构化事件，不把某个宿主的原始 token 协议当作通用接口。完整级别表见 [Recall 规范](../../spec/recall/recall.md#流式输出与-verbosity)。
 
 直接终端运行时会自动显示图标、颜色、运行中状态和汇总框；管道到文件或 CI 时保持纯文本，不包含动态清屏。需要关闭颜色时设置 `NO_COLOR=1`，实时 case 进度仍然保留。
 
@@ -196,7 +196,7 @@ const criterion = {
 
 resolver 仅对实际引用在装配预检同步调用并按 case 缓存；非法返回或抛错为 CLI=2。未注册 resolver 时，Recall 不解释插件 `input.score`。score 省略或空对象默认 hit=1/miss=-1，部分覆盖独立默认。
 
-报告 `artifact.outcomes` 保留原始 0..1 分数，`artifact.assertions` 保存 name/source/pass/reason/贡献，`artifact.rawScore` 为贡献和；所有断言通过才通过，正总分不抵消失败。缺裁定/判据结果与调用、超时、解析失败为 CLI=1，非法定义为 CLI=2，内容失败为 CLI=0。计分正式契约见 [Recall 断言计分](../../spec/recall-scoring.md)，Judge 执行契约见 [Judge DSL](../../spec/recall-judge-dsl.md)。
+报告 `artifact.outcomes` 保留原始 0..1 分数，`artifact.assertions` 保存 name/source/pass/reason/贡献，`artifact.rawScore` 为贡献和；所有断言通过才通过，正总分不抵消失败。缺裁定/判据结果与调用、超时、解析失败为 CLI=1，非法定义为 CLI=2，内容失败为 CLI=0。计分正式契约见 [Recall 断言计分](../../spec/recall/recall-scoring.md)，Judge 执行契约见 [Judge DSL](../../spec/recall/recall-judge-dsl.md)。
 
 可复制的真实场景仓见 [Recall 断言计分示例](../../../integrations/itrepos/recall-scoring/README.md)：`mechanical/.recall.yaml` 覆盖六种机械分值各自的命中/未命中，根 `.recall.yaml` 演示机械/AI 混合及逐轮/最终同名归因。README 给出字段说明、全部预期贡献、零 token 回归与各自独立的显式 token 入口；扩展机械示例不增加最小混合考卷的五次调用预算。
 
@@ -280,7 +280,7 @@ const registry = {
 - `contextPath: CONTEXT.md`；
 - 报告 mode 为 `borrowed`、provision 为 `plan:local`、effects 为 `none`。
 
-完整 CLI、effects.use/inline、TargetTags、报告分目录和失败语义见[原生 Recall 规范](../../spec/recall.md)。默认教程、单测和 CI 不调用真实 provider；真实场景仓入口见 [`integrations/README.md`](../../../integrations/README.md)。
+完整 CLI、effects.use/inline、TargetTags、报告分目录和失败语义见[原生 Recall 规范](../../spec/recall/recall.md)。默认教程、单测和 CI 不调用真实 provider；真实场景仓入口见 [`integrations/README.md`](../../../integrations/README.md)。
 
 ## 局部标准 / 降级：firstOf
 
@@ -306,7 +306,7 @@ expect:
 
 标准通过后不请求降级 Judge；完整合法的内容失败才进入下一档，缺裁定、超时、解析或清理错误不能降级。一个组合只贡献 +3、+1 或一次 -1；普通 honesty 的贡献另算，它失败时总分为正也不能通过。档内 rubric 不允许独立 score，不支持嵌套 firstOf。`turn.expect` 同样支持，且完成评价后才允许下一轮 send。
 
-完整可运行考卷、素材、预期结果和授权 token 入口见 [firstOf 场景](../../../integrations/itrepos/recall-scoring/first-of/README.md)，契约见 [firstOf 规格](../../spec/recall-first-of.md)。先运行默认安全回归：
+完整可运行考卷、素材、预期结果和授权 token 入口见 [firstOf 场景](../../../integrations/itrepos/recall-scoring/first-of/README.md)，契约见 [firstOf 规格](../../spec/recall/recall-first-of.md)。先运行默认安全回归：
 
 ```sh
 pnpm exec tsx --test scripts/tests/recall-first-of-config.test.ts

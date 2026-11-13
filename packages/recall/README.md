@@ -21,7 +21,7 @@
 - `loadRecallEffectsPlan` / `RecallEffects` / `RecallEffectsProfile` / `isRecallCommandAllowed`：effects-only Plan DSL 与命令门禁。
 - `materializeRecallProvision` / `readRecallResources` / `RecallCompiledResource`：provision 资源校验与隔离 cwd 物化。
 
-资源声明的 `install` 默认 true；显式 false 时跳过来源读取且禁止 destination，true 或省略时 destination 必填并相对隔离 cwd。目录沿用 `kind: directory`，不运行原生安装器；完整规则见 [resources 字段与路径](../../docs/spec/recall.md#resources-字段与路径)。
+资源声明的 `install` 默认 true；显式 false 时跳过来源读取且禁止 destination，true 或省略时 destination 必填并相对隔离 cwd。目录沿用 `kind: directory`，不运行原生安装器；完整规则见 [resources 字段与路径](../../docs/spec/recall/recall.md#resources-字段与路径)。
 
 ## 最小示例
 
@@ -88,7 +88,7 @@ CLI 默认在 case 完成时立即输出 `PASS/FAIL/ERROR`，结束后输出 `SU
 | 2    | `-vv`、`--verbose 2`  | turn 生命周期、逐判据 `score` 与 `contribution`         |
 | 3    | `-vvv`、`--verbose 3` | 完整脱敏 prompt/Observation/repeat 结果/错误堆栈        |
 
-`--verbose=2` 与 `--verbose 2` 等价；不同形式混用时累加，总和只允许 0..3。高级别不改变执行和退出码，详细内容使用与报告一致的 Driver redactor。级别 3 在每轮返回后输出结构化事件，不代表通用逐 token 流。完整契约见 [Recall 流式输出与 verbosity](../../docs/spec/recall.md#流式输出与-verbosity)。
+`--verbose=2` 与 `--verbose 2` 等价；不同形式混用时累加，总和只允许 0..3。高级别不改变执行和退出码，详细内容使用与报告一致的 Driver redactor。级别 3 在每轮返回后输出结构化事件，不代表通用逐 token 流。完整契约见 [Recall 流式输出与 verbosity](../../docs/spec/recall/recall.md#流式输出与-verbosity)。
 
 TTY 下自动启用图标、颜色、case 运行状态行和最终汇总框；普通日志会先清除状态行再输出，避免被下一帧覆盖。`NO_COLOR` 或 `TERM=dumb` 仅关闭颜色。非 TTY 不写任何 ANSI/光标控制，仍输出纯文本 `PASS/FAIL/SUMMARY`。
 
@@ -98,7 +98,7 @@ TTY 下自动启用图标、颜色、case 运行状态行和最终汇总框；�
 
 ## 判据、执行参数与路由
 
-- **内置 Judge**：case 级 `expect.judge` 支持简写 rubric KV 与完整 `rubrics/timeoutMs/maxRetries/instructions`，只评最后一轮文本；每个 rubric 独立保留 boolean、reason 与贡献，`expect.decision` 不属于一期。契约见 [`docs/spec/recall-judge-dsl.md`](../../docs/spec/recall-judge-dsl.md)。
+- **内置 Judge**：case 级 `expect.judge` 支持简写 rubric KV 与完整 `rubrics/timeoutMs/maxRetries/instructions`，只评最后一轮文本；每个 rubric 独立保留 boolean、reason 与贡献，`expect.decision` 不属于一期。契约见 [`docs/spec/recall/recall-judge-dsl.md`](../../docs/spec/recall/recall-judge-dsl.md)。
 - **机械判据与 opt-in 分值**：其他判据由消费者在 registry 注册，expect 原样透传。静态 Criterion 与工厂均可声明 `assertionScore(expect)`，从自己的输入协议同步返回 `{hit?,miss?}`；仅实际引用在装配预检解析并按 case 缓存，非法返回/抛错在主 Driver 前拒绝。未声明时不读取插件 `input.score`，只应用默认贡献。
 - **判据装配与报告**：动态工厂按已选 target 装配实际引用，每 target 一次且先于主 Driver，上下文提供同源 target/config/tags/批准/effects。报告 `artifact.outcomes` 保留原始 0..1 分数，`artifact.assertions` 保存 name/source/pass/reason/贡献，`artifact.rawScore` 为贡献之和；全部断言通过才通过。
 - **执行参数与路由**：`--execution-params <JSON对象>` 只交给已选 Profile/Adapter，每个 case/repeat 独立副本，不得改变 target、凭据、权限 Plan 或 live 审批；未注册、carrier 不匹配、候选不唯一或 live 未审批一律 fail-closed，不创建 Driver。
@@ -116,7 +116,7 @@ TTY 下自动启用图标、颜色、case 运行状态行和最终汇总框；�
 - JSON 的 `assertions` 记录有效贡献，`compositions` 记录诊断树，`repeats` 记录各次完整结果；ERROR 以独立 diagnostic 文档保全，不伪造正常成绩。
 - `firstOf`、`firstOf.*` 和内部组合前缀为保留名；注册判据重名会在主执行前显式拒绝，旧消费者须先迁移而不能静默换含义。
 
-完整语法见 [firstOf 规格](../../docs/spec/recall-first-of.md)，可运行的合成示例与真实验收入口见 [firstOf 场景](../../integrations/itrepos/recall-scoring/first-of/README.md)。默认零 token 验证：
+完整语法见 [firstOf 规格](../../docs/spec/recall/recall-first-of.md)，可运行的合成示例与真实验收入口见 [firstOf 场景](../../integrations/itrepos/recall-scoring/first-of/README.md)。默认零 token 验证：
 
 ```sh
 pnpm exec tsx --test scripts/tests/recall-first-of-config.test.ts
@@ -135,5 +135,5 @@ pnpm ittest                                     # 仓库根：真实宿主 CLI +
 
 ## 正式文档
 
-- [原生 Recall 设计](../../docs/spec/recall.md)
+- [原生 Recall 设计](../../docs/spec/recall/recall.md)
 - [ephemeral-client 与报告归因](../../docs/spec/ephemeral-client.md) / [教程导航](../../docs/tutorial/README.md)

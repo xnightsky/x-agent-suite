@@ -7,7 +7,7 @@ tags: [research, recall, scoring, decision]
 
 # Recall 效果评分与通过政策补充调研
 
-> 调研日期：2026-11-09。仅使用公开一手资料与本仓文件，不收录仓库外消费者配置或业务内容。逐项可选 `score` 与统一求和方案已定稿并实现，正式契约见 [Recall 断言计分](../spec/recall-scoring.md)；本文保留证据与取舍，不作为待实施设计，不引入 Decision。
+> 调研日期：2026-11-09。仅使用公开一手资料与本仓文件，不收录仓库外消费者配置或业务内容。逐项可选 `score` 与统一求和方案已定稿并实现，正式契约见 [Recall 断言计分](../spec/recall/recall-scoring.md)；本文保留证据与取舍，不作为待实施设计，不引入 Decision。
 
 ## 一、结论
 
@@ -22,7 +22,7 @@ tags: [research, recall, scoring, decision]
 
 | 证据                                                        | 已确认事实                                                        |
 | ----------------------------------------------------------- | ----------------------------------------------------------------- |
-| [Recall 断言计分](../spec/recall-scoring.md)                | 默认贡献 1/-1；当前全部断言通过才通过，正分不能补偿失败。         |
+| [Recall 断言计分](../spec/recall/recall-scoring.md)                | 默认贡献 1/-1；当前全部断言通过才通过，正分不能补偿失败。         |
 | `packages/recall/src/assertion-results.ts:112–130`          | 报告投影求 rawScore，不用分数重算 hardPass。                      |
 | `packages/runner/src/run-scenario.ts:216–225`               | 通用 runner 有 aggregate 接缝，但不代表 Recall DSL 已开放该政策。 |
 | `packages/assertions/src/evidence/index.ts:223–271`         | allOf 保留子项原因，整体仍只产生一个 pass 和 0/1 标准分。         |
@@ -69,7 +69,7 @@ OpenAI [Graders 指南](https://platform.openai.com/docs/guides/graders) 也支�
 | 模型直接报连续分                   | 接口看似短，但尺度锚点和审计性不足，不优先采用。           |
 | 有限等级加静态映射                 | 仅在独立效果不足以表达差异时另议，需要协议和质量证据。     |
 
-现行方案采用独立效果计分与统一求和，正式规格已迁出 future。先前把差异评分推进成 Decision 设计扩大了需求，已撤回字段、算法与算例；[后续设计说明](../spec/recall-judge-dsl.md#decision-分数验收政策) 只记录未来分数放行的独立触发条件。机械自定义分值仍经显式 resolver 接入，不为旧输入强加包装，也不把 score 误称为 scope。
+现行方案采用独立效果计分与统一求和，正式规格已迁出 future。先前把差异评分推进成 Decision 设计扩大了需求，已撤回字段、算法与算例；[后续设计说明](../spec/recall/recall-judge-dsl.md#decision-分数验收政策) 只记录未来分数放行的独立触发条件。机械自定义分值仍经显式 resolver 接入，不为旧输入强加包装，也不把 score 误称为 scope。
 
 [分类专题](../spec/future/recall-classification-pre-design.md#8-分类与评级) 继续不自动赋分；评级尚无 DSL，不属于本次已定稿的逐项计分能力。
 

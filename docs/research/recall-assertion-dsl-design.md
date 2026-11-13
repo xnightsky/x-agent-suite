@@ -44,7 +44,7 @@ cases:
 
 KV key 是断言身份和报告名称，不再另写维度名或结果引用。每个 rubric 自己带可选分值；分值不交给模型，只交给确定性计分。
 
-内置 Judge 保留简写与带执行参数的完整形态，只评最后一轮文本。具体封闭字段、默认值与会话要求见 [一期规格](../spec/recall-judge-dsl.md)。
+内置 Judge 保留简写与带执行参数的完整形态，只评最后一轮文本。具体封闭字段、默认值与会话要求见 [一期规格](../spec/recall/recall-judge-dsl.md)。
 
 ### 2.2 机械判据继续注册，不另造机械匹配 DSL
 
@@ -101,7 +101,7 @@ casePass = 所有已声明断言细项均通过
 - OR、否决、阈值与缺席映射相互影响。
 - 内部聚合结构反过来主导作者 DSL。
 
-一期只有逐项判断与求和，不需要这些政策。未来真正需要“部分失败仍可过线”时，再按 [Decision 延后说明](../spec/recall-judge-dsl.md#decision-分数验收政策) 重新论证。旧字段只是候选，不是保留成本的理由。
+一期只有逐项判断与求和，不需要这些政策。未来真正需要“部分失败仍可过线”时，再按 [Decision 延后说明](../spec/recall/recall-judge-dsl.md#decision-分数验收政策) 重新论证。旧字段只是候选，不是保留成本的理由。
 
 **【外部事实】**OpenAI Evals 将受约束裁定与 choice_scores 映射分开，说明“模型裁定、确定性计分”的分层可借鉴；它不要求本仓同时引入评分维度表。[Eval templates](https://github.com/openai/evals/blob/main/docs/eval-templates.md)
 
@@ -112,7 +112,7 @@ casePass = 所有已声明断言细项均通过
 - **Decision：**组合评分政策，不能隐式改变一期全通过规则。
 - **[分类](../spec/future/recall-classification-pre-design.md)：**只产 choice，不自动计分或控制执行。
 - **[条件分支](../spec/future/recall-conditional-branching-pre-design.md)：**读取已有结果执行作者内嵌的子步骤，结束后自然继续外层；通过 case 与 repeat 检查覆盖及稳定性。
-- **[轮次级断言](../spec/recall-turn-assertion.md)：**明确评价时机、结果身份与未执行轮次，不自动引入跨轮组合政策。
+- **[轮次级断言](../spec/recall/recall-turn-assertion.md)：**明确评价时机、结果身份与未执行轮次，不自动引入跨轮组合政策。
 - **[提前终止](../spec/future/recall-early-termination-pre-design.md)：**独立记录停止原因，不能把未执行伪造为通过。
 - **独立 Judge 选择与质量校准：**按实际需求设计，真实调用走显式 token 入口。
 
@@ -122,7 +122,7 @@ casePass = 所有已声明断言细项均通过
 
 ### 本仓与用户指定的一手资料
 
-1. `docs/spec/recall-judge-dsl.md`：第一阶段断言直接计分、固定全通过规则、最后一轮边界与后续方向。
+1. `docs/spec/recall/recall-judge-dsl.md`：第一阶段断言直接计分、固定全通过规则、最后一轮边界与后续方向。
 2. `docs/plans/2026-10-31-ai-assertion-complete-scenarios.md`：待重排的统一断言计分实施范围。
 3. `docs/spec/scenario-dsl.md`：既有场景规则与可比性要求；后续条件执行不要求每次走相同路径。
 4. `docs/spec/scoring-aggregation.md`：既有通用聚合契约；其内部字段不等同于本次 Recall 作者计分接口。

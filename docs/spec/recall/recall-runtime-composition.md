@@ -311,7 +311,7 @@ const registry = {
 2. **recall registry**：`RecallCriterionDescriptor` / `RecallCriterionFactory` / `RecallCriterionRegistration` 类型与 `validateCriteria` 扩展；registry 校验用例。
 3. **recall compile**：`CompileRecallOptions.criteria` 放宽为描述符；编译用例确认工厂声明可通过引用校验。
 4. **recall load/run**：`loadRecallCore` 保留 catalog 与归一化批准；新增 `criterion-assembly.ts`；`runRecall`/`runCase` 接线；装配与 CLI 路径用例。
-5. **文档与收口**：同步 `docs/spec/recall.md`（或对应教程）中 registry 形状说明、本节状态；跑 `pnpm check`。
+5. **文档与收口**：同步 `docs/spec/recall/recall.md`（或对应教程）中 registry 形状说明、本节状态；跑 `pnpm check`。
 
 边界纪律：`packages/*/src/` 内不得出现任何具体被测系统名、命令、环境变量或判据名（`pnpm boundary` 强制）；新类型与错误消息保持领域中立。
 

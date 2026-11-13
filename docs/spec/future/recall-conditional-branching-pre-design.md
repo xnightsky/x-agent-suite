@@ -184,4 +184,4 @@ turns:
 - 默认继续、onFail 停止整个 case、外层后续被停止、最终评价时机及清理。
 - 两个 YAML 示例在固定脚本结果下的路径、逐项得分和最终实际文本。
 
-本文未实现运行接缝、生产执行器或真实模型路径实验；文档算例验证不等于宿主集成验证。相关职责继续见 [轮次级断言](../recall-turn-assertion.md) 与 [提前终止](./recall-early-termination-pre-design.md)。
+本文未实现运行接缝、生产执行器或真实模型路径实验；文档算例验证不等于宿主集成验证。相关职责继续见 [轮次级断言](../recall/recall-turn-assertion.md) 与 [提前终止](./recall-early-termination-pre-design.md)。

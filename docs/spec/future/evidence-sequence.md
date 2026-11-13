@@ -12,13 +12,13 @@ tags: [evidence, sequence]
 
 ## 结论与归属
 
-既有场景主要验证入口路由、附件/语言规则读取和答案，不需要有序调用基础设施。通用适用边界见 [Recall 变量机制](../recall-variables.md#当前阶段裁决)。题面中的“先读取”“主链步骤”、`must_run` 清单和 schema-first 答案要求，不能自动推导为真实进程严格时序需求。
+既有场景主要验证入口路由、附件/语言规则读取和答案，不需要有序调用基础设施。通用适用边界见 [Recall 变量机制](../recall/recall-variables.md#当前阶段裁决)。题面中的“先读取”“主链步骤”、`must_run` 清单和 schema-first 答案要求，不能自动推导为真实进程严格时序需求。
 
 因此 **sequence、局部 steps 和严格 seq 整体延后**，不先实现所谓“轻量完成顺序”作为占位，也不将其设为队列迁移前置条件。
 
 文档职责分为三层：
 
-- [Recall 变量机制](../recall-variables.md)：引用语法、静态变量、动态 Provider 与先准备后求值；不定义局部步骤参数。
+- [Recall 变量机制](../recall/recall-variables.md)：引用语法、静态变量、动态 Provider 与先准备后求值；不定义局部步骤参数。
 - [脚本与 CLI 进程执行证据](../process-execution-evidence.md)：快照入口、调用关联、覆盖完整性、wrapper 和独立进程结果；不证明顺序。
 - 本文：在前两者具备实际需求和可用证据之后，增加有序匹配与局部捕获。断言仍归现有 `assertions/evidence`，Assertions 不 import Recall。
 

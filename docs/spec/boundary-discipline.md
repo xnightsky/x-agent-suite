@@ -56,7 +56,7 @@ observation.metadata?.xKbPluginInjection; // 硬编码某个领域字段名
 
 **G4 是最容易破的一条。** 写着写着一定会冒出「路由命中挺通用的吧，别的系统也有路由概念」这种念头。不要。一条内建判据会带进一整套领域词汇，G2 和 G3 会跟着一起崩。
 
-通用 Judge 是模型执行能力，不是领域判据。Recall 的内置 judge 只提供批量裁定与结果适配；具体 rubric、判据名、断言分值和业务语义均由考卷作者或消费者声明。机械与 AI 结果统一计分不要求内建领域判据或 decision，见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
+通用 Judge 是模型执行能力，不是领域判据。Recall 的内置 judge 只提供批量裁定与结果适配；具体 rubric、判据名、断言分值和业务语义均由考卷作者或消费者声明。机械与 AI 结果统一计分不要求内建领域判据或 decision，见 [Recall 内置 Judge 与断言计分 DSL](./recall/recall-judge-dsl.md)。
 
 **G3 是最硬的一条。** 哪天测试跑不起来需要装某个被测系统，说明污染已经发生，此时先修边界再谈别的。
 

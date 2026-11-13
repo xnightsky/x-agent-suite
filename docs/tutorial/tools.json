@@ -594,7 +594,7 @@
           "category": "advanced",
           "purpose": "复用基础结论表渲染，供 Recall 附加组合明细而不复制通用报告逻辑。",
           "risk": "safe",
-          "reason": "高级报告渲染入口，firstOf 场景经公开 CLI 回归验证；见 docs/spec/recall-first-of.md。"
+          "reason": "高级报告渲染入口，firstOf 场景经公开 CLI 回归验证；见 docs/spec/recall/recall-first-of.md。"
         },
         {
           "name": "writeReportDocument",

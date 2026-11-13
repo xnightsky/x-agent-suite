@@ -9,7 +9,7 @@ tags: [research, resource-install-state-location]
 
 > 日期：2026-10-28。范围：Skill 的发现位置、资源铺设与原生包安装的区别，以及这些事实对 `resources` DSL 的影响。本文是调研笔记，不构成已实现的契约。
 
-设计已收敛为通用资源安装开关，正式规则以 [Recall 资源规范](../spec/recall.md#resources-字段与路径) 为准；下列验证边界仅记录调研阶段的证据范围。
+设计已收敛为通用资源安装开关，正式规则以 [Recall 资源规范](../spec/recall/recall.md#resources-字段与路径) 为准；下列验证边界仅记录调研阶段的证据范围。
 
 ## 结论
 

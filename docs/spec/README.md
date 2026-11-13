@@ -22,13 +22,7 @@ tags: [spec]
 | [contracts.md](./contracts.md)                                   | 通用类型契约：Observation、Driver、Scenario、Criterion、Registry      |
 | [scenario-dsl.md](./scenario-dsl.md)                             | Scenario DSL 设计原则：可比性轴、分歧点、LLM 控制器禁区               |
 | [scenario-runner.md](./scenario-runner.md)                       | P3 设计：Registry 运行时、DSL 执行与 CLI                              |
-| [recall.md](./recall.md)                                         | 原生 `.recall`：发现、严格 YAML、ScenarioSpec 编译与执行              |
-| [recall-judge-dsl.md](./recall-judge-dsl.md)                     | 内置 Judge、逐项计分、固定全通过与独立裁定会话                        |
-| [recall-scoring.md](./recall-scoring.md)                         | 计分 DSL、完整配置示例、机械 registry、报告与错误验收                 |
-| [recall-turn-assertion.md](./recall-turn-assertion.md)           | 线性逐轮评价时机、完整归因、跨轮计分与树状设计空间                    |
-| [recall-composition-scoring.md](./recall-composition-scoring.md)   | allOf/anyOf/firstOf、分值唯一来源、诊断与 repeat/suite 汇总       |
-| [recall-first-of.md](./recall-first-of.md)                       | 旧有序择档的迁移入口与历史验证边界                                  |
-| [recall-runtime-composition.md](./recall-runtime-composition.md) | 待审方案：assertions 原生 client 装配与 Recall 同源依赖接线           |
+| [recall/README.md](./recall/README.md)                           | Recall 规格索引：考卷、Judge、逐轮断言、变量、组合计分与迁移        |
 | [judge.md](./judge.md)                                           | 通用 AI Judge：批量 rubric、具名 verdict、失败分层与双 mode           |
 | [target-tags.md](./target-tags.md)                               | 四层能力标签、实例与 direct/borrowed/live 决策                        |
 | [driver.md](./driver.md)                                         | 子进程基座：`JsonlProcess`、`PtyProcess`、严格 LF 分帧 + 宿主适配纪律 |
@@ -42,7 +36,6 @@ tags: [spec]
 | [versioning.md](./versioning.md)                                 | lockstep 版本、发布准备与 tag 时机、固定版本重打及升级说明            |
 | [scenario-evaluation.md](./scenario-evaluation.md)               | 评分层：Dry / Hard / Fuzzy / enumerate / 报告                         |
 | [evidence-assertions.md](./evidence-assertions.md)               | 访问痕迹证据：非空工具结果、workspace 路径、引用与组合                |
-| [recall-variables.md](./recall-variables.md)                     | 待审设计：Recall 变量、动态 Provider 与两阶段解析                     |
 | [process-execution-evidence.md](./process-execution-evidence.md) | 待审设计：进程证据入口、覆盖完整性、wrapper 与安装矩阵                |
 | [future/README.md](./future/README.md)                           | 未来与延后设计：有序证据、Recall 分类/分支/停止/组合政策              |
 | [scoring-aggregation.md](./scoring-aggregation.md)               | 打分聚合机：维度声明、knockout/absent 三态、静态打分出口              |

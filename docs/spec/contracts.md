@@ -223,7 +223,7 @@ export interface TurnCriterion {
 }
 ```
 
-Recall 一期目标需要保留每个机械细项与 AI rubric 的独立判断、原因和得分，统一求和且全部通过才通过，不以 decision 或配置聚合维度为前提。一次昂贵调用如何返回多个具名结果、以及如何接入现有 Criterion 调度，由重排后的实施计划确认；此前的 TurnCriterionGroup／evaluateMany／expandOutcomes 仅为候选接缝，不作为本次文档调整已新增的公开 API。必需裁定缺失须报评测错误，不产生缺席计分结果。详见 [Recall 内置 Judge 与断言计分 DSL](./recall-judge-dsl.md)。
+Recall 一期目标需要保留每个机械细项与 AI rubric 的独立判断、原因和得分，统一求和且全部通过才通过，不以 decision 或配置聚合维度为前提。一次昂贵调用如何返回多个具名结果、以及如何接入现有 Criterion 调度，由重排后的实施计划确认；此前的 TurnCriterionGroup／evaluateMany／expandOutcomes 仅为候选接缝，不作为本次文档调整已新增的公开 API。必需裁定缺失须报评测错误，不产生缺席计分结果。详见 [Recall 内置 Judge 与断言计分 DSL](./recall/recall-judge-dsl.md)。
 
 ## Registry
 

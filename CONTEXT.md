@@ -36,7 +36,7 @@
 
 **[Matrix](docs/spec/matrix.md)**：把同一场景按变体和 carrier 展开为对照结果的编排方式；不负责 live target 解析或领域判定。
 
-**[Recall](docs/spec/recall.md)**：本仓原生声明式评测入口，把 Recall YAML 编译为 ScenarioSpec 并复用 Runner；不泛指记忆能力或其他工具中的同名概念。
+**[Recall](docs/spec/recall/recall.md)**：本仓原生声明式评测入口，把 Recall YAML 编译为 ScenarioSpec 并复用 Runner；不泛指记忆能力或其他工具中的同名概念。
 
 **[Judge](docs/spec/judge.md)**：把批量 rubric 转换为具名 boolean verdict 的通用执行器；不产生分数、阈值或 overall pass。
 

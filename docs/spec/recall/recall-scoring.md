@@ -75,7 +75,7 @@ expect:
 
 ## 完整示例：机械与 AI 混合计分
 
-以下是完整考卷结构，可保存为 `.recall.yaml`；`contains-text` 是下文注册代码提供的示例判据，不是框架内建名称。执行前仍需按 [Recall 使用方式](../tutorial/recipes/recall.md) 配置 target、批准与 registry；这些示例不构成真实 provider 调用授权。
+以下是完整考卷结构，可保存为 `.recall.yaml`；`contains-text` 是下文注册代码提供的示例判据，不是框架内建名称。执行前仍需按 [Recall 使用方式](../../tutorial/recipes/recall.md) 配置 target、批准与 registry；这些示例不构成真实 provider 调用授权。
 
 ```yaml
 version: 1
@@ -431,7 +431,7 @@ expect:
 
 现有回归入口为 `packages/assertions/tests/score.test.ts`，以及 `packages/recall/tests/` 下的 `recall-assertion-scoring.test.ts`、`recall-mechanical-scoring.test.ts`、`recall-judge-schema.test.ts`、`recall-judge-assertion.test.ts`、`recall-turn-assertion.test.ts`。机械配置矩阵须通过官方 CLI 验证六种配置及有限小数、turn/case、repeat 独立、resolver 缓存、未 opt-in 默认贡献，以及标准分与贡献分离；非法异步 resolver 同时验证 CLI=2、零主执行与异常不泄漏。文档示例还须经真实解析/编译、示例 registry 类型检查与固定 boolean 的计分核验，不能只证明 YAML 可解析。
 
-真实 token 接线验收使用独立的 [评分合成考卷](../../integrations/itrepos/recall-scoring/README.md)，显式入口为 `pnpm ittest:token:recall-scoring`，不进入默认回归。只选择一个已批准 target、repeat=1、Judge 零重试，验证真实主输出、turn/case Judge、机械/AI 贡献与 PASS/FAIL 报告；退出 0 不能替代预期细项和总分检查。
+真实 token 接线验收使用独立的 [评分合成考卷](../../../integrations/itrepos/recall-scoring/README.md)，显式入口为 `pnpm ittest:token:recall-scoring`，不进入默认回归。只选择一个已批准 target、repeat=1、Judge 零重试，验证真实主输出、turn/case Judge、机械/AI 贡献与 PASS/FAIL 报告；退出 0 不能替代预期细项和总分检查。
 
 2026-11-09 的限定真实验证见上述考卷的实测记录：真实主执行与 turn/case Judge 经 Pi borrowed 路径调用单一已批准 provider/model，复验得到正例 6 分 PASS、负例 5 分 FAIL，逐项原始分与贡献、原生 usage 和资源清理均已核对。首轮原始 Judge JSON 曾出现 boolean 与理由矛盾，明确 rubric 通过条件后的复验不能抹去该失败。
 
