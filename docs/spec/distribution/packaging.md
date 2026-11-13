@@ -32,7 +32,7 @@ tags: [spec, packaging]
 
 个人 scope `@xnightsky` 不需要创建 npm 组织。CLI 命令仍为 `x-agent-suite`，私有源码根包与内部 `@x-agent-suite/*` 名称不变；聚合包导入统一使用 `@xnightsky/x-agent-suite/<子路径>`。打包显式固定附件名为 `x-agent-suite-<version>.tgz`，避免 pnpm 的 scoped 默认文件名影响 Release、安装器和补发校验。
 
-聚合模块只承担分发接口，不复制领域逻辑。将来确有消费者只需单包安装时，再把对应内部模块提升为独立分发模块，不提前扩大发布面。按需安装形态（pip extras 等价物、触发条件与切片纪律）的完整评估见 [`research/on-demand-install-artifact-matrix.md`](../research/on-demand-install-artifact-matrix.md)。
+聚合模块只承担分发接口，不复制领域逻辑。将来确有消费者只需单包安装时，再把对应内部模块提升为独立分发模块，不提前扩大发布面。按需安装形态（pip extras 等价物、触发条件与切片纪律）的完整评估见 [`research/on-demand-install-artifact-matrix.md`](../../research/on-demand-install-artifact-matrix.md)。
 
 ### 原生能力显式选择
 

@@ -56,7 +56,7 @@ try {
 
 ## 分发形态
 
-对外有**两个**制品（均由 `pnpm artifacts:pack` 产出，见 [`docs/spec/packaging.md`](../../docs/spec/packaging.md)）：
+对外有**两个**制品（均由 `pnpm artifacts:pack` 产出，见 [`docs/spec/distribution/packaging.md`](../../docs/spec/distribution/packaging.md)）：
 
 - 核心聚合包 `@xnightsky/x-agent-suite`：零原生，按 `packaging/entries/*.ts` 暴露子路径（如 `@xnightsky/x-agent-suite/harness`）。
 - 独立 PTY 制品 `@x-agent-suite/pty-driver`：承载原生终端能力（依赖 `node-pty` / `@xterm/headless`），需要交互式 TUI 时显式安装。
@@ -73,7 +73,7 @@ pnpm test                                       # 全仓单元测试（收口见
 
 ## 文档
 
-- [`docs/spec/driver.md`](../../docs/spec/driver.md)：驱动契约与生命周期。
-- [`docs/spec/pty-driver.md`](../../docs/spec/pty-driver.md)、[`docs/spec/long-lived-driver.md`](../../docs/spec/long-lived-driver.md)：PTY 与长驻驱动。
+- [`docs/spec/driver/driver.md`](../../docs/spec/driver/driver.md)：驱动契约与生命周期。
+- [`docs/spec/driver/pty-driver.md`](../../docs/spec/driver/pty-driver.md)、[`docs/spec/driver/long-lived-driver.md`](../../docs/spec/driver/long-lived-driver.md)：PTY 与长驻驱动。
 - [`docs/spec/host-config-projection.md`](../../docs/spec/host-config-projection.md)、[`docs/spec/live-auth-config.md`](../../docs/spec/live-auth-config.md)：宿主配置与凭据借用。
 - [`docs/research/harness-capability-surface.md`](../../docs/research/harness-capability-surface.md)：能力面调研。

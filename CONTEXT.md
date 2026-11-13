@@ -24,7 +24,7 @@
 
 **[Observation](docs/spec/contracts.md#observation)**：Driver 对宿主输出与事件的结构化归一结果；不包含框架无法解释的专属外部状态语义。
 
-**[ArtifactEvidence](docs/spec/scenario-evaluation.md#artifactevidence)**：消费者定义的外部状态证据，与 Observation 分开采集和评分；框架只透传，不解释其领域含义。
+**[ArtifactEvidence](./docs/spec/evaluation/scenario-evaluation.md#artifactevidence)**：消费者定义的外部状态证据，与 Observation 分开采集和评分；框架只透传，不解释其领域含义。
 
 **[Criterion](docs/spec/contracts.md#scenario-与-criterion)**：对单轮或多轮观测作出判定的评分逻辑；具体领域判据由消费者注册，而非框架预置。
 
@@ -38,7 +38,7 @@
 
 **[Recall](docs/spec/recall/recall.md)**：本仓原生声明式评测入口，把 Recall YAML 编译为 ScenarioSpec 并复用 Runner；不泛指记忆能力或其他工具中的同名概念。
 
-**[Judge](docs/spec/judge.md)**：把批量 rubric 转换为具名 boolean verdict 的通用执行器；不产生分数、阈值或 overall pass。
+**[Judge](./docs/spec/evaluation/judge.md)**：把批量 rubric 转换为具名 boolean verdict 的通用执行器；不产生分数、阈值或 overall pass。
 
 ### 目标与执行路径
 

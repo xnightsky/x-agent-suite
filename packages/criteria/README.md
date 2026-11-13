@@ -61,7 +61,7 @@ pnpm --filter @x-agent-suite/criteria test
 
 ## 正式文档
 
-- [场景评估](../../docs/spec/scenario-evaluation.md)
-- [访问痕迹证据断言](../../docs/spec/evidence-assertions.md)
+- [场景评估](../../docs/spec/evaluation/scenario-evaluation.md)
+- [访问痕迹证据断言](../../docs/spec/evaluation/evidence-assertions.md)
 - [能力演进](../../docs/spec/capability-system.md)：判据子包的定位
-- [打包与分发](../../docs/spec/packaging.md)
+- [打包与分发](../../docs/spec/distribution/packaging.md)

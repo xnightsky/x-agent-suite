@@ -20,9 +20,9 @@
 pnpm add @xnightsky/x-agent-suite@0.10.0
 ```
 
-需要 PTY 时，从同一 Release 下载 `x-agent-suite-pty-driver-0.10.0.tgz`，与核心包保持相同版本。更多交付方式见[打包与版本管理](docs/spec/packaging.md)。
+需要 PTY 时，从同一 Release 下载 `x-agent-suite-pty-driver-0.10.0.tgz`，与核心包保持相同版本。更多交付方式见[打包与版本管理](./docs/spec/distribution/packaging.md)。
 
-**文档导航**：[使用教程](docs/tutorial/README.md) · [模块组合](docs/tutorial/combinations.md) · [接口契约](docs/spec/README.md) · [测试分层](docs/spec/testing.md) · [发布与安装](docs/spec/packaging.md)
+**文档导航**：[使用教程](docs/tutorial/README.md) · [模块组合](docs/tutorial/combinations.md) · [接口契约](docs/spec/README.md) · [测试分层](docs/spec/testing.md) · [发布与安装](./docs/spec/distribution/packaging.md)
 
 ## 核心纪律
 
@@ -79,9 +79,9 @@ pnpm tutorial:pty:pi  # 真实 Pi + fake provider；默认 skip，零 token
 
 运行入口已落地为库级 + CLI 双形态：`@x-agent-suite/runner` 提供 `runScenarioSpec` 与 `x-agent-suite eval <config>`；`@x-agent-suite/recall` 提供显式 carrier/provider/model、独立 registry、effects-only Plan、文件内场景 plans 和 `x-agent-suite recall`，不读取 `x-agent-suite.config.ts`。矩阵对照继续由 `@x-agent-suite/matrix` 自持。
 
-兄弟仓库的本地 tarball、git 源码自构建、远程 GET、npm 核心包安装配置，以及固定版本重打方式，见 [`docs/spec/packaging.md`](docs/spec/packaging.md)。`artifacts/` 是本地交付输出并已加入 `.gitignore`。
+兄弟仓库的本地 tarball、git 源码自构建、远程 GET、npm 核心包安装配置，以及固定版本重打方式，见 [`docs/spec/distribution/packaging.md`](./docs/spec/distribution/packaging.md)。`artifacts/` 是本地交付输出并已加入 `.gitignore`。
 
-Release 工作流在同一构建中把主制品 `x-agent-suite-<version>.tgz` 上传 GitHub Release 并发布到 npm，包名为 `@xnightsky/x-agent-suite`，CLI 命令仍为 `x-agent-suite`；不逐个发布内部 workspace。维护者在本仓 Actions Repository secrets 配置 `NPM_TOKEN`，经授权推送稳定 tag 后触发；首次成功发布后才可通过 npm 安装，详见[发布配置与安装](docs/spec/packaging.md#交付方式四npm-registry核心聚合包)。
+Release 工作流在同一构建中把主制品 `x-agent-suite-<version>.tgz` 上传 GitHub Release 并发布到 npm，包名为 `@xnightsky/x-agent-suite`，CLI 命令仍为 `x-agent-suite`；不逐个发布内部 workspace。维护者在本仓 Actions Repository secrets 配置 `NPM_TOKEN`，经授权推送稳定 tag 后触发；首次成功发布后才可通过 npm 安装，详见[发布配置与安装](./docs/spec/distribution/packaging.md#交付方式四npm-registry核心聚合包)。
 
 需要任意目录可调用的全局 CLI 时，从本源码仓安装已交付的核心制品（不自动构建、不发布）：
 
@@ -89,7 +89,7 @@ Release 工作流在同一构建中把主制品 `x-agent-suite-<version>.tgz` �
 pnpm run install:global -- "/path/to/artifacts/<version>"
 ```
 
-脚本先校验 manifest 与 SHA-256，只安装核心 CLI，不安装 PTY、不写用户配置。全局 bin/PATH 前置及跨仓使用边界见[全局 CLI 安装](docs/spec/global-cli-install.md)。
+脚本先校验 manifest 与 SHA-256，只安装核心 CLI，不安装 PTY、不写用户配置。全局 bin/PATH 前置及跨仓使用边界见[全局 CLI 安装](./docs/spec/distribution/global-cli-install.md)。
 
 ## 流水线阶段：每段都是可替换槽位
 

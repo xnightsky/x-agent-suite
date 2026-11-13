@@ -343,8 +343,8 @@ cases:
 - 不调用变量解析接口的判据完全不变。
 - `toolResult/citation/not/allOf` 的现有语义不变。
 - [Scenario DSL](../scenario-dsl.md) 的执行前参数化决策不变；本文只增加结果评估期的变量解析。
-- [Evidence assertions](../evidence-assertions.md) 是当前行为契约；阶段 1 可用语法仅限上述显式字段，教程不得将其扩展为全局插值。
-- [脚本与 CLI 进程执行证据](../process-execution-evidence.md) 定义独立证据基座；[Evidence 有序调用与局部捕获](../future/evidence-sequence.md) 保存延后的顺序设计，不属于本文实施范围。
+- [Evidence assertions](../evaluation/evidence-assertions.md) 是当前行为契约；阶段 1 可用语法仅限上述显式字段，教程不得将其扩展为全局插值。
+- [脚本与 CLI 进程执行证据](../evaluation/process-execution-evidence.md) 定义独立证据基座；[Evidence 有序调用与局部捕获](../future/evidence-sequence.md) 保存延后的顺序设计，不属于本文实施范围。
 - 不新增公开 package、子路径导出或顶层 criterion 名。
 
 ## 本期验收用例

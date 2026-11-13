@@ -29,7 +29,7 @@ tags: [research, recall, scoring, decision]
 | `packages/recall/tests/recall-turn-assertion.test.ts:84–87` | 已执行零 token 回归，覆盖 rawScore=6、hardPass=false。            |
 | [一期 DSL 调研](./recall-assertion-dsl-design.md)           | 维度表、重复赋分与引用维护成本，是此前收缩接口的原因。            |
 
-过程事实应交给机械证据；只看回答文本的 Judge 不能证明工具操作真实发生。[通用聚合契约](../spec/scoring-aggregation.md) 的 weight、归一分和缺席映射也不等于 Recall 的 hit/miss 求和，不应为复用而混淆。
+过程事实应交给机械证据；只看回答文本的 Judge 不能证明工具操作真实发生。[通用聚合契约](../spec/evaluation/scoring-aggregation.md) 的 weight、归一分和缺席映射也不等于 Recall 的 hit/miss 求和，不应为复用而混淆。
 
 ## 三、补充核验的一手实践
 

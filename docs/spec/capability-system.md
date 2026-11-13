@@ -200,6 +200,6 @@ flowchart TD
 
 单件设计细节不集中重复，权威出处：
 
-- 聚合机自研、命名对齐、judge 不内建：[scoring-aggregation.md](./scoring-aggregation.md)
+- 聚合机自研、命名对齐、judge 不内建：[scoring-aggregation.md](./evaluation/scoring-aggregation.md)
 - 混合执行不抽象、skill 依赖规范层无解：[../research/skill-mixed-execution.md](../research/skill-mixed-execution.md)
 - 领域中立与三个合法出口：[boundary-discipline.md](./boundary-discipline.md)

@@ -8,7 +8,7 @@ tags: [spec, process-execution-evidence]
 # 脚本与 CLI 进程执行证据（待审设计）
 
 > 日期：2026-11-02。状态：待审设计，未实现。
-> 范围：脚本/CLI 的真实进程证据入口、覆盖完整性、wrapper/fake CLI、动态安装位置、返回值与测试分层；仍是待审设计，不代表这些能力已实现。`sequence`、局部 `steps`、严格 `seq` 已拆至 [Evidence 有序调用与局部捕获](./future/evidence-sequence.md)，整体延后。
+> 范围：脚本/CLI 的真实进程证据入口、覆盖完整性、wrapper/fake CLI、动态安装位置、返回值与测试分层；仍是待审设计，不代表这些能力已实现。`sequence`、局部 `steps`、严格 `seq` 已拆至 [Evidence 有序调用与局部捕获](../future/evidence-sequence.md)，整体延后。
 
 ## 结论
 
@@ -28,7 +28,7 @@ tags: [spec, process-execution-evidence]
 2. **进程证据**：证明实际启动、参数、工作目录、输出和退出结果。
 3. **产物证据**：证明副作用，而不是模型声称成功。
 
-通用适用边界见 [Recall 变量机制的阶段裁决](./recall/recall-variables.md#当前阶段裁决)。既有场景目前侧重路由、读取和答案，没有真实进程结果断言。本期优先迁移读取证据；本设计仅为确有脚本/CLI 执行需求的后续 case 定义接入前提，不为既有场景强加 wrapper、collector 或顺序能力。
+通用适用边界见 [Recall 变量机制的阶段裁决](../recall/recall-variables.md#当前阶段裁决)。既有场景目前侧重路由、读取和答案，没有真实进程结果断言。本期优先迁移读取证据；本设计仅为确有脚本/CLI 执行需求的后续 case 定义接入前提，不为既有场景强加 wrapper、collector 或顺序能力。
 
 ## 需求覆盖
 
@@ -201,7 +201,7 @@ Profile/Adapter 必须经 `resolveEvidence` 返回 `processCoverage`，不能仅
 
 ## 测试分层
 
-遵循 [测试分层规范](./testing.md)：
+遵循 [测试分层规范](../testing.md)：
 
 | 层级                | 验证内容                                                                                              | 不能证明                         |
 | ------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------- |
@@ -241,4 +241,4 @@ Profile/Adapter 必须经 `resolveEvidence` 返回 `processCoverage`，不能仅
 2. **有真实执行需求后**：接入 `resolveEvidence`、覆盖完整性、wrapper/fake CLI 和真实脚本直接测试；先由消费者注册判据验证，不新增进程 DSL。
 3. **真实宿主适配**：显式调用关联、完整覆盖、安装矩阵和 fake provider ittest；自然触发只走显式批准的 token case。
 
-顺序能力的重新启用条件、seq 信任边界、局部捕获与验收已移至 [Evidence 有序调用与局部捕获](./future/evidence-sequence.md)，不作为上述阶段的交付前置。每阶段独立收口测试和文档，不用 fake provider 的成功替代真实自然触发证据。
+顺序能力的重新启用条件、seq 信任边界、局部捕获与验收已移至 [Evidence 有序调用与局部捕获](../future/evidence-sequence.md)，不作为上述阶段的交付前置。每阶段独立收口测试和文档，不用 fake provider 的成功替代真实自然触发证据。

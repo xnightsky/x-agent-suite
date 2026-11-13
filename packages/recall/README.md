@@ -2,7 +2,7 @@
 
 原生 `.recall` 声明式考卷：发现并校验 YAML → 编译为 `ScenarioSpec[]` → 复用同一个 Runner 的判据调度、repeat 与报告。
 
-> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `@xnightsky/x-agent-suite/recall`，装配方式见 [packaging 规范](../../docs/spec/packaging.md)。
+> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `@xnightsky/x-agent-suite/recall`，装配方式见 [packaging 规范](../../docs/spec/distribution/packaging.md)。
 
 ## 用途与不负责
 

@@ -66,7 +66,7 @@ x-agent-suite recall
 
 第二条是安全拒绝探针：应退出 2 并提示显式选择 target，不启动 Driver 或请求模型。当前 CLI 不提供 `--version`；版本从安装列表或交付清单核对。
 
-进入目标 repo 后，可使用全局命令执行其考卷；完整接线见 [Recall](../tutorial/recipes/recall.md)。从任意目录调用时仍遵循相同规则：
+进入目标 repo 后，可使用全局命令执行其考卷；完整接线见 [Recall](../../tutorial/recipes/recall.md)。从任意目录调用时仍遵循相同规则：
 
 - 无显式考卷路径时，仅发现当前 cwd 的 `.recall/` 第一层 YAML，不向上或递归搜索 repo。
 - `--registry`、`--plan`、考卷和输出的相对路径以调用 cwd 为基准；`--root-dir` 只设置场景资源根，不切换 cwd。

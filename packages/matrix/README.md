@@ -2,7 +2,7 @@
 
 Matrix 层：scenario × carrier × prompt 变体对照运行与报告。
 
-> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `@xnightsky/x-agent-suite/matrix`，装配方式见 [packaging 规范](../../docs/spec/packaging.md)。
+> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `@xnightsky/x-agent-suite/matrix`，装配方式见 [packaging 规范](../../docs/spec/distribution/packaging.md)。
 
 ## 公开入口
 

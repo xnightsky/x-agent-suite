@@ -11,7 +11,7 @@ tags: [research, on-demand-install-artifact-matrix]
 >
 > 范围：npm 生态下「默认全量安装 + 按需子集安装」的实现形态；是否现在就扩展制品矩阵。
 >
-> 证据约束：只采用 npm/pnpm 安装语法事实、本仓 `scripts/artifacts-*.ts` 与 `packaging/` 一手代码、`docs/spec/packaging.md` 现行分发规范。
+> 证据约束：只采用 npm/pnpm 安装语法事实、本仓 `scripts/artifacts-*.ts` 与 `packaging/` 一手代码、`docs/spec/distribution/packaging.md` 现行分发规范。
 
 ## 结论
 

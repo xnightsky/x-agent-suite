@@ -130,11 +130,11 @@ pnpm --filter @x-agent-suite/assertions test
 
 ## 正式文档
 
-- [场景评估](../../docs/spec/scenario-evaluation.md)：判据如何进入评分
-- [访问痕迹证据断言](../../docs/spec/evidence-assertions.md)：非空读取、workspace 路径、引用与组合
-- [打分聚合](../../docs/spec/scoring-aggregation.md)：判据结果如何变成出口分
-- [通用 AI Judge](../../docs/spec/judge.md)：AI 断言的底层执行器
-- [打包与分发](../../docs/spec/packaging.md)：聚合子路径机制
+- [场景评估](../../docs/spec/evaluation/scenario-evaluation.md)：判据如何进入评分
+- [访问痕迹证据断言](../../docs/spec/evaluation/evidence-assertions.md)：非空读取、workspace 路径、引用与组合
+- [打分聚合](../../docs/spec/evaluation/scoring-aggregation.md)：判据结果如何变成出口分
+- [通用 AI Judge](../../docs/spec/evaluation/judge.md)：AI 断言的底层执行器
+- [打包与分发](../../docs/spec/distribution/packaging.md)：聚合子路径机制
 
 ## 有序择档原语
 

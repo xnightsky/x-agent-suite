@@ -23,23 +23,15 @@ tags: [spec]
 | [scenario-dsl.md](./scenario-dsl.md)                             | Scenario DSL 设计原则：可比性轴、分歧点、LLM 控制器禁区               |
 | [scenario-runner.md](./scenario-runner.md)                       | P3 设计：Registry 运行时、DSL 执行与 CLI                              |
 | [recall/README.md](./recall/README.md)                           | Recall 规格索引：考卷、Judge、逐轮断言、变量、组合计分与迁移        |
-| [judge.md](./judge.md)                                           | 通用 AI Judge：批量 rubric、具名 verdict、失败分层与双 mode           |
+| [evaluation/README.md](./evaluation/README.md)                 | 评价与计分：Judge、Scenario 评价、聚合、访问痕迹与进程证据        |
 | [target-tags.md](./target-tags.md)                               | 四层能力标签、实例与 direct/borrowed/live 决策                        |
-| [driver.md](./driver.md)                                         | 子进程基座：`JsonlProcess`、`PtyProcess`、严格 LF 分帧 + 宿主适配纪律 |
+| [driver/README.md](./driver/README.md)                             | Driver：子进程/JSONL/PTY 基座、长驻会话与 PTY 驱动                |
 | [sandbox.md](./sandbox.md)                                       | 临时 `HOME` / `cwd`、环境剥离、并发隔离与清理                         |
 | [llm-fixture.md](./llm-fixture.md)                               | `LlmBackend`、自研 fake provider、`HarnessProfile` 配置               |
 | [ephemeral-client.md](./ephemeral-client.md)                     | 同级 Carrier kind、Client Adapter 引用与渠道复用                      |
 | [host-config-projection.md](./host-config-projection.md)         | 渠道与执行偏好分离、单次参数、Pi 消费者隔离投影与保真边界             |
 | [live-auth-config.md](./live-auth-config.md)                     | 可选 `.env.auth.yaml`：provider 凭据、来源优先级与失败语义            |
-| [packaging.md](./packaging.md)                                   | 包分发、安装方式、版本管理与原生依赖分层                              |
-| [global-cli-install.md](./global-cli-install.md)                 | 指定制品集的全局 CLI 安装、校验、副作用与跨仓路径边界                 |
-| [versioning.md](./versioning.md)                                 | lockstep 版本、发布准备与 tag 时机、固定版本重打及升级说明            |
-| [scenario-evaluation.md](./scenario-evaluation.md)               | 评分层：Dry / Hard / Fuzzy / enumerate / 报告                         |
-| [evidence-assertions.md](./evidence-assertions.md)               | 访问痕迹证据：非空工具结果、workspace 路径、引用与组合                |
-| [process-execution-evidence.md](./process-execution-evidence.md) | 待审设计：进程证据入口、覆盖完整性、wrapper 与安装矩阵                |
+| [distribution/README.md](./distribution/README.md)               | 分发与发布：打包、版本、全局安装与制品边界                        |
 | [future/README.md](./future/README.md)                           | 未来与延后设计：有序证据、Recall 分类/分支/停止/组合政策              |
-| [scoring-aggregation.md](./scoring-aggregation.md)               | 打分聚合机：维度声明、knockout/absent 三态、静态打分出口              |
 | [matrix.md](./matrix.md)                                         | `runMatrix`：变体串行、carrier 并行、对照表与报告                     |
-| [long-lived-driver.md](./long-lived-driver.md)                   | `LongLivedAgentDriver` 与入站事件观测                                 |
-| [pty-driver.md](./pty-driver.md)                                 | PTY 驱动层：屏幕 idle 判定与 TUI 门槛                                 |
 | [lessons-from-evals.md](./lessons-from-evals.md)                 | 从内部评测实践总结的通用模式                                          |

@@ -1,6 +1,6 @@
 # 变更记录
 
-本文件记录影响消费者接口、行为、安装、配置、协议或报告格式的变化。版本遵循 [Semantic Versioning 2.0.0](https://semver.org/)；源码 workspace 的 `0.0.0` 是不可发布占位值，制品版本由 Git history 与稳定 tag 管理。开发中的变化记入 `Unreleased`；发布准备时允许先提交目标版本章节，完整验收成功后再生成对应稳定 tag。版本章节本身不表示制品已形成，流程见 [版本治理](docs/spec/versioning.md)。
+本文件记录影响消费者接口、行为、安装、配置、协议或报告格式的变化。版本遵循 [Semantic Versioning 2.0.0](https://semver.org/)；源码 workspace 的 `0.0.0` 是不可发布占位值，制品版本由 Git history 与稳定 tag 管理。开发中的变化记入 `Unreleased`；发布准备时允许先提交目标版本章节，完整验收成功后再生成对应稳定 tag。版本章节本身不表示制品已形成，流程见 [版本治理](./docs/spec/distribution/versioning.md)。
 
 ## Unreleased
 
@@ -178,7 +178,7 @@
 
 ### 升级说明
 
-- 相对 `0.6.1` 的配置、类型替身、安装及授权注意事项见 [0.7.0 升级说明](docs/spec/versioning.md#从-061-升级到-070)。Recall/Judge 的未发布中间态不视为上一稳定版接口；YAML schema 版本不随制品版本机械递增。
+- 相对 `0.6.1` 的配置、类型替身、安装及授权注意事项见 [0.7.0 升级说明](./docs/spec/distribution/versioning.md#从-061-升级到-070)。Recall/Judge 的未发布中间态不视为上一稳定版接口；YAML schema 版本不随制品版本机械递增。
 - 本次按操作者明确授权 rebase 主线并重新校准 `v0.7.0`，旧标签曾指向 `b40fec7`；新标签仅在重新完成稳定制品验收后形成。已取得旧版制品的消费者须按新 manifest 的 commit 与 SHA-256 重新核对，不混用新旧 `0.7.0` 制品。此次为一次性历史修正，不改变默认的版本不可变规则。
 
 ## 0.6.1 - 2026-10-19

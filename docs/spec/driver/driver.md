@@ -149,7 +149,7 @@ scenario → driver → Observation → criterion → report
 
 Windows 有官方 prebuilt；Linux CI 可用 `@lydell/node-pty` 绕开工具链。
 
-Windows 关闭系统 ConPTY 时，`node-pty@1.1.0` 会 fork 辅助进程枚举控制台进程树。本库通过 pnpm patch 将该辅助进程的 `AttachConsole` 失败降级为现有的 shell PID 回退；正常枚举和主 PTY 错误仍保持原行为，且清理阶段不会向测试 stderr 泄漏辅助进程堆栈。适用范围、上游状态和删除条件见[依赖补丁说明](../../patches/README.md)。
+Windows 关闭系统 ConPTY 时，`node-pty@1.1.0` 会 fork 辅助进程枚举控制台进程树。本库通过 pnpm patch 将该辅助进程的 `AttachConsole` 失败降级为现有的 shell PID 回退；正常枚举和主 PTY 错误仍保持原行为，且清理阶段不会向测试 stderr 泄漏辅助进程堆栈。适用范围、上游状态和删除条件见[依赖补丁说明](../../../patches/README.md)。
 
 ## 文件清单
 

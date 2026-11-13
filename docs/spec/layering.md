@@ -57,9 +57,9 @@ flowchart TB
 
 | 出处                                               | 失效形态                                              |
 | -------------------------------------------------- | ----------------------------------------------------- |
-| [driver.md](./driver.md)                           | screen 文本被用来断言 → TUI 改版即碎                  |
-| [scenario-evaluation.md](./scenario-evaluation.md) | `expect` 键 typo → 该轮不跑任何判据，场景变绿         |
-| [long-lived-driver.md](./long-lived-driver.md)     | 把宿主通知流当证据，而非被测系统侧记录                |
+| [driver.md](./driver/driver.md)                           | screen 文本被用来断言 → TUI 改版即碎                  |
+| [scenario-evaluation.md](./evaluation/scenario-evaluation.md) | `expect` 键 typo → 该轮不跑任何判据，场景变绿         |
+| [long-lived-driver.md](./driver/long-lived-driver.md)     | 把宿主通知流当证据，而非被测系统侧记录                |
 | [matrix.md](./matrix.md)                           | 单个 carrier 失败被当整体失败，或单个成功被当整体通过 |
 
 这些都不会抛异常，都会以「测试通过」或「测试失败」的正常形态呈现。

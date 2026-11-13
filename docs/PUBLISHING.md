@@ -180,7 +180,7 @@ Release 工作流已在同一构建中将主制品发布为 `@xnightsky/x-agent-
 
 在本仓 Repository secrets 配置具有发布权限、允许 Bypass 2FA 的 `NPM_TOKEN`；不用创建 npm 组织，也不要把 Token 写入源码或日志。首次成功发布后缩小 Token 权限并撤销临时广权限 Token。
 
-完整配置、安装和失败后的只读补发步骤见[打包与分发规范](./spec/packaging.md#交付方式四npm-registry核心聚合包)。scoped 包改名必须构建新版本；不能修改历史 tarball、移动旧 tag 或覆盖既有 Release 附件。
+完整配置、安装和失败后的只读补发步骤见[打包与分发规范](./spec/distribution/packaging.md#交付方式四npm-registry核心聚合包)。scoped 包改名必须构建新版本；不能修改历史 tarball、移动旧 tag 或覆盖既有 Release 附件。
 
 ---
 

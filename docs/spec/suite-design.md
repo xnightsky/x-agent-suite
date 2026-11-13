@@ -17,14 +17,14 @@ tags: [spec, suite-design]
 | [boundary-discipline.md](./boundary-discipline.md) | 边界纪律：四条守卫、三个合法出口、边界债务                   |
 | [layering.md](./layering.md)                       | 分层与依赖选型：工具型库 vs 平台                             |
 | [scenario-dsl.md](./scenario-dsl.md)               | Scenario DSL 设计原则                                        |
-| [driver.md](./driver.md)                           | 子进程 / JSONL / PTY 基座 + 宿主适配纪律                     |
-| [packaging.md](./packaging.md)                     | 包分发与原生依赖分层                                         |
+| [driver.md](./driver/driver.md)                           | 子进程 / JSONL / PTY 基座 + 宿主适配纪律                     |
+| [packaging.md](./distribution/packaging.md)                     | 包分发与原生依赖分层                                         |
 | [sandbox.md](./sandbox.md)                         | 无 Docker 隔离环境                                           |
 | [llm-fixture.md](./llm-fixture.md)                 | 自研 fake provider + harness profile                         |
-| [scenario-evaluation.md](./scenario-evaluation.md) | 完整 scenario + 评分层                                       |
+| [scenario-evaluation.md](./evaluation/scenario-evaluation.md) | 完整 scenario + 评分层                                       |
 | [matrix.md](./matrix.md)                           | Matrix 脚本：同 scenario 多宿主对照表                        |
-| [long-lived-driver.md](./long-lived-driver.md)     | 长驻会话 driver：入站事件观测                                |
-| [pty-driver.md](./pty-driver.md)                   | PTY 驱动层                                                   |
+| [long-lived-driver.md](./driver/long-lived-driver.md)     | 长驻会话 driver：入站事件观测                                |
+| [pty-driver.md](./driver/pty-driver.md)                   | PTY 驱动层                                                   |
 | [lessons-from-evals.md](./lessons-from-evals.md)   | 从评测实践借鉴的模式                                         |
 
 ## 结论
@@ -35,7 +35,7 @@ x-agent-suite 把验证拆成三层：
 2. **一次性 headless driver**：为提供非交互 JSONL/流式输出的 CLI 定义 profile，用**自研 fake provider**（`node:http`）提供确定性 LLM 响应；零 token 走通。
 3. **长驻 driver**：为提供长驻双向通道的 CLI 定义 driver，在同一 session 上多轮注入并观测入站事件。
 
-驱动方式以**结构化协议 IO** 为主（长驻走 JSON-RPC / JSONL，一次性走官方 JSONL 输出）。PTY 仅作补充层，只覆盖 TUI 交互路径，见 [pty-driver.md](./pty-driver.md)。
+驱动方式以**结构化协议 IO** 为主（长驻走 JSON-RPC / JSONL，一次性走官方 JSONL 输出）。PTY 仅作补充层，只覆盖 TUI 交互路径，见 [pty-driver.md](./driver/pty-driver.md)。
 
 ## 总体架构
 

@@ -2,7 +2,7 @@
 
 场景运行器：Registry 运行时 + `ScenarioSpec` 执行 + 一条命令出报告的 CLI。
 
-> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `@xnightsky/x-agent-suite/runner`，装配方式见 [packaging 规范](../../docs/spec/packaging.md)。
+> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `@xnightsky/x-agent-suite/runner`，装配方式见 [packaging 规范](../../docs/spec/distribution/packaging.md)。
 
 ## 用途与不负责
 

@@ -25,7 +25,7 @@ config：[`examples/tutorial/fixtures/tutorial-runner.config.ts`](../../../examp
 `TUTORIAL_SUMMARY` 应包含：
 
 - `exitCode: 0`——`runner-fail` 场景判据未过是**行为结论**，不影响退出码
-  （确定性层与行为层分离，见 `docs/spec/scenario-evaluation.md`）；
+  （确定性层与行为层分离，见 `docs/spec/evaluation/scenario-evaluation.md`）；
 - `reports: 3`——三个场景各出一份 md + json 报告；
 - 聚合场景 `coverage: { evaluated: 2, total: 3 }`（style 维度缺席计入分母）。
 

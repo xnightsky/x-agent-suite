@@ -573,7 +573,7 @@
           "category": "primary",
           "purpose": "把判据的具名结果按维度声明（weight/knockout/absent/threshold）聚合成出口分。",
           "risk": "safe",
-          "reason": "纯函数零依赖，设计见 docs/spec/scoring-aggregation.md；runner 落地后再补 recipe。"
+          "reason": "纯函数零依赖，设计见 docs/spec/evaluation/scoring-aggregation.md；runner 落地后再补 recipe。"
         },
         {
           "name": "writeScenarioReports",
@@ -676,14 +676,14 @@
           "category": "advanced",
           "purpose": "创建可注入逐 turn workspace resolver 的证据判据。",
           "risk": "safe",
-          "reason": "高级证据 DSL；完整声明与接入示例见 docs/spec/evidence-assertions.md，当前无独立教程 recipe。"
+          "reason": "高级证据 DSL；完整声明与接入示例见 docs/spec/evaluation/evidence-assertions.md，当前无独立教程 recipe。"
         },
         {
           "name": "evidence",
           "category": "advanced",
           "purpose": "组合非空工具结果、workspace 路径、引用与否定证据。",
           "risk": "safe",
-          "reason": "高级证据 DSL；完整声明与接入示例见 docs/spec/evidence-assertions.md，当前无独立教程 recipe。"
+          "reason": "高级证据 DSL；完整声明与接入示例见 docs/spec/evaluation/evidence-assertions.md，当前无独立教程 recipe。"
         }
       ]
     },

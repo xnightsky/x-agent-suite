@@ -125,7 +125,7 @@ casePass = 所有已声明断言细项均通过
 1. `docs/spec/recall/recall-judge-dsl.md`：第一阶段断言直接计分、固定全通过规则、最后一轮边界与后续方向。
 2. `docs/plans/2026-10-31-ai-assertion-complete-scenarios.md`：待重排的统一断言计分实施范围。
 3. `docs/spec/scenario-dsl.md`：既有场景规则与可比性要求；后续条件执行不要求每次走相同路径。
-4. `docs/spec/scoring-aggregation.md`：既有通用聚合契约；其内部字段不等同于本次 Recall 作者计分接口。
+4. `docs/spec/evaluation/scoring-aggregation.md`：既有通用聚合契约；其内部字段不等同于本次 Recall 作者计分接口。
 5. 用户指定的跨仓 `recall-author/SKILL.md`：既有作者文档中的 KV 裁定池、声明即参与和历史评分草案；仅作设计证据，不要求源码引入其领域词汇。
 
 ### 外部一手资料（8 个）

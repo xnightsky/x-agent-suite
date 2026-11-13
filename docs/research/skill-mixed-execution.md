@@ -7,7 +7,7 @@ tags: [research, skill-mixed-execution]
 
 # 混合执行场景承载力调研：skill + 脚本 + CLI + 嵌套依赖 + 安装布局
 
-> 日期：2026-09-19。触发：打分聚合机（[../spec/scoring-aggregation.md](../spec/scoring-aggregation.md)）
+> 日期：2026-09-19。触发：打分聚合机（[../spec/scoring-aggregation.md](../spec/evaluation/scoring-aggregation.md)）
 > 设计评审时提出的质疑——「实际场景大量是 skill 与脚本（py/mjs）混合执行、skill 驱动 CLI、
 > skill 互相依赖嵌套、安装前后目录布局不一，这套机制是否承载得了」。
 > 本文以业界公开实践为证据主体；内部实践以角色代称，不暴露具体仓库。

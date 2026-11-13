@@ -48,7 +48,7 @@ const outcome = await judge(
 
 ## 真实 provider 调用
 
-会消耗真实 token，必须显式授权与配置：`createJudgeClient` 需要完整 target 与 TargetTags 唯一候选；`review-required` 目标还需本次 `liveReviewApproved`，direct 与 borrowed 之间不做失败回退。绑定方式见 [judge.md](../../docs/spec/judge.md) 与 [target-tags.md](../../docs/spec/target-tags.md)。
+会消耗真实 token，必须显式授权与配置：`createJudgeClient` 需要完整 target 与 TargetTags 唯一候选；`review-required` 目标还需本次 `liveReviewApproved`，direct 与 borrowed 之间不做失败回退。绑定方式见 [judge.md](../../docs/spec/evaluation/judge.md) 与 [target-tags.md](../../docs/spec/target-tags.md)。
 
 ## 依赖与边界
 
@@ -73,7 +73,7 @@ pnpm --filter @x-agent-suite/judge test
 
 ## 正式文档
 
-- [通用 AI Judge](../../docs/spec/judge.md)：契约与不变量
+- [通用 AI Judge](../../docs/spec/evaluation/judge.md)：契约与不变量
 - [TargetTags 决策](../../docs/spec/target-tags.md)：direct / borrowed 如何选定
 - [LLM Fixture](../../docs/spec/llm-fixture.md)：target 解析与 transport
-- [场景评估](../../docs/spec/scenario-evaluation.md)：Judge 在评分体系中的位置
+- [场景评估](../../docs/spec/evaluation/scenario-evaluation.md)：Judge 在评分体系中的位置

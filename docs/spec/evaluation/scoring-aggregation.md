@@ -9,7 +9,7 @@ tags: [spec, scoring-aggregation]
 
 > 判据负责判定，聚合机负责算分。AI 只产具名裁定，分数恒由静态机出口。
 
-本文描述现有通用聚合契约，不是 Recall 一期作者 DSL。Recall 一期只做各断言 hit／miss 直接计分与总分求和，所有断言通过才通过；decision、阈值、组合维度和否决留待未来，见 [Recall 内置 Judge 与断言计分 DSL](./recall/recall-judge-dsl.md)。下述已有公共契约与行为不因本次文档收缩改变。
+本文描述现有通用聚合契约，不是 Recall 一期作者 DSL。Recall 一期只做各断言 hit／miss 直接计分与总分求和，所有断言通过才通过；decision、阈值、组合维度和否决留待未来，见 [Recall 内置 Judge 与断言计分 DSL](../recall/recall-judge-dsl.md)。下述已有公共契约与行为不因本次文档收缩改变。
 
 ## 目的
 
@@ -40,7 +40,7 @@ tags: [spec, scoring-aggregation]
 | 第二个消费者是否需要                             | 是。加权聚合是 promptfoo / DeepEval / RAGAS 共有的跨领域需求，非单一消费者定制               |
 | 是否破坏「零内建判据」                           | 否。聚合机不判定任何事，只消费判据已产出的具名结果做算术                                     |
 | 是否扩展 `ScenarioSpec` 契约                     | 否。聚合声明的载体由消费者持有（见「接线位置」）                                             |
-| 可比性轴（[scenario-dsl.md](./scenario-dsl.md)） | 不引入主动分支；LLM 仍只当分类器不当控制器——聚合规则是一张静态表                             |
+| 可比性轴（[scenario-dsl.md](../scenario-dsl.md)） | 不引入主动分支；LLM 仍只当分类器不当控制器——聚合规则是一张静态表                             |
 
 ## 核心概念
 
@@ -165,7 +165,7 @@ export declare function resolveAggregate(
 - **pass 判定**：knockout 未触发，且 `threshold` 存在时 `score >= threshold`；省略时计入维全部 hit。threshold 可为任意有限数，与归一分可为负的语义一致。
 - **空考警示**：`coverage.evaluated = 0`（无任何在场维）时 reason 必须显式声明「无在场维度」——机制上不替场景做 zero/fail 选择，但绝不允许「免费绿」被静默误读。该规则仅描述本通用聚合契约；Recall 目标 DSL 不再提供缺席计分机制。
 - **coverage**：`evaluated` = OR 归约后、映射前非缺席维数，`total` = 声明维数。多轮部分 absent 的 metric 不计入 `evaluated`；若它属于 OR 维度，则以整个维度的归约状态为准。`absent: pass/fail` 只影响计分，不倒推提高 coverage。
-- **引用完整性**：`metric` 引用了任何判据都未产出的名字时，按 absent 处理（不报错），但 `resolveAggregate` 在 reason 中逐个点名，供场景作者发现拼写错误（呼应 [scenario-dsl.md](./scenario-dsl.md) 的引用完整性校验原则）。OR metric 数组中即使其他引用已经造成 hit/miss，未产出的引用名仍必须出现在 reason 中。
+- **引用完整性**：`metric` 引用了任何判据都未产出的名字时，按 absent 处理（不报错），但 `resolveAggregate` 在 reason 中逐个点名，供场景作者发现拼写错误（呼应 [scenario-dsl.md](../scenario-dsl.md) 的引用完整性校验原则）。OR metric 数组中即使其他引用已经造成 hit/miss，未产出的引用名仍必须出现在 reason 中。
 
 ## 接线位置
 
@@ -180,11 +180,11 @@ provision（铺安装态，消费者写）
 
 - **类型**：`@x-agent-suite/contracts`（与本包「只导出类型」一致，上述接口均为类型声明）。
 - **实现**：`@x-agent-suite/observation` 新增 `resolveAggregate` 纯函数——该包已是「判据结果 → 报告」的汇聚点。
-- **spec 载体**：`ScenarioSpec.aggregate` 是现有通用运行时聚合入口。Recall 一期不暴露 decision 或聚合维度 DSL，只要求独立断言计分、求和与固定全通过，见 [Recall 断言计分](./recall/recall-scoring.md)；未来分数放行边界见 [Decision 延后说明](./recall/recall-judge-dsl.md#decision-分数验收政策)。
+- **spec 载体**：`ScenarioSpec.aggregate` 是现有通用运行时聚合入口。Recall 一期不暴露 decision 或聚合维度 DSL，只要求独立断言计分、求和与固定全通过，见 [Recall 断言计分](../recall/recall-scoring.md)；未来分数放行边界见 [Decision 延后说明](../recall/recall-judge-dsl.md#decision-分数验收政策)。
 
 ## judge 接入面（通用执行器，不内建领域判据）
 
-- `@x-agent-suite/judge` 提供通用批量裁定执行器，输出 `JudgeVerdict`，不是 `CriterionOutcome`。Recall 一期目标保留每个 AI rubric 的独立判断与分值，与机械断言直接求和，不以 decision 为前提。完整目标见 [Recall 内置 Judge 与断言计分 DSL](./recall/recall-judge-dsl.md)。
+- `@x-agent-suite/judge` 提供通用批量裁定执行器，输出 `JudgeVerdict`，不是 `CriterionOutcome`。Recall 一期目标保留每个 AI rubric 的独立判断与分值，与机械断言直接求和，不以 decision 为前提。完整目标见 [Recall 内置 Judge 与断言计分 DSL](../recall/recall-judge-dsl.md)。
 - Judge 复用 live 配置与 `LiveBackend`，通过通用 TargetTags 决策 direct/borrowed；唯一候选可自动选择，多候选必须显式 mode/cliRef，借用凭据不等于 direct 授权，失败不跨 mode fallback。真实裁判调用属于 token 消耗，只能在显式 token 测试层运行。
 - **失败分层**：原生 Judge 的单项缺失或无法识别仍为 `completed + absent`；整体未配置、调用失败或不可解析为 `not-evaluated`。Recall 目标适配在缺少必需裁定时报告评测错误，不提供缺席计分映射，也不得把评测失败压成内容零分。
 

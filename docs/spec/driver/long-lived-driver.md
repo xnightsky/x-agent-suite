@@ -114,7 +114,7 @@ export interface JsonRpcLongLivedAdapter {
 由 `close()` 原样拒绝；进程关闭失败时暴露该清理错误。重复或并发 `close()` 共用同一次关闭操作，
 失败时也不重复执行回调或清理，调用方仍能观察到相同的失败结果。
 
-可运行示例见 [long-lived-wire 教程](../tutorial/recipes/long-lived-wire.md)。
+可运行示例见 [long-lived-wire 教程](../../tutorial/recipes/long-lived-wire.md)。
 
 ## 结论边界
 

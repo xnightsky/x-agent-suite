@@ -75,7 +75,7 @@ pnpm --filter @x-agent-suite/observation test
 
 ## 正式文档
 
-- [场景评估](../../docs/spec/scenario-evaluation.md)：dry / hard / fuzzy 与判据分层
-- [打分聚合](../../docs/spec/scoring-aggregation.md)：维度、权重与缺席映射
+- [场景评估](../../docs/spec/evaluation/scenario-evaluation.md)：dry / hard / fuzzy 与判据分层
+- [打分聚合](../../docs/spec/evaluation/scoring-aggregation.md)：维度、权重与缺席映射
 - [场景运行器](../../docs/spec/scenario-runner.md)：报告如何被消费
-- [打包与分发](../../docs/spec/packaging.md)
+- [打包与分发](../../docs/spec/distribution/packaging.md)

@@ -143,14 +143,14 @@ snapshot 只允许来自干净且已提交的 HEAD，格式为 `<自动推导稳
 - 旧 `carriers.*.provider/model` 仍可加载，但会产生 `deprecated-carrier-model` 告警；建议迁移到 `providers.*.models` 与 `default`。同一 carrier 不得混用新旧结构；旧格式没有承诺移除日期。
 - `resolveLiveTargets` 至少需要 carrier/provider/model 之一；carrier-only 展开该范围的 defaults，不允许无参数执行所有默认目标。原 `resolveLiveChannel` 入口仍保留。
 - 手工构造 `LiveConfigLoad` loaded 分支的 TypeScript 适配或测试替身，需补齐 `available`、`defaults`、`warnings`；调用 `loadLiveConfig` 可直接取得完整结构。
-- `.env.auth.yaml` 可选，不要求拆出现有内联凭据。采用独立文件时，凭据来源为 runtime > auth-file > model-config；已选来源缺值或出错不继续回退，显式 `auth.provider` 必须能解析。代码显式 channel 仍可旁路文件发现。详见 [live-auth-config.md](./live-auth-config.md)。
+- `.env.auth.yaml` 可选，不要求拆出现有内联凭据。采用独立文件时，凭据来源为 runtime > auth-file > model-config；已选来源缺值或出错不继续回退，显式 `auth.provider` 必须能解析。代码显式 channel 仍可旁路文件发现。详见 [live-auth-config.md](../live-auth-config.md)。
 
 ### TargetTags、Recall 与 Judge
 
 - 核心包携带公共 `config/target-tags/keys.yaml` 和 `instances.yaml`，默认从自身包根加载，不要求消费者复制源码仓或准备同名目录。显式 `dictionaryPath/instancesPath` 优先于 `repoRoot`，未覆盖时使用包内资源；显式资源失败不静默回退。
-- 私有实例按公共目录 → home 的 `.env.target-tags.instances.yaml` → 已选 live 配置内 `targetTags` 合并；公共目录出现某实例不代表其 live 已授权，unknown/disallowed 不自动放行。详见 [target-tags.md](./target-tags.md)。
-- Recall 与 Judge 均为本次首次发布。Recall 不读 `x-agent-suite.config.ts`，按显式目标、独立 registry 和 effects-only Plan 执行；曾试用未发布中间态的调用方按 [recall.md](./recall/recall.md) 调整，但这些中间态不列作相对 `0.6.1` 的删除接口。
-- Recall 的 `kind: cli`（含省略 kind）只走消费者注册的唯一 borrowed Profile；原试用态 HTTP direct 调用需迁移为 `kind: ephemeral-client + clientRef`，详见 [临时 Client](./ephemeral-client.md)。
-- `--execution-params` / `executionParams` 只对本次执行透传偏好，不更改渠道、权限或路由；消费者 Profile/Adapter 负责解释，原生宿主配置投影的边界见 [宿主配置保真](./host-config-projection.md)。
+- 私有实例按公共目录 → home 的 `.env.target-tags.instances.yaml` → 已选 live 配置内 `targetTags` 合并；公共目录出现某实例不代表其 live 已授权，unknown/disallowed 不自动放行。详见 [target-tags.md](../target-tags.md)。
+- Recall 与 Judge 均为本次首次发布。Recall 不读 `x-agent-suite.config.ts`，按显式目标、独立 registry 和 effects-only Plan 执行；曾试用未发布中间态的调用方按 [recall.md](../recall/recall.md) 调整，但这些中间态不列作相对 `0.6.1` 的删除接口。
+- Recall 的 `kind: cli`（含省略 kind）只走消费者注册的唯一 borrowed Profile；原试用态 HTTP direct 调用需迁移为 `kind: ephemeral-client + clientRef`，详见 [临时 Client](../ephemeral-client.md)。
+- `--execution-params` / `executionParams` 只对本次执行透传偏好，不更改渠道、权限或路由；消费者 Profile/Adapter 负责解释，原生宿主配置投影的边界见 [宿主配置保真](../host-config-projection.md)。
 - Recall、Plan 与 TargetTags 的 YAML 版本保持 `1`，live 配置继续兼容旧结构，不因制品升到 `0.7.0` 就机械修改 schema 版本。
 - 默认验收只运行零 token 测试。真实 provider、借用登录态和 token 测试仍需单次显式授权；本次稳定打包不代表完成这些验证。

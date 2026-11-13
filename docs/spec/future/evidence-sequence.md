@@ -19,7 +19,7 @@ tags: [evidence, sequence]
 文档职责分为三层：
 
 - [Recall 变量机制](../recall/recall-variables.md)：引用语法、静态变量、动态 Provider 与先准备后求值；不定义局部步骤参数。
-- [脚本与 CLI 进程执行证据](../process-execution-evidence.md)：快照入口、调用关联、覆盖完整性、wrapper 和独立进程结果；不证明顺序。
+- [脚本与 CLI 进程执行证据](../evaluation/process-execution-evidence.md)：快照入口、调用关联、覆盖完整性、wrapper 和独立进程结果；不证明顺序。
 - 本文：在前两者具备实际需求和可用证据之后，增加有序匹配与局部捕获。断言仍归现有 `assertions/evidence`，Assertions 不 import Recall。
 
 ## 重新启用条件

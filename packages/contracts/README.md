@@ -2,7 +2,7 @@
 
 类型契约层：框架与消费者之间的全部接缝。
 
-> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `@xnightsky/x-agent-suite/contracts`，装配方式见 [packaging 规范](../../docs/spec/packaging.md)。
+> 本包是私有 workspace 实现模块（`private: true`、版本 `0.0.0` 占位），**不单独发布到 npm**。对外使用时走聚合包子路径 `@xnightsky/x-agent-suite/contracts`，装配方式见 [packaging 规范](../../docs/spec/distribution/packaging.md)。
 
 ## 设计纪律
 
