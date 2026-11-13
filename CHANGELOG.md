@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 0.15.0 - 2026-11-13
+
 ### Added
 
 - Recall 的 turn/case 断言新增 `allOf` 与 `anyOf`：allOf 逐项累计实际贡献，anyOf 在通过候选中取最高贡献、全失败只计一次共同 miss；新增可运行组合考卷和精确 `ittest:token:recall-composition-scoring` 入口，真实验收待授权。
