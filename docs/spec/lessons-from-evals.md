@@ -120,14 +120,14 @@ tags: [spec, lessons-from-evals]
 
 ## 10. 应用状态
 
-| 模式                          | 落点                                                                               | 状态   |
-| ----------------------------- | ---------------------------------------------------------------------------------- | ------ |
-| Observation 归一              | [contracts.md](./contracts.md)、[scenario-evaluation.md](./evaluation/scenario-evaluation.md) | 已应用 |
-| ArtifactEvidence 分离         | [scenario-evaluation.md](./evaluation/scenario-evaluation.md)                                 | 已应用 |
-| 分层评分 Dry→Hard→Fuzzy→Judge | [scenario-evaluation.md](./evaluation/scenario-evaluation.md)                                 | 已应用 |
-| enumerate 核对                | [scenario-evaluation.md](./evaluation/scenario-evaluation.md)                                 | 已应用 |
-| 双格式报告                    | [scenario-evaluation.md](./evaluation/scenario-evaluation.md)、[matrix.md](./matrix.md)       | 已应用 |
-| `stripEnv` 与工作拷贝隔离     | [sandbox.md](./sandbox.md)                                                         | 已应用 |
-| 崩溃隔离                      | [sandbox.md](./sandbox.md)、[matrix.md](./matrix.md)                               | 已应用 |
-| 变体矩阵                      | [matrix.md](./matrix.md)                                                           | 已应用 |
-| 外部客观观测                  | [pty-driver.md](./driver/pty-driver.md)、[long-lived-driver.md](./driver/long-lived-driver.md)   | 已应用 |
+| 模式                          | 落点                                                                                           | 状态   |
+| ----------------------------- | ---------------------------------------------------------------------------------------------- | ------ |
+| Observation 归一              | [contracts.md](./contracts.md)、[scenario-evaluation.md](./evaluation/scenario-evaluation.md)  | 已应用 |
+| ArtifactEvidence 分离         | [scenario-evaluation.md](./evaluation/scenario-evaluation.md)                                  | 已应用 |
+| 分层评分 Dry→Hard→Fuzzy→Judge | [scenario-evaluation.md](./evaluation/scenario-evaluation.md)                                  | 已应用 |
+| enumerate 核对                | [scenario-evaluation.md](./evaluation/scenario-evaluation.md)                                  | 已应用 |
+| 双格式报告                    | [scenario-evaluation.md](./evaluation/scenario-evaluation.md)、[matrix.md](./matrix.md)        | 已应用 |
+| `stripEnv` 与工作拷贝隔离     | [sandbox.md](./sandbox.md)                                                                     | 已应用 |
+| 崩溃隔离                      | [sandbox.md](./sandbox.md)、[matrix.md](./matrix.md)                                           | 已应用 |
+| 变体矩阵                      | [matrix.md](./matrix.md)                                                                       | 已应用 |
+| 外部客观观测                  | [pty-driver.md](./driver/pty-driver.md)、[long-lived-driver.md](./driver/long-lived-driver.md) | 已应用 |

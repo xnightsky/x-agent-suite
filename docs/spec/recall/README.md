@@ -11,20 +11,20 @@ tags: [spec, recall]
 
 ## 入口与执行
 
-| 文档 | 内容 |
-| --- | --- |
-| [recall.md](./recall.md) | 考卷发现、严格 YAML、target、编译、执行与 CLI |
-| [recall-turn-assertion.md](./recall-turn-assertion.md) | 线性逐轮评价时机、归因与跨轮计分 |
-| [recall-judge-dsl.md](./recall-judge-dsl.md) | 内置 Judge、独立裁定会话与 rubric DSL |
+| 文档                                                             | 内容                                          |
+| ---------------------------------------------------------------- | --------------------------------------------- |
+| [recall.md](./recall.md)                                         | 考卷发现、严格 YAML、target、编译、执行与 CLI |
+| [recall-turn-assertion.md](./recall-turn-assertion.md)           | 线性逐轮评价时机、归因与跨轮计分              |
+| [recall-judge-dsl.md](./recall-judge-dsl.md)                     | 内置 Judge、独立裁定会话与 rubric DSL         |
 | [recall-runtime-composition.md](./recall-runtime-composition.md) | assertions 原生 client 装配与同源依赖接线方案 |
 
 ## 计分与组合
 
-| 文档 | 内容 |
-| --- | --- |
-| [recall-scoring.md](./recall-scoring.md) | 平铺断言 hit/miss、机械分值接入、rawScore 与报告 |
+| 文档                                                             | 内容                                                    |
+| ---------------------------------------------------------------- | ------------------------------------------------------- |
+| [recall-scoring.md](./recall-scoring.md)                         | 平铺断言 hit/miss、机械分值接入、rawScore 与报告        |
 | [recall-composition-scoring.md](./recall-composition-scoring.md) | allOf/anyOf/firstOf、组合贡献、诊断及 repeat/suite 汇总 |
-| [recall-first-of.md](./recall-first-of.md) | 旧有序择档的迁移入口与历史验证边界 |
+| [recall-first-of.md](./recall-first-of.md)                       | 旧有序择档的迁移入口与历史验证边界                      |
 
 ## 变量与后续设计
 

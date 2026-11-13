@@ -22,7 +22,7 @@ tags: [research, recall, scoring, decision]
 
 | 证据                                                        | 已确认事实                                                        |
 | ----------------------------------------------------------- | ----------------------------------------------------------------- |
-| [Recall 断言计分](../spec/recall/recall-scoring.md)                | 默认贡献 1/-1；当前全部断言通过才通过，正分不能补偿失败。         |
+| [Recall 断言计分](../spec/recall/recall-scoring.md)         | 默认贡献 1/-1；当前全部断言通过才通过，正分不能补偿失败。         |
 | `packages/recall/src/assertion-results.ts:112–130`          | 报告投影求 rawScore，不用分数重算 hardPass。                      |
 | `packages/runner/src/run-scenario.ts:216–225`               | 通用 runner 有 aggregate 接缝，但不代表 Recall DSL 已开放该政策。 |
 | `packages/assertions/src/evidence/index.ts:223–271`         | allOf 保留子项原因，整体仍只产生一个 pass 和 0/1 标准分。         |

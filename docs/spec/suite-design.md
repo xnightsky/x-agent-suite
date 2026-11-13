@@ -11,21 +11,21 @@ tags: [spec, suite-design]
 
 ## 目录
 
-| 文档                                               | 内容                                                         |
-| -------------------------------------------------- | ------------------------------------------------------------ |
-| [contracts.md](./contracts.md)                     | 通用契约：Observation、Driver、Scenario、Criterion、Registry |
-| [boundary-discipline.md](./boundary-discipline.md) | 边界纪律：四条守卫、三个合法出口、边界债务                   |
-| [layering.md](./layering.md)                       | 分层与依赖选型：工具型库 vs 平台                             |
-| [scenario-dsl.md](./scenario-dsl.md)               | Scenario DSL 设计原则                                        |
-| [driver.md](./driver/driver.md)                           | 子进程 / JSONL / PTY 基座 + 宿主适配纪律                     |
-| [packaging.md](./distribution/packaging.md)                     | 包分发与原生依赖分层                                         |
-| [sandbox.md](./sandbox.md)                         | 无 Docker 隔离环境                                           |
-| [llm-fixture.md](./llm-fixture.md)                 | 自研 fake provider + harness profile                         |
+| 文档                                                          | 内容                                                         |
+| ------------------------------------------------------------- | ------------------------------------------------------------ |
+| [contracts.md](./contracts.md)                                | 通用契约：Observation、Driver、Scenario、Criterion、Registry |
+| [boundary-discipline.md](./boundary-discipline.md)            | 边界纪律：四条守卫、三个合法出口、边界债务                   |
+| [layering.md](./layering.md)                                  | 分层与依赖选型：工具型库 vs 平台                             |
+| [scenario-dsl.md](./scenario-dsl.md)                          | Scenario DSL 设计原则                                        |
+| [driver.md](./driver/driver.md)                               | 子进程 / JSONL / PTY 基座 + 宿主适配纪律                     |
+| [packaging.md](./distribution/packaging.md)                   | 包分发与原生依赖分层                                         |
+| [sandbox.md](./sandbox.md)                                    | 无 Docker 隔离环境                                           |
+| [llm-fixture.md](./llm-fixture.md)                            | 自研 fake provider + harness profile                         |
 | [scenario-evaluation.md](./evaluation/scenario-evaluation.md) | 完整 scenario + 评分层                                       |
-| [matrix.md](./matrix.md)                           | Matrix 脚本：同 scenario 多宿主对照表                        |
-| [long-lived-driver.md](./driver/long-lived-driver.md)     | 长驻会话 driver：入站事件观测                                |
-| [pty-driver.md](./driver/pty-driver.md)                   | PTY 驱动层                                                   |
-| [lessons-from-evals.md](./lessons-from-evals.md)   | 从评测实践借鉴的模式                                         |
+| [matrix.md](./matrix.md)                                      | Matrix 脚本：同 scenario 多宿主对照表                        |
+| [long-lived-driver.md](./driver/long-lived-driver.md)         | 长驻会话 driver：入站事件观测                                |
+| [pty-driver.md](./driver/pty-driver.md)                       | PTY 驱动层                                                   |
+| [lessons-from-evals.md](./lessons-from-evals.md)              | 从评测实践借鉴的模式                                         |
 
 ## 结论
 

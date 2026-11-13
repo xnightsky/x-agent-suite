@@ -30,16 +30,16 @@ x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenari
 | [`document-research.md`](./document-research.md)                                   | 重要任务最小检索、future 转正与 Markdown metadata            |
 | [`spec/boundary-discipline.md`](./spec/boundary-discipline.md)                     | 边界纪律：四条守卫、三个合法出口、边界债务                   |
 | [`spec/layering.md`](./spec/layering.md)                                           | 分层与依赖选型：工具型库 vs 平台                             |
-| [`spec/distribution/README.md`](./spec/distribution/README.md)             | 分发与发布：打包、版本与全局安装                                 |
+| [`spec/distribution/README.md`](./spec/distribution/README.md)                     | 分发与发布：打包、版本与全局安装                             |
 | [`spec/testing.md`](./spec/testing.md)                                             | test / ittest / token ittest 的分层、位置与默认回归规则      |
 | [`research/test-file-naming-taxonomy.md`](./research/test-file-naming-taxonomy.md) | 为什么不继续增加 PTY/live/smoke 等测试终止后缀               |
 | [`research/agent-messaging-layers.md`](./research/agent-messaging-layers.md)       | Agent 消息通信：传输层与入站触达层的拆分                     |
 | [`spec/contracts.md`](./spec/contracts.md)                                         | 核心契约：Observation、Driver、Scenario、Criterion、Registry |
 | [`spec/scenario-dsl.md`](./spec/scenario-dsl.md)                                   | Scenario DSL 设计原则：可比性轴、分歧点、LLM 控制器禁区      |
-| [`spec/recall/README.md`](./spec/recall/README.md)                           | Recall 规格索引：考卷、Judge、逐轮断言、变量与组合计分             |
-| [`spec/evaluation/README.md`](./spec/evaluation/README.md)                   | 评价与计分：Judge、聚合、访问痕迹与进程证据                       |
+| [`spec/recall/README.md`](./spec/recall/README.md)                                 | Recall 规格索引：考卷、Judge、逐轮断言、变量与组合计分       |
+| [`spec/evaluation/README.md`](./spec/evaluation/README.md)                         | 评价与计分：Judge、聚合、访问痕迹与进程证据                  |
 | [`spec/target-tags.md`](./spec/target-tags.md)                                     | 四层能力标签、实例与 direct/borrowed/live 决策               |
-| [`spec/driver/README.md`](./spec/driver/README.md)                           | Driver：子进程、长驻会话与 PTY                                   |
+| [`spec/driver/README.md`](./spec/driver/README.md)                                 | Driver：子进程、长驻会话与 PTY                               |
 | [`spec/sandbox.md`](./spec/sandbox.md)                                             | 无 Docker 隔离沙箱                                           |
 | [`spec/llm-fixture.md`](./spec/llm-fixture.md)                                     | 自研 fake provider 与 HarnessProfile 配置                    |
 | [`spec/ephemeral-client.md`](./spec/ephemeral-client.md)                           | 同级 Carrier 与临时 Client 配置、Adapter 和报告归因          |

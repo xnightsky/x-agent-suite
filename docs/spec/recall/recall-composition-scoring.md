@@ -15,10 +15,10 @@ tags: [spec, recall, assertions, scoring, composition]
 
 在不认识任何具体被测系统、判据或宿主的前提下，为 Recall 增加三种通用组合评价点，并统一重复执行与整套考卷的统计口径：
 
-| 组合 | 内容判定 | 有效贡献 |
-| --- | --- | --- |
-| `allOf` | 全部分支通过才通过 | 各分支实际贡献逐项求和 |
-| `anyOf` | 任一分支通过即通过 | 通过分支中的最高实际贡献；全失败时只取一次共同 miss |
+| 组合      | 内容判定                                | 有效贡献                                                |
+| --------- | --------------------------------------- | ------------------------------------------------------- |
+| `allOf`   | 全部分支通过才通过                      | 各分支实际贡献逐项求和                                  |
+| `anyOf`   | 任一分支通过即通过                      | 通过分支中的最高实际贡献；全失败时只取一次共同 miss     |
 | `firstOf` | 按声明顺序接受首个实际贡献 `> 0` 的分支 | 被接受分支的实际贡献；未接受任何分支时只取一次共同 miss |
 
 核心不变量：
@@ -124,16 +124,16 @@ expect:
 
 ### 3.2 封闭校验
 
-| 位置 | 规则 |
-| --- | --- |
-| `expect.allOf/anyOf/firstOf` | 非空普通 KV；point 非空、不含点号；与 judge、注册判据及其他组合并列 |
-| `allOf` 分支数组 | 至少一项；按声明顺序全部执行 |
-| `anyOf/firstOf` 分支数组 | 至少两项；数组顺序稳定，firstOf 据此短路 |
-| 分支 | 封闭对象，仅 `name/score/expect`；name、expect 必填，score 可选 |
-| 分支 name | 非空、不含点号，同一评价点内唯一 |
-| 分支 expect | 非空平铺 AND 块；允许同 scope 注册判据和内置 Judge；不允许嵌套组合或 decision |
-| 分支 score | 封闭 `{hit?, miss?}`，两侧均为有限 number；缺省侧分别为 1、-1 |
-| `anyOf/firstOf` 共同 miss | 所有分支应用上述规则后的失败贡献必须一致，否则定义错误 |
+| 位置                         | 规则                                                                          |
+| ---------------------------- | ----------------------------------------------------------------------------- |
+| `expect.allOf/anyOf/firstOf` | 非空普通 KV；point 非空、不含点号；与 judge、注册判据及其他组合并列           |
+| `allOf` 分支数组             | 至少一项；按声明顺序全部执行                                                  |
+| `anyOf/firstOf` 分支数组     | 至少两项；数组顺序稳定，firstOf 据此短路                                      |
+| 分支                         | 封闭对象，仅 `name/score/expect`；name、expect 必填，score 可选               |
+| 分支 name                    | 非空、不含点号，同一评价点内唯一                                              |
+| 分支 expect                  | 非空平铺 AND 块；允许同 scope 注册判据和内置 Judge；不允许嵌套组合或 decision |
+| 分支 score                   | 封闭 `{hit?, miss?}`，两侧均为有限 number；缺省侧分别为 1、-1                 |
+| `anyOf/firstOf` 共同 miss    | 所有分支应用上述规则后的失败贡献必须一致，否则定义错误                        |
 
 所有分支，包括必然被跳过的 firstOf 后档，都必须在主 Driver 创建前完成结构、引用、scope、Judge、工厂和可静态确定的分值预检。未知机械插件的任意领域输入仍由插件自身负责，不能借组合名义宣称完成其静态验证。
 
@@ -217,13 +217,13 @@ no accepted branch ? fail(commonMiss)
 - 未接受任何分支时组合 FAIL，只贡献一次共同 miss；不能把所有已尝试档位的 miss 连加。
 - ERROR 不触发降级；后档标记 `skipped(error)`，不生成正常组合贡献。
 
-| 标准档结果与贡献 | 降级档结果与贡献 | 组合结果 |
-| --- | --- | --- |
-| pass / +3 | skipped | PASS，accepted=standard，+3 |
-| fail / -1 | pass / +1 | PASS，accepted=downgrade，+1 |
-| pass / 0 | pass / +1 | PASS，accepted=downgrade，+1 |
-| fail / -1 | fail / -1 | FAIL，accepted=null，共同 miss -1 |
-| ERROR | skipped(error) | ERROR，无正常贡献 |
+| 标准档结果与贡献 | 降级档结果与贡献 | 组合结果                          |
+| ---------------- | ---------------- | --------------------------------- |
+| pass / +3        | skipped          | PASS，accepted=standard，+3       |
+| fail / -1        | pass / +1        | PASS，accepted=downgrade，+1      |
+| pass / 0         | pass / +1        | PASS，accepted=downgrade，+1      |
+| fail / -1        | fail / -1        | FAIL，accepted=null，共同 miss -1 |
+| ERROR            | skipped(error)   | ERROR，无正常贡献                 |
 
 ## 5. 外层关系、错误与覆盖率
 
