@@ -39,6 +39,7 @@ x-agent-suite 是一套通用 Agent 测试套件框架：提供 driver、scenari
 | [`spec/recall.md`](./spec/recall.md)                                               | 原生 `.recall` 声明式考卷、发现与执行规则                    |
 | [`spec/recall-judge-dsl.md`](./spec/recall-judge-dsl.md)                           | 内置 Judge、断言直接计分、统一汇总与独立裁定会话             |
 | [`spec/recall-scoring.md`](./spec/recall-scoring.md)                               | Recall 断言计分正式规格、机械分值接入与统一汇总              |
+| [`spec/recall-composition-scoring.md`](./spec/recall-composition-scoring.md)   | 组合断言、allOf/anyOf/firstOf 计分与 repeat/suite 汇总             |
 | [`spec/judge.md`](./spec/judge.md)                                                 | 通用 AI Judge：批量 rubric、具名 verdict、direct/borrowed    |
 | [`spec/target-tags.md`](./spec/target-tags.md)                                     | 四层能力标签、实例与 direct/borrowed/live 决策               |
 | [`spec/driver.md`](./spec/driver.md)                                               | 子进程 / JSONL / PTY 基座                                    |

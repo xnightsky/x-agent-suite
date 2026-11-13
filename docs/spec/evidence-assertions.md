@@ -193,6 +193,6 @@ pnpm ittest:token:evidence-variables --carrier <carrier> --provider <provider> -
 
 ## 有序择档断言实施补充
 
-`turn.expect.firstOf` 与 `case.expect.firstOf` 的本次实施契约见 [有序择档断言](./recall-first-of.md)。普通兄弟断言仍全部执行且必过；每个组合档内 AND、档间按数组顺序只在合法内容失败时 fallback，首个通过后跳过本组后档。组合只提交一个顶层结果和一份 hit/共同 miss 贡献，内部原始失败保留为诊断而不独立计分；执行/缺裁定/清理错误不触发降级。evidence 节点、平铺 rubric 和主执行线性顺序保持原义。
+`turn.expect` 与 `case.expect` 的 `allOf/anyOf/firstOf` 已确认迁移契约统一见 [Recall 组合断言与计分](./recall-composition-scoring.md)。该文档当前处于文档先行阶段，运行时尚未完成迁移。普通兄弟断言仍全部执行且必过；组合只提交一个顶层结果和有效贡献，内部原始失败保留为诊断而不独立计分。执行、缺裁定与清理错误不触发降级，也不被其他分支结果吞掉。evidence 节点、平铺 rubric 和主执行线性顺序保持原义。
 
 本扩展开发与验收中，不能据此视为已获真实 token 验证。实现收口须同时通过默认零 token 回归与另行授权的真实 token 验收；报告、进度、repeat 和错误诊断同属交付范围。

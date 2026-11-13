@@ -437,8 +437,10 @@ expect:
 
 这只证明该目标下的合成接线与计分，不证明真实 Judge 准确率、模型稳定性、其他渠道或所有消费者机械插件接入；作者体验与模型方差仍需单独验证。固定 boolean 算例和 fake 接线更不能替代这些证据。
 
-## 有序择档断言实施补充
+## 组合断言与计分
 
-`turn.expect.firstOf` 与 `case.expect.firstOf` 的本次实施契约见 [有序择档断言](./recall-first-of.md)。普通兄弟断言仍全部执行且必过；每个组合档内 AND、档间按数组顺序只在合法内容失败时 fallback，首个通过后跳过本组后档。组合只提交一个顶层结果和一份 hit/共同 miss 贡献，内部原始失败保留为诊断而不独立计分；执行/缺裁定/清理错误不触发降级。evidence 节点、平铺 rubric 和主执行线性顺序保持原义。
+`turn.expect` 与 `case.expect` 的 `allOf/anyOf/firstOf` 已确认迁移契约统一见 [Recall 组合断言与计分](./recall-composition-scoring.md)。该文档当前处于文档先行阶段，运行时尚未完成迁移；其中定义分值唯一来源、组合实际贡献、共同 miss、firstOf 正贡献择档、诊断与 repeat/suite 汇总。
 
-本扩展开发与验收中，不能据此视为已获真实 token 验证。实现收口须同时通过默认零 token 回归与另行授权的真实 token 验收；报告、进度、repeat 和错误诊断同属交付范围。
+普通兄弟断言仍全部执行且必过；组合内部原始失败只保留为诊断，不摊平成额外套层计分项。执行、缺裁定与清理错误始终走 ERROR，不被任何组合结果吞掉。evidence 节点、平铺 rubric 和主执行线性顺序保持原义。
+
+新行为不能凭既有 firstOf 的真实 token 回执视为已验收。实现收口须同时通过默认零 token 回归与另行授权的真实 token 验收；报告、进度、repeat/suite 和错误诊断同属交付范围。
