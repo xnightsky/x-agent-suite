@@ -7,7 +7,7 @@ import type {
   RecallCompositePayload,
   RecallComposition,
   RecallRepeatSnapshot,
-} from "./first-of-records.ts";
+} from "./composition-records.ts";
 import {
   assertionContribution,
   type AssertionDetail,

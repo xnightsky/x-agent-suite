@@ -7,7 +7,7 @@ import {
   COMPOSITION_PREFIXES,
   parseRecallComposition,
   type RecallCompositionDefinition,
-} from "./first-of-dsl.ts";
+} from "./composition-dsl.ts";
 import type { ExpectBlock } from "@x-agent-suite/contracts";
 import {
   parseAssertionScore,

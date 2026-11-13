@@ -31,11 +31,11 @@ import {
 } from "./composition-report.ts";
 import { createRecallDriver } from "./driver.ts";
 import type { RecallResolvedExecution } from "./execution.ts";
-import { hasCompositions } from "./first-of-dsl.ts";
+import { hasCompositions } from "./composition-dsl.ts";
 import {
   RecallCompositionJournal,
   bindCompositionJournal,
-} from "./first-of-records.ts";
+} from "./composition-records.ts";
 import type { LoadedRecall } from "./load.ts";
 import type {
   RecallCaseProgress,

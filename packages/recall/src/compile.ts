@@ -5,7 +5,7 @@
 import {
   isReservedCompositionName,
   mechanicalEntries,
-} from "./first-of-dsl.ts";
+} from "./composition-dsl.ts";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type { ScenarioSpec } from "@x-agent-suite/contracts";

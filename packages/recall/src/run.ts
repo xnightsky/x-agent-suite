@@ -8,7 +8,7 @@ import type { ScenarioRepeatEvent } from "@x-agent-suite/runner";
 import { runRecallCase } from "./case-run.ts";
 import { targetOutDir } from "./report-path.ts";
 import { RecallDiagnosticError } from "./composition-report.ts";
-import type { RecallCompositionEvent } from "./first-of-records.ts";
+import type { RecallCompositionEvent } from "./composition-records.ts";
 export { targetOutDir } from "./report-path.ts";
 import type {
   Criterion,

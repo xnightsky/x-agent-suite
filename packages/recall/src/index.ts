@@ -59,7 +59,7 @@ export type {
   RecallComposition,
   RecallCompositionEvent,
   RecallRepeatSnapshot,
-} from "./first-of-records.ts";
+} from "./composition-records.ts";
 export {
   summarizeRecallRepeatScores,
   summarizeRecallSuiteScores,

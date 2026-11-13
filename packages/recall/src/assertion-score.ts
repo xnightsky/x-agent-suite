@@ -7,7 +7,7 @@ import {
   mechanicalEntries,
   type RecallCompositionBranch,
   type RecallCompositionKind,
-} from "./first-of-dsl.ts";
+} from "./composition-dsl.ts";
 import type { ExpectBlock } from "@x-agent-suite/contracts";
 import {
   assertionContribution,

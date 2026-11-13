@@ -1,4 +1,4 @@
-/** @module @x-agent-suite/recall/first-of-dsl
+/** @module @x-agent-suite/recall/composition-dsl
  * 组合评价点结构、保留名与编译路径；不解释领域判据输入，不执行条件。
  */
 import {

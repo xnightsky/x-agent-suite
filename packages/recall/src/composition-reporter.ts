@@ -2,7 +2,7 @@
  * 同源事件的分级文本视图；不求值、不重新选择档位。
  */
 import type { RecallReporterOutput, RecallVerbosity } from "./reporter.ts";
-import type { RecallCompositionEvent } from "./first-of-records.ts";
+import type { RecallCompositionEvent } from "./composition-records.ts";
 /** 渲染一个择档事件；0 级依旧只使用 case 结论。 */
 export function writeCompositionEvent(
   context: { verbosity: RecallVerbosity; output: RecallReporterOutput },

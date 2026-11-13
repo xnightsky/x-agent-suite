@@ -18,7 +18,7 @@ import type { RecallRepeatScoreSummary } from "./score-summary.ts";
 import type {
   RecallComposition,
   RecallCompositionJournal,
-} from "./first-of-records.ts";
+} from "./composition-records.ts";
 function detailMarkdown(compositions: readonly RecallComposition[]): string {
   return compositions
     .flatMap((composition) => [

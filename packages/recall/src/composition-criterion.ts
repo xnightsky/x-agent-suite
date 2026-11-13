@@ -1,4 +1,4 @@
-/** @module @x-agent-suite/recall/first-of-criterion
+/** @module @x-agent-suite/recall/composition-criterion
  * 局部组合评价点是普通 Criterion，档内复用 runCriteria，不引入执行引擎。
  * 不变量：复用同一主观测；Judge 仅在分支开始后创建隔离 client 与批次。
  */
@@ -34,7 +34,7 @@ import {
   compositionKindOfKey,
   type RecallCompositionBranch,
   type RecallCompositionKind,
-} from "./first-of-dsl.ts";
+} from "./composition-dsl.ts";
 import {
   compositeAssertion,
   compositionIdentity,
@@ -42,7 +42,7 @@ import {
   type RecallCompositePayload,
   type RecallComposition,
   type RecallCompositionJournal,
-} from "./first-of-records.ts";
+} from "./composition-records.ts";
 import {
   recallCompositionBranchMiss,
   recallCompositionMechanicalAssertionScore,

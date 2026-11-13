@@ -1,6 +1,6 @@
 import type { Redactor, ReportPaths } from "@x-agent-suite/contracts";
 import type { RecallJudgeCleanup } from "./judge-driver.ts";
-/** @module @x-agent-suite/recall/first-of-records
+/** @module @x-agent-suite/recall/composition-records
  * Recall 本地择档账本；先记录后通知，不修改被测 Observation。
  * 不变量：账本按 execution/spec 隔离；阶段事件是深拷贝快照，不受后续清理影响。
  */
@@ -19,7 +19,7 @@ import {
   compositionKindOfKey,
   type RecallCompositionBranch,
   type RecallCompositionKind,
-} from "./first-of-dsl.ts";
+} from "./composition-dsl.ts";
 /** 分支原始诊断，没有独立有效贡献。 */
 export interface RecallFirstOfBranchTrace extends FirstOfBranchTrace {
   readonly conditions?: readonly CriterionOutcome[];
