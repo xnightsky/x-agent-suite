@@ -3,9 +3,10 @@
  * turn/case 断言 DSL 与内部 Judge rubric 展开；作者分值不进入 Judge 裁定输入。
  */
 import {
-  FIRST_OF_PREFIX,
-  parseRecallFirstOf,
-  type RecallFirstOfDefinition,
+  COMPOSITION_KINDS,
+  COMPOSITION_PREFIXES,
+  parseRecallComposition,
+  type RecallCompositionDefinition,
 } from "./first-of-dsl.ts";
 import type { ExpectBlock } from "@x-agent-suite/contracts";
 import {
@@ -40,7 +41,9 @@ export interface RecallJudgeDefinition {
 /** 校验后的 case expect；机械值保持原始引用，judge 为内置归一配置。 */
 export type RecallCaseExpectDefinition = Record<string, unknown> & {
   readonly judge?: RecallJudgeDefinition;
-  readonly firstOf?: RecallFirstOfDefinition;
+  readonly allOf?: RecallCompositionDefinition;
+  readonly anyOf?: RecallCompositionDefinition;
+  readonly firstOf?: RecallCompositionDefinition;
 };
 
 /** case expect 编译结果：Runner 输入与 Recall 私有 Judge 元数据。 */
@@ -147,41 +150,49 @@ export function parseRecallCaseExpect(
   value: unknown,
   filePath: string,
   at: string,
-  condition = false,
+  branch?: { readonly explicitScore: boolean },
 ): RecallCaseExpectDefinition | undefined {
   if (value === undefined) return undefined;
   if (!isRecord(value)) throw schemaError(filePath, at + " 必须是对象");
   if (Object.hasOwn(value, "decision")) {
     throw schemaError(filePath, at + ".decision 不属于一期 Recall DSL");
   }
-  if (condition && Object.hasOwn(value, "firstOf"))
-    throw schemaError(filePath, at + " 不支持嵌套 firstOf");
+  if (branch && COMPOSITION_KINDS.some((kind) => Object.hasOwn(value, kind)))
+    throw schemaError(filePath, at + " 不支持嵌套组合");
   const judge =
     value.judge === undefined
       ? undefined
       : parseJudge(value.judge, filePath, at + ".judge");
   if (
-    condition &&
+    branch?.explicitScore &&
     Object.values(judge?.rubrics ?? {}).some((item) => item.score !== undefined)
   )
-    throw schemaError(filePath, at + " 档内 rubric 不允许 score");
-  const firstOf =
-    value.firstOf === undefined
-      ? undefined
-      : parseRecallFirstOf(
-          value.firstOf,
-          (input, path) => {
-            const parsed = parseRecallCaseExpect(input, filePath, path, true);
-            if (!parsed)
-              throw schemaError(filePath, path + " 必须是非空 expect");
-            return parsed;
-          },
-          at + ".firstOf",
-        );
+    throw schemaError(
+      filePath,
+      at + " 显式分支 score 与内部 rubric score 互斥",
+    );
+  const compositions = Object.fromEntries(
+    COMPOSITION_KINDS.flatMap((kind) => {
+      if (value[kind] === undefined) return [];
+      const parsed = parseRecallComposition(
+        kind,
+        value[kind],
+        (input, path, explicitScore) => {
+          const child = parseRecallCaseExpect(input, filePath, path, {
+            explicitScore,
+          });
+          if (!child) throw schemaError(filePath, path + " 必须是非空 expect");
+          return child;
+        },
+        at + "." + kind,
+      );
+      return [[kind, parsed]];
+    }),
+  );
   return {
     ...value,
     ...(judge ? { judge } : {}),
-    ...(firstOf ? { firstOf } : {}),
+    ...compositions,
   } as RecallCaseExpectDefinition;
 }
 
@@ -197,9 +208,10 @@ export function compileRecallCaseExpect(
   if (!definition) return {};
   const entries: [string, unknown][] = [];
   for (const [name, value] of Object.entries(definition)) {
-    if (name === "firstOf") {
-      for (const [point, branches] of Object.entries(definition.firstOf!))
-        entries.push([FIRST_OF_PREFIX + point, branches]);
+    const kind = COMPOSITION_KINDS.find((candidate) => candidate === name);
+    if (kind) {
+      for (const [point, branches] of Object.entries(definition[kind]!))
+        entries.push([COMPOSITION_PREFIXES[kind] + point, branches]);
       continue;
     }
     if (name !== "judge") {

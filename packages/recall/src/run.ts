@@ -27,6 +27,11 @@ import {
   type RecallLoadCore,
 } from "./load.ts";
 import type { RecallAssertionArtifact } from "./assertion-results.ts";
+import {
+  summarizeRecallSuiteScores,
+  type RecallRepeatScoreSummary,
+  type RecallSuiteScoreSummary,
+} from "./score-summary.ts";
 
 /** 单个 case 的成功执行与报告位置。 */
 export interface RecallCaseRun {
@@ -34,6 +39,8 @@ export interface RecallCaseRun {
   readonly scenarioId: string;
   /** 行为判据是否全部通过。 */
   readonly hardPass: boolean;
+  /** 当前 case 的 repeat 计分汇总。 */
+  readonly score: RecallRepeatScoreSummary;
   /** 双格式报告路径。 */
   readonly reports: ReportPaths;
   /** 当前 target 的 carrier。 */
@@ -52,6 +59,7 @@ export interface RecallInfraFailure {
   readonly error: Error;
   /** 使用组合的 case 的错误诊断路径。 */
   readonly reports?: ReportPaths;
+  readonly scoreSummary?: RecallRepeatScoreSummary;
   /** 当前 target 的 carrier。 */
   readonly carrier: string;
   /** 当前访问模式。 */
@@ -64,6 +72,8 @@ export interface RecallRunResult {
   readonly runs: readonly RecallCaseRun[];
   /** 基础设施失败。 */
   readonly failures: readonly RecallInfraFailure[];
+  /** target×case 宏平均与覆盖统计。 */
+  readonly summary: RecallSuiteScoreSummary;
 }
 
 /** 当前 target × case 的稳定进度归因；index/total 为 1-based 展示序号。 */
@@ -230,7 +240,10 @@ export async function runRecall(
           carrier: execution.target.carrier,
           mode: execution.mode,
           ...(cause instanceof RecallDiagnosticError
-            ? { reports: cause.reports }
+            ? {
+                scoreSummary: cause.scoreSummary,
+                ...(cause.reports ? { reports: cause.reports } : {}),
+              }
             : {}),
         };
         failures.push(failure);
@@ -243,7 +256,18 @@ export async function runRecall(
       }
     }
   }
-  const result = { runs, failures };
+  const result = {
+    runs,
+    failures,
+    summary: summarizeRecallSuiteScores(
+      total,
+      runs.map((run) => run.score),
+      {
+        invalid: failures.length,
+        skipped: total - runs.length - failures.length,
+      },
+    ),
+  };
   listener?.({
     type: "run-completed",
     result,

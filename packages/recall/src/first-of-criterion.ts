@@ -1,13 +1,17 @@
 /** @module @x-agent-suite/recall/first-of-criterion
- * 局部有序评价点是一个普通 Criterion，档内复用 runCriteria，不引入执行引擎。
- * 不变量：复用同一主观测；Judge 仅在档位开始后创建隔离 client 与批次。
+ * 局部组合评价点是普通 Criterion，档内复用 runCriteria，不引入执行引擎。
+ * 不变量：复用同一主观测；Judge 仅在分支开始后创建隔离 client 与批次。
  */
 import {
+  assertionContribution,
   assertCriterionResult,
+  evaluateAllOf,
+  evaluateAnyOf,
   evaluateFirstOf,
   judgeAssertionResults,
-  type FirstOfBranch,
-  type FirstOfEvent,
+  type CompositionBranch,
+  type CompositionBranchResult,
+  type CompositionEvent,
 } from "@x-agent-suite/assertions";
 import type {
   Criterion,
@@ -17,6 +21,7 @@ import type {
   SessionCriterionContext,
   TurnObservation,
   TurnCriterionContext,
+  ScenarioSpec,
 } from "@x-agent-suite/contracts";
 import type { JudgeOutcome } from "@x-agent-suite/judge";
 import { runCriteria } from "@x-agent-suite/observation";
@@ -25,7 +30,11 @@ import {
   recallJudgeCriterionName,
 } from "./assertion-dsl.ts";
 import type { AssembleRecallCriteriaOptions } from "./criterion-assembly.ts";
-import { isFirstOfKey, type RecallFirstOfBranch } from "./first-of-dsl.ts";
+import {
+  compositionKindOfKey,
+  type RecallCompositionBranch,
+  type RecallCompositionKind,
+} from "./first-of-dsl.ts";
 import {
   compositeAssertion,
   compositionIdentity,
@@ -35,23 +44,33 @@ import {
   type RecallCompositionJournal,
 } from "./first-of-records.ts";
 import {
+  recallCompositionBranchMiss,
+  recallCompositionMechanicalAssertionScore,
+} from "./assertion-score.ts";
+import {
   createRecallJudgeModelClient,
   type CreateRecallJudgeModelClientOptions,
+  type RecallJudgeCleanup,
 } from "./judge-driver.ts";
 import { evaluateRecallJudgeBatch } from "./judge-criterion.ts";
+
 interface BranchDetails {
   conditions: CriterionOutcome[];
+  cleanup: RecallJudgeCleanup[];
   judge?: JudgeOutcome;
   onCleanup?: CreateRecallJudgeModelClientOptions["onCleanup"];
   onRedactor?: CreateRecallJudgeModelClientOptions["onRedactor"];
 }
+
 interface Position {
   key: string;
+  kind: RecallCompositionKind;
   scope: "turn" | "session";
   turn?: TurnObservation;
   session: SessionObservation;
-  branches: readonly RecallFirstOfBranch[];
+  branches: readonly RecallCompositionBranch[];
 }
+
 function captureCriteria(
   criteria: readonly Criterion[],
   details: BranchDetails,
@@ -92,8 +111,9 @@ function captureCriteria(
         },
   );
 }
+
 function createBranchJudgeCriteria(
-  branch: RecallFirstOfBranch,
+  branch: RecallCompositionBranch,
   position: Position,
   options: AssembleRecallCriteriaOptions,
   details: BranchDetails,
@@ -101,7 +121,7 @@ function createBranchJudgeCriteria(
   let pending: ReturnType<typeof judgeAssertionResults> | undefined;
   const results = async () => {
     if (pending) return pending;
-    if (!branch.expect.judge) throw new Error("档内 Judge 声明缺失");
+    if (!branch.expect.judge) throw new Error("组合分支 Judge 声明缺失");
     const output = position.turn?.text ?? position.session.turns.at(-1)?.text;
     if (output === undefined) throw new Error("Recall 组合缺少评价输出");
     const client = createRecallJudgeModelClient({
@@ -114,7 +134,7 @@ function createBranchJudgeCriteria(
       branch.expect.judge,
       client,
     );
-    pending = judgeAssertionResults(details.judge, "Recall firstOf Judge");
+    pending = judgeAssertionResults(details.judge, "Recall 组合 Judge");
     return pending;
   };
   return Object.keys(branch.expect.judge?.rubrics ?? {}).map(
@@ -133,13 +153,40 @@ function createBranchJudgeCriteria(
     }),
   );
 }
-async function evaluateBranch(
-  branch: RecallFirstOfBranch,
+
+function leafContribution(
+  branch: RecallCompositionBranch,
   position: Position,
+  branchIndex: number,
+  spec: ScenarioSpec,
+  options: AssembleRecallCriteriaOptions,
+  outcome: CriterionOutcome,
+): number {
+  const rubric = Object.entries(branch.expect.judge?.rubrics ?? {}).find(
+    ([name]) => recallJudgeCriterionName(name) === outcome.name,
+  );
+  return rubric
+    ? assertionContribution(outcome.pass, rubric[1].score)
+    : recallCompositionMechanicalAssertionScore(
+        options.execution,
+        spec,
+        position.scope,
+        position.turn?.index,
+        position.key,
+        branchIndex,
+        outcome,
+      );
+}
+
+async function evaluateBranch(
+  branch: RecallCompositionBranch,
+  position: Position,
+  branchIndex: number,
+  spec: ScenarioSpec,
   criteria: readonly Criterion[],
   options: AssembleRecallCriteriaOptions,
   details: BranchDetails,
-): Promise<CriterionResult> {
+): Promise<CompositionBranchResult> {
   const compiled = compileRecallCaseExpect(branch.expect);
   const judgeCriteria = createBranchJudgeCriteria(
     branch,
@@ -159,7 +206,7 @@ async function evaluateBranch(
       : { sessionExpect: compiled.expect }),
   });
   const pass = children.every((item) => item.pass);
-  return {
+  const result: CriterionResult = {
     pass,
     score: pass ? 1 : 0,
     reason: pass
@@ -169,22 +216,35 @@ async function evaluateBranch(
           .map((item) => item.name + ": " + item.reason)
           .join("；"),
   };
+  if (branch.score !== undefined) return result;
+  return {
+    ...result,
+    contribution: children.reduce(
+      (sum, outcome) =>
+        sum +
+        leafContribution(branch, position, branchIndex, spec, options, outcome),
+      0,
+    ),
+  };
 }
+
 function compositionSnapshot(
   identity: ReturnType<typeof compositionIdentity>,
-  event: FirstOfEvent,
+  event: CompositionEvent,
   details: ReadonlyMap<number, BranchDetails>,
+  commonMiss: number | undefined,
 ): RecallComposition {
   return {
     ...identity,
     accepted: event.accepted,
+    ...(commonMiss === undefined ? {} : { commonMiss }),
     status:
       event.phase === "composition-error"
         ? "error"
         : event.phase === "composition-completed"
-          ? event.accepted === null
-            ? "failed"
-            : "passed"
+          ? event.result?.pass
+            ? "passed"
+            : "failed"
           : "running",
     branches: event.branches.map((branch) => {
       const captured = details.get(branch.index);
@@ -193,6 +253,7 @@ function compositionSnapshot(
         ...(captured
           ? {
               conditions: captured.conditions,
+              cleanup: captured.cleanup,
               ...(captured.judge ? { judge: captured.judge } : {}),
             }
           : {}),
@@ -200,29 +261,56 @@ function compositionSnapshot(
     }),
   };
 }
+
 function lazyBranches(
   position: Position,
+  spec: ScenarioSpec,
   criteria: readonly Criterion[],
   options: AssembleRecallCriteriaOptions,
   details: Map<number, BranchDetails>,
   journal: RecallCompositionJournal | undefined,
   assertionName: string,
-): FirstOfBranch[] {
+): CompositionBranch[] {
   return position.branches.map((branch, index) => ({
     name: branch.name,
-    ...(branch.score ? { score: branch.score } : {}),
+    ...(branch.score === undefined ? {} : { score: branch.score }),
+    ...(branch.score === undefined && position.kind !== "allOf"
+      ? {
+          miss: recallCompositionBranchMiss(
+            options.execution,
+            spec,
+            position.scope,
+            position.turn?.index,
+            position.key,
+            branch,
+            index,
+          ),
+        }
+      : {}),
     evaluate: async () => {
       const captured: BranchDetails = {
         conditions: [],
-        onCleanup: (event) =>
-          journal?.addCleanup({ ...event, assertionName, branchIndex: index }),
+        cleanup: [],
+        onCleanup: (event) => {
+          captured.cleanup.push(event);
+          journal?.addCleanup({ ...event, assertionName, branchIndex: index });
+        },
         onRedactor: (redact) => journal?.redactors.push(redact),
       };
       details.set(index, captured);
-      return evaluateBranch(branch, position, criteria, options, captured);
+      return evaluateBranch(
+        branch,
+        position,
+        index,
+        spec,
+        criteria,
+        options,
+        captured,
+      );
     },
   }));
 }
+
 async function evaluateComposition(
   position: Position,
   criteria: readonly Criterion[],
@@ -242,14 +330,32 @@ async function evaluateComposition(
   let composition: RecallComposition | undefined;
   const branches = lazyBranches(
     position,
+    spec,
     criteria,
     options,
     details,
     journal,
     identity.assertionName,
   );
-  const result = await evaluateFirstOf(branches, (event) => {
-    composition = compositionSnapshot(identity, event, details);
+  const evaluate = {
+    allOf: evaluateAllOf,
+    anyOf: evaluateAnyOf,
+    firstOf: evaluateFirstOf,
+  }[position.kind];
+  const commonMiss =
+    position.kind === "allOf"
+      ? undefined
+      : recallCompositionBranchMiss(
+          options.execution,
+          spec,
+          position.scope,
+          position.turn?.index,
+          position.key,
+          position.branches[0]!,
+          0,
+        );
+  const result = await evaluate(branches, (event) => {
+    composition = compositionSnapshot(identity, event, details, commonMiss);
     journal?.record(event, composition, event.result);
   });
   if (!composition) throw new Error("Recall 组合未产出完整结论");
@@ -263,21 +369,27 @@ async function evaluateComposition(
     },
   };
 }
-/** 装配 scope 局部组合；共享函数而不共享分支裁定或缓存。 */
-export function createRecallFirstOfCriteria(
+
+/** 装配 turn/session 组合；共享函数而不共享分支裁定或缓存。 */
+export function createRecallCompositionCriteria(
   options: AssembleRecallCriteriaOptions,
   criteria: readonly Criterion[],
 ): Criterion[] {
   const keys = new Map<string, "turn" | "session">();
   for (const spec of options.scenarios) {
-    for (const key of Object.keys(spec.expect ?? {}).filter(isFirstOfKey))
+    for (const key of Object.keys(spec.expect ?? {}).filter(
+      (name) => compositionKindOfKey(name) !== undefined,
+    ))
       keys.set("session:" + key, "session");
     for (const turn of spec.turns)
-      for (const key of Object.keys(turn.expect ?? {}).filter(isFirstOfKey))
+      for (const key of Object.keys(turn.expect ?? {}).filter(
+        (name) => compositionKindOfKey(name) !== undefined,
+      ))
         keys.set("turn:" + key, "turn");
   }
   return [...keys].map(([fullKey, scope]): Criterion => {
     const key = fullKey.slice(scope.length + 1);
+    const kind = compositionKindOfKey(key)!;
     return scope === "turn"
       ? {
           name: key,
@@ -286,10 +398,11 @@ export function createRecallFirstOfCriteria(
             evaluateComposition(
               {
                 key,
+                kind,
                 scope,
                 turn,
                 session: context.session,
-                branches: context.expect as readonly RecallFirstOfBranch[],
+                branches: context.expect as readonly RecallCompositionBranch[],
               },
               criteria,
               options,
@@ -302,9 +415,10 @@ export function createRecallFirstOfCriteria(
             evaluateComposition(
               {
                 key,
+                kind,
                 scope,
                 session,
-                branches: context.expect as readonly RecallFirstOfBranch[],
+                branches: context.expect as readonly RecallCompositionBranch[],
               },
               criteria,
               options,
@@ -312,3 +426,6 @@ export function createRecallFirstOfCriteria(
         };
   });
 }
+
+/** 兼容既有装配名；实现同时支持全部组合类型。 */
+export const createRecallFirstOfCriteria = createRecallCompositionCriteria;

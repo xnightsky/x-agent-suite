@@ -7,7 +7,7 @@
  * - 工厂返回的 name/scope 必须与声明严格一致，装配不得增减判据或改变考卷选择；
  * - 装配错误只含 scope:name 与阶段（create / 形状校验），不回显 context/config 或插件异常内容。
  */
-import { createRecallFirstOfCriteria } from "./first-of-criterion.ts";
+import { createRecallCompositionCriteria } from "./first-of-criterion.ts";
 import { mechanicalEntries } from "./first-of-dsl.ts";
 import type { Criterion, ScenarioSpec } from "@x-agent-suite/contracts";
 import type {
@@ -150,6 +150,6 @@ export async function assembleRecallCriteria(
   return [
     ...assembled,
     ...createRecallJudgeCriteria(options),
-    ...createRecallFirstOfCriteria(options, assembled),
+    ...createRecallCompositionCriteria(options, assembled),
   ];
 }

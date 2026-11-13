@@ -11,7 +11,7 @@ tags: [recall, assertions, first-of, scoring]
 
 ## 迁移结论
 
-已确认的组合扩展将 firstOf 从“接受首个原始 pass 档”迁移为“接受首个实际贡献大于 0 的档”，并补齐 allOf、anyOf、repeat/suite 统计。主要影响：
+组合扩展已将 firstOf 从“接受首个原始 pass 档”迁移为“接受首个实际贡献大于 0 的档”，并补齐 allOf、anyOf、repeat/suite 统计。主要影响：
 
 - hit=0 或负 hit 的原始通过档不再抢占，继续执行后档；
 - 分支省略 score 且内部有多个条件时，采用内部实际贡献之和，不再固定为 +1/-1；
@@ -24,4 +24,4 @@ tags: [recall, assertions, first-of, scoring]
 
 旧 firstOf 的运行时与真实验证记录仅证明迁移前行为，不能作为新组合或新 firstOf 语义的验收证据。历史回执保留在 [first-of 场景](../../../integrations/itrepos/recall-scoring/first-of/README.md#本次真实验收回执)；其中已知的 Judge 误判仍按原记录保留，不因文档迁移改写。
 
-新行为实施完成后，必须按新规格提供可运行考卷、默认零 token 回归和另行授权的真实 token 验收；在此之前不得宣称本文所述迁移已经完整交付。
+新行为的组合原语、Recall DSL、诊断、repeat/suite 汇总和默认零 token 回归已交付，完整 `pnpm check` 已通过；可运行考卷见 [composition 场景](../../../integrations/itrepos/recall-scoring/composition/README.md)。真实 token 验收仍未获授权，状态为“实现完成，真实验收待完成”。

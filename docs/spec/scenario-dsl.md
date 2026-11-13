@@ -106,4 +106,4 @@ expected: {
 
 ## Recall 的局部择档评价
 
-`allOf/anyOf/firstOf` 是 [Recall 组合断言与计分](./recall/recall-composition-scoring.md) 的局部评价结构，不改变 ScenarioSpec 控制流；该扩展当前处于文档先行阶段，运行时尚未完成迁移。组合编译为一个普通 Criterion，Runner 仍线性发送一次主任务、每轮评价后再 send、主会话关闭后评价 session；外层断言仍 AND，组合内部失败只作原始诊断，不摊成独立必过项。执行错误始终中止，不启用另一套任务执行或条件分支引擎。
+`allOf/anyOf/firstOf` 是 [Recall 组合断言与计分](./recall/recall-composition-scoring.md) 的局部评价结构，不改变 ScenarioSpec 控制流；该扩展的零 token 实现与可运行考卷已交付，真实 token 验收仍待授权。组合编译为一个普通 Criterion，Runner 仍线性发送一次主任务、每轮评价后再 send、主会话关闭后评价 session；外层断言仍 AND，组合内部失败只作原始诊断，不摊成独立必过项。执行错误始终中止，不启用另一套任务执行或条件分支引擎。

@@ -439,7 +439,7 @@ expect:
 
 ## 组合断言与计分
 
-`turn.expect` 与 `case.expect` 的 `allOf/anyOf/firstOf` 已确认迁移契约统一见 [Recall 组合断言与计分](./recall-composition-scoring.md)。该文档当前处于文档先行阶段，运行时尚未完成迁移；其中定义分值唯一来源、组合实际贡献、共同 miss、firstOf 正贡献择档、诊断与 repeat/suite 汇总。
+`turn.expect` 与 `case.expect` 的 `allOf/anyOf/firstOf` 契约统一见 [Recall 组合断言与计分](./recall-composition-scoring.md)。组合原语、DSL、诊断与 repeat/suite 汇总已实现，默认零 token 回归与可运行考卷已交付；真实 token 验收仍待授权。
 
 普通兄弟断言仍全部执行且必过；组合内部原始失败只保留为诊断，不摊平成额外套层计分项。执行、缺裁定与清理错误始终走 ERROR，不被任何组合结果吞掉。evidence 节点、平铺 rubric 和主执行线性顺序保持原义。
 

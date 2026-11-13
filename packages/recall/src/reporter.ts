@@ -173,6 +173,7 @@ function writeRunCompleted(
   const passed = event.result.runs.filter((run) => run.hardPass).length;
   const failed = event.result.runs.length - passed;
   const errors = event.result.failures.length;
+  const summary = event.result.summary;
   context.output.stdout(
     "SUMMARY total=" +
       (event.result.runs.length + errors) +
@@ -183,7 +184,19 @@ function writeRunCompleted(
       " errors=" +
       errors +
       " durationMs=" +
-      event.durationMs,
+      event.durationMs +
+      " coverage=" +
+      summary.coverage +
+      " invalidRate=" +
+      summary.invalidRate +
+      " passRate=" +
+      summary.passRate +
+      " rawScore=" +
+      summary.rawScore +
+      " pass@k=" +
+      summary.passAtK +
+      " pass^k=" +
+      summary.passAllK,
   );
 }
 

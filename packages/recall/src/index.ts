@@ -60,3 +60,11 @@ export type {
   RecallCompositionEvent,
   RecallRepeatSnapshot,
 } from "./first-of-records.ts";
+export {
+  summarizeRecallRepeatScores,
+  summarizeRecallSuiteScores,
+  type RecallRepeatScoreInput,
+  type RecallRepeatScoreSummary,
+  type RecallScoreCountOptions,
+  type RecallSuiteScoreSummary,
+} from "./score-summary.ts";

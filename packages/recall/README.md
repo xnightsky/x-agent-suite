@@ -107,18 +107,19 @@ TTY 下自动启用图标、颜色、case 运行状态行和最终汇总框；�
 
 依赖 `assertions`（Judge 结果与直接贡献原语）、`contracts`（类型）、`judge`（批量裁定核心）、`llm-fixture`（live target 与 TargetTags 决策）、`harness`（宿主 hooks）、`observation`（判据调度与报告）、`runner`（复用 Runner）、`yaml`；`criteria` / `driver` / `sandbox` 只作测试期 devDependency。本包不读写消费者仓库，也不感知其目录结构。
 
-## 局部有序择档
+## 组合断言与计分汇总
 
-`turn.expect.firstOf.<评价点>` 与 `case.expect.firstOf.<评价点>` 接受至少两档的有序数组，每档为 `{ name, score?, expect }`。档内条件全部评价且 AND，只有齐全合法的内容 false 才进入后档；首个通过后跳过本组后档，不预创建 Judge、不影响兄弟断言。
+`turn.expect` 与 `case.expect` 支持 `allOf/anyOf/firstOf.<评价点>`。allOf 至少一个分支并逐项求和；anyOf 至少两个候选，通过项取最高贡献、全失败取共同 miss；firstOf 按顺序接受首个实际贡献大于 0 的档位，hit=0 或负 hit 继续，接受后跳过后档。普通兄弟断言仍全部执行且必过。
 
-- 各档有效 miss 必须一致；默认 `{ hit: 1, miss: -1 }`，支持 YAML 锚点。子 rubric 不允许 score，避免重复计分。
-- 一个组合只产生一个顶层结果与唯一贡献；低档通过不删除标准档 false。执行、缺裁定、解析和清理错误仍为 ERROR，不降级。
-- JSON 的 `assertions` 记录有效贡献，`compositions` 记录诊断树，`repeats` 记录各次完整结果；ERROR 以独立 diagnostic 文档保全，不伪造正常成绩。
-- `firstOf`、`firstOf.*` 和内部组合前缀为保留名；注册判据重名会在主执行前显式拒绝，旧消费者须先迁移而不能静默换含义。
+- 分支显式 `score` 时该分支是原子计分单位，内部 rubric 不得重复配置 score；省略分支 score 时，按内部叶子的实际贡献求和。anyOf/firstOf 的共同 miss 在主执行前校验。
+- 每个组合只产生一个顶层结果与有效贡献，内部原始 false、accepted/commonMiss、分支贡献、skipped 和清理信息保留在 `compositions`；执行、缺裁定、解析和清理错误仍为 ERROR。
+- `artifact.scoreSummary` 与 `RecallCaseRun.score` 汇总 repeat 的 valid/invalid/skipped、coverage、passRate、rawScore mean/min/max 和 pass@k/pass^k；`RecallRunResult.summary` 对 target×case 做宏平均，空统计为 null。
+- 三种组合名、point 前缀和内部编译键均为保留名；注册判据重名会在主执行前显式拒绝。
 
-完整语法见 [firstOf 规格](../../docs/spec/recall/recall-first-of.md)，可运行的合成示例与真实验收入口见 [firstOf 场景](../../integrations/itrepos/recall-scoring/first-of/README.md)。默认零 token 验证：
+完整语法见 [组合断言与计分](../../docs/spec/recall/recall-composition-scoring.md)，可运行示例与精确 token 入口见 [composition 场景](../../integrations/itrepos/recall-scoring/composition/README.md)。默认零 token 验证：
 
 ```sh
+pnpm exec tsx --test scripts/tests/recall-composition-config.test.ts
 pnpm exec tsx --test scripts/tests/recall-first-of-config.test.ts
 ```
 

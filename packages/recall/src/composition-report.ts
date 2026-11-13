@@ -14,6 +14,7 @@ import {
   writeScenarioReports,
 } from "@x-agent-suite/observation";
 import type { RecallAssertionArtifact } from "./assertion-results.ts";
+import type { RecallRepeatScoreSummary } from "./score-summary.ts";
 import type {
   RecallComposition,
   RecallCompositionJournal,
@@ -24,12 +25,15 @@ function detailMarkdown(compositions: readonly RecallComposition[]): string {
       `### ${composition.assertionName}: ${composition.status} / accepted=${composition.accepted ?? "null"}`,
       "",
       ...composition.branches.flatMap((branch) => [
-        `- [${branch.index}] ${branch.name}: ${branch.status}${branch.skipReason ? " (" + branch.skipReason + ")" : ""}`,
+        `- [${branch.index}] ${branch.name}: ${branch.status}${branch.skipReason ? " (" + branch.skipReason + ")" : ""}, contribution=${branch.contribution ?? "null"}, scoreSource=${branch.scoreSource ?? "null"}`,
         ...(branch.conditions ?? []).map(
           (condition) =>
             `  - ${condition.name}: pass=${condition.pass}, rawScore=${condition.score}; ${condition.reason}`,
         ),
         ...(branch.judge ? ["  - Judge: " + JSON.stringify(branch.judge)] : []),
+        ...(branch.cleanup ?? []).map(
+          (cleanup) => "  - cleanup: " + JSON.stringify(cleanup),
+        ),
       ]),
       "",
     ])
@@ -52,20 +56,24 @@ export async function writeRecallReports(
         .map((row) => {
           const artifact = row.result.artifact;
           const repeats = artifact.repeats ?? [{ index: 0, ...artifact }];
-          return repeats
-            .map(
-              (repeat) =>
-                `## Repeat ${repeat.index}\n\nrawScore=${repeat.rawScore}\n\n` +
-                (repeat.assertions ?? [])
-                  .map(
-                    (item) =>
-                      `- ${item.name}: ${item.source}, pass=${item.pass}, contribution=${item.score}`,
-                  )
-                  .join("\n") +
-                "\n\n" +
-                detailMarkdown(repeat.compositions ?? []),
-            )
-            .join("\n");
+          return (
+            repeats
+              .map(
+                (repeat) =>
+                  `## Repeat ${repeat.index}\n\nrawScore=${repeat.rawScore}\n\n` +
+                  (repeat.assertions ?? [])
+                    .map(
+                      (item) =>
+                        `- ${item.name}: ${item.source}, pass=${item.pass}, contribution=${item.score}`,
+                    )
+                    .join("\n") +
+                  "\n\n" +
+                  detailMarkdown(repeat.compositions ?? []),
+              )
+              .join("\n") +
+            "\n\nscoreSummary=" +
+            JSON.stringify(artifact.scoreSummary)
+          );
         })
         .join("\n"),
   });
@@ -89,7 +97,8 @@ function errorDetails(cause: unknown, seen = new Set<unknown>()): unknown {
 export class RecallDiagnosticError extends Error {
   constructor(
     cause: Error,
-    readonly reports: ReportPaths,
+    readonly reports: ReportPaths | undefined,
+    readonly scoreSummary: RecallRepeatScoreSummary,
   ) {
     super(cause.message, { cause });
     this.name = cause.name;
@@ -100,6 +109,7 @@ export async function writeRecallErrorDiagnostic(
   journal: RecallCompositionJournal,
   cause: unknown,
   options: WriteReportsOptions,
+  scoreSummary: RecallRepeatScoreSummary,
 ): Promise<ReportPaths> {
   journal.fail();
   const writeOptions = {
@@ -109,6 +119,7 @@ export async function writeRecallErrorDiagnostic(
   return journal.persistDiagnostic(() => {
     const value = {
       status: "error",
+      repeatSummary: scoreSummary,
       repeatIndex: journal.repeatIndex,
       repeatCount: journal.repeatCount,
       completedRepeats: journal.repeats,

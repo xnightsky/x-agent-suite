@@ -129,3 +129,9 @@ pnpm ittest:token:recall-scoring \
 ## 局部有序择档
 
 新增独立 [first-of 场景](./first-of/README.md)：标准 +3、降级 +1、全失败 -1 的单次有效贡献，档外证据仍必过；含可运行考卷、合成规则、零 token 官方 CLI 回归和独立 token 入口。与本页旧计分考卷分别计预算，firstOf 的真实 token 验收尚未进行。
+
+## 组合断言与 repeat/suite
+
+新增独立 [composition 场景](./composition/README.md)：覆盖 allOf 求和、anyOf 多命中取最高与共同 miss、firstOf 首个正贡献、hit=0 继续、内部叶子计分及 repeat/suite 宏平均。两个 case 在 repeat=2 下的预期 rawScore 分别为 12 和 4，suite passRate=0.5、rawScore=8、pass@k=0.5、pass^k=0.5。
+
+默认零 token 回归为 `pnpm exec tsx --test scripts/tests/recall-composition-config.test.ts`；真实验收入口为 `pnpm ittest:token:recall-composition-scoring`，须另行授权唯一 target、4 次主 send + 32 次 Judge 的 36 次逻辑调用预算与费用。当前真实验收待完成，不能引用本页其他考卷的历史实测替代。

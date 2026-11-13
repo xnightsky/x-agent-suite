@@ -136,8 +136,10 @@ pnpm --filter @x-agent-suite/assertions test
 - [通用 AI Judge](../../docs/spec/evaluation/judge.md)：AI 断言的底层执行器
 - [打包与分发](../../docs/spec/distribution/packaging.md)：聚合子路径机制
 
-## 有序择档原语
+## 组合断言原语
 
-`evaluateFirstOf(branches, onEvent?)` 顺序调用懒分支，只有合法的 `pass=false` 才继续；首个通过短路，任何异常或非法结果都抛出。返回原始 0/1 结果与唯一 `contribution`、接受档和分支诊断；共同 miss 必须一致，不将跳过分支变为 false/0 分。阶段事件是深拷贝快照，监听器异常仍显式失败。
+`evaluateAllOf(branches, onEvent?)` 执行全部分支并逐项累计实际贡献；`evaluateAnyOf` 执行全部候选，在通过项中取最高实际贡献，全失败只计一次共同 miss；`evaluateFirstOf` 按声明顺序接受首个实际贡献严格大于 0 的分支，hit=0 或负 hit 不抢占，合法接受后真正跳过后档。
 
-`assertCriterionResult` 是通用结果形状校验，Observation 调度与择档原语共用它；不预置任何领域判据。Recall 的 DSL/Driver 装配仍留在 Recall，见 [firstOf 规格](../../docs/spec/recall/recall-first-of.md)。
+分支显式 `score` 与内部叶子贡献互斥；省略分支 score 时可返回内部叶子的贡献之和。三者都保留原始 0..1 标准分、分支贡献、accepted/commonMiss 和诊断快照；执行异常、非法结果或监听器失败均显式抛出，不发布正常贡献，也不把 skipped 伪造成 false/0 分。
+
+`assertCriterionResult` 是通用结果形状校验，Observation 调度与组合原语共用它；不预置任何领域判据。Recall 的 DSL/Driver 装配仍留在 Recall，完整规则见 [组合断言与计分](../../docs/spec/recall/recall-composition-scoring.md)。

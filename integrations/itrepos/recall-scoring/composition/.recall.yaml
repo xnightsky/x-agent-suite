@@ -1,0 +1,108 @@
+version: 1
+id: recall-composition
+cases:
+  - id: combined-pass
+    timeoutMs: 60000
+    turns:
+      - send: |-
+          这是合成计分样本。只输出 Sample 正文，不要引号、解释、额外标记或工具调用。
+          <Sample>
+          COMPOSITION_OK
+          DETAIL_OK
+          STANDARD_OK
+          FALLBACK_OK
+          </Sample>
+        expect: &composition-expect
+          text-contains: [COMPOSITION_OK]
+          allOf:
+            required:
+              - name: correctness
+                score: { hit: 2, miss: -1 }
+                expect:
+                  judge:
+                    timeoutMs: 60000
+                    maxRetries: 0
+                    rubrics:
+                      correctness:
+                        rubric: 只有回答文本包含完整 COMPOSITION_OK 标记才返回 pass=true，否则必须 false。
+              - name: completeness
+                score: { hit: 3, miss: 0 }
+                expect:
+                  judge:
+                    timeoutMs: 60000
+                    maxRetries: 0
+                    rubrics:
+                      completeness:
+                        rubric: 只有回答文本包含完整 DETAIL_OK 标记才返回 pass=true，否则必须 false。
+          anyOf:
+            acceptable:
+              - name: concise
+                score: { hit: 1, miss: -2 }
+                expect:
+                  judge:
+                    timeoutMs: 60000
+                    maxRetries: 0
+                    rubrics:
+                      concise:
+                        rubric: 只有回答文本包含完整 DETAIL_OK 标记才返回 pass=true，否则必须 false。
+              - name: detailed
+                score: { hit: 3, miss: -2 }
+                expect:
+                  judge:
+                    timeoutMs: 60000
+                    maxRetries: 0
+                    rubrics:
+                      detailed:
+                        rubric: 只有回答文本包含完整 STANDARD_OK 标记才返回 pass=true，否则必须 false。
+          firstOf:
+            zero:
+              - name: standard
+                score: { hit: 0, miss: -1 }
+                expect:
+                  judge:
+                    timeoutMs: 60000
+                    maxRetries: 0
+                    rubrics:
+                      zero_standard:
+                        rubric: 只有回答文本包含完整 STANDARD_OK 标记才返回 pass=true，否则必须 false。
+              - name: downgrade
+                score: { hit: 1, miss: -1 }
+                expect:
+                  judge:
+                    timeoutMs: 60000
+                    maxRetries: 0
+                    rubrics:
+                      zero_downgrade:
+                        rubric: 只有回答文本包含完整 FALLBACK_OK 标记才返回 pass=true，否则必须 false。
+            leaves:
+              - name: standard
+                expect:
+                  judge:
+                    timeoutMs: 60000
+                    maxRetries: 0
+                    rubrics:
+                      leaf_present:
+                        rubric: 只有回答文本包含完整 STANDARD_OK 标记才返回 pass=true，否则必须 false。
+                        score: { hit: 1, miss: -1 }
+                      leaf_missing:
+                        rubric: 只有回答文本包含完整 NOT_PRESENT 标记才返回 pass=true，否则必须 false。
+                        score: { hit: 3, miss: -1 }
+              - name: downgrade
+                expect:
+                  judge:
+                    timeoutMs: 60000
+                    maxRetries: 0
+                    rubrics:
+                      leaf_fallback:
+                        rubric: 只有回答文本包含完整 FALLBACK_OK 标记才返回 pass=true，否则必须 false。
+                        score: { hit: 2, miss: -2 }
+  - id: expected-fail
+    timeoutMs: 60000
+    turns:
+      - send: |-
+          这是合成计分样本。只输出 Sample 正文，不要引号、解释、额外标记或工具调用。
+          <Sample>
+          COMPOSITION_OK
+          FALLBACK_OK
+          </Sample>
+        expect: *composition-expect

@@ -58,7 +58,15 @@ export {
 } from "./score.ts";
 export { assertCriterionResult } from "./result.ts";
 export {
+  evaluateAllOf,
+  evaluateAnyOf,
   evaluateFirstOf,
+  type CompositionBranch,
+  type CompositionBranchResult,
+  type CompositionBranchTrace,
+  type CompositionEvent,
+  type CompositionKind,
+  type CompositionResult,
   type FirstOfBranch,
   type FirstOfBranchTrace,
   type FirstOfEvent,

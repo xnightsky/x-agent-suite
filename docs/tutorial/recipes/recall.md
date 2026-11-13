@@ -304,12 +304,17 @@ expect:
             minimum: { rubric: 入口与安全底线均正确，允许省略清单 }
 ```
 
-标准通过后不请求降级 Judge；完整合法的内容失败才进入下一档，缺裁定、超时、解析或清理错误不能降级。一个组合只贡献 +3、+1 或一次 -1；普通 honesty 的贡献另算，它失败时总分为正也不能通过。档内 rubric 不允许独立 score，不支持嵌套 firstOf。`turn.expect` 同样支持，且完成评价后才允许下一轮 send。
+标准档只有实际贡献大于 0 才会被接受；hit=0 或负 hit 即使 raw pass=true 也会继续降级。接受后不再请求后档 Judge，缺裁定、超时、解析或清理错误不能降级。一个组合只贡献 +3、+1 或一次 -1；普通 honesty 的贡献另算，它失败时总分为正也不能通过。分支显式 score 与内部叶子计分互斥，省略分支 score 时按内部实际贡献求和；不支持嵌套组合。`turn.expect` 同样支持，且完成评价后才允许下一轮 send。
 
-完整可运行考卷、素材、预期结果和授权 token 入口见 [firstOf 场景](../../../integrations/itrepos/recall-scoring/first-of/README.md)，契约见 [firstOf 规格](../../spec/recall/recall-first-of.md)。先运行默认安全回归：
+同层还可使用 `allOf.<评价点>` 逐项累计分支贡献，以及 `anyOf.<评价点>` 在通过候选中取最高贡献、全失败只计一次共同 miss。anyOf 为确定最高分不会在首个通过后短路；任何分支 ERROR 都不能被其他候选吞掉。
+
+组合考卷还会生成 `artifact.scoreSummary` 与 suite 宏平均，分别披露 repeat 的 rawScore mean/min/max、coverage、pass@k/pass^k 和空统计 null。
+
+完整规则见 [组合断言与计分](../../spec/recall/recall-composition-scoring.md)。三种组合、hit=0 降级、内部叶子计分和 repeat/suite 的可运行考卷见 [composition 场景](../../../integrations/itrepos/recall-scoring/composition/README.md)；旧 firstOf 的独立证据考卷仍保留在 [first-of 场景](../../../integrations/itrepos/recall-scoring/first-of/README.md)。默认安全回归：
 
 ```sh
+pnpm exec tsx --test scripts/tests/recall-composition-config.test.ts
 pnpm exec tsx --test scripts/tests/recall-first-of-config.test.ts
 ```
 
-该回归使用临时配置、fake Driver/裁定、真实 provision 与消费者 evidence，经官方 CLI 核对 11 个样本；不产生 token。真实模型验收必须另行授权，不能用 skip 或 fake 回归替代。
+这些回归使用临时配置、fake Driver/裁定与真实公开装配，经官方 CLI 核对贡献、调用顺序、报告和清理，不产生 token。真实模型验收必须另行授权，不能用 skip 或 fake 回归替代。

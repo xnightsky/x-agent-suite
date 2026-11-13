@@ -49,6 +49,7 @@ for (const mode of [
     let diagnostic = JSON.parse(
       await readFile(failure.reports.jsonPath, "utf8"),
     );
+    assert.equal(diagnostic.compositions[0].commonMiss, -1);
     if (mode === "factory-late") {
       assert.equal(diagnostic.cleanup[0].status, "pending");
       releaseLifecycle();
@@ -101,6 +102,22 @@ test("第二次 repeat 错误保留第一次成绩，不执行剩余 repeat", as
   assert.equal(diagnostic.completedRepeats.length, 1);
   assert.equal(diagnostic.completedRepeats[0].rawScore, 3);
   assert.equal(diagnostic.pendingRepeats[0].index, 2);
+  assert.deepEqual(diagnostic.repeatSummary, {
+    planned: 3,
+    valid: 1,
+    invalid: 1,
+    skipped: 1,
+    coverage: 1 / 3,
+    invalidRate: 1 / 3,
+    passRate: 1,
+    rawScore: { mean: 3, min: 3, max: 3 },
+    passAtK: true,
+    passAllK: false,
+  });
+  assert.deepEqual(result.failures[0]!.scoreSummary, diagnostic.repeatSummary);
+  assert.equal(result.summary.valid, 0);
+  assert.equal(result.summary.invalid, 1);
+  assert.equal(result.summary.passRate, null);
   assert.equal(lifecycle.filter((item) => item === "main:factory").length, 2);
 });
 test("所有 verbosity 由相同事件渲染，快照不随低档执行改写", async (t) => {

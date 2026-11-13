@@ -4,6 +4,16 @@
 
 ## Unreleased
 
+### Added
+
+- Recall 的 turn/case 断言新增 `allOf` 与 `anyOf`：allOf 逐项累计实际贡献，anyOf 在通过候选中取最高贡献、全失败只计一次共同 miss；新增可运行组合考卷和精确 `ittest:token:recall-composition-scoring` 入口，真实验收待授权。
+- 新增 repeat 与 suite 计分汇总：披露 valid/invalid/skipped、coverage、invalidRate、passRate、rawScore mean/min/max、pass@k 与 pass^k，suite 按 target×case 宏平均，空统计使用 null。
+
+### Changed
+
+- Assertions 的 `evaluateFirstOf` 改为接受首个实际贡献严格大于 0 的分支，hit=0 或负 hit 不再抢占；分支省略 score 时按内部叶子实际贡献求和，显式分支 score 与叶子计分互斥。
+- 组合报告新增 kind/commonMiss、分支贡献与分值来源；`RecallCaseRun.score`、`RecallRunResult.summary` 和 CLI 汇总公开 repeat/suite 统计，含 ERROR 的 case 不进入 suite 宏平均。
+
 ## 0.14.0 - 2026-11-09
 
 ### Added

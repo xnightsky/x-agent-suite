@@ -754,6 +754,20 @@
           "recipes": ["recall"]
         },
         {
+          "name": "summarizeRecallRepeatScores",
+          "category": "primitive",
+          "purpose": "按 planned/valid/invalid/skipped 汇总单 case 的独立 repeat，计算 coverage、passRate、rawScore 与 pass@k/pass^k。",
+          "risk": "safe",
+          "reason": "纯函数；零 token 回归见 packages/recall/tests/recall-score-summary.test.ts 与组合计分考卷。"
+        },
+        {
+          "name": "summarizeRecallSuiteScores",
+          "category": "primitive",
+          "purpose": "对 target×case 的 repeat 汇总做宏平均，并显式披露 suite 覆盖率、无效比例与空统计。",
+          "risk": "safe",
+          "reason": "纯函数；零 token 回归见 packages/recall/tests/recall-score-summary.test.ts 与组合计分考卷。"
+        },
+        {
           "name": "createRecallReporter",
           "category": "advanced",
           "purpose": "把 Recall 结构化进度事件按 0..3 verbosity 渲染为行式流式输出。",

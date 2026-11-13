@@ -25,6 +25,7 @@ import {
 } from "./assertion-dsl.ts";
 import { recallMechanicalAssertionScore } from "./assertion-score.ts";
 import type { RecallResolvedExecution } from "./execution.ts";
+import type { RecallRepeatScoreSummary } from "./score-summary.ts";
 
 /** Recall 的有效明细允许组合来源，不更改通用断言契约。 */
 export type RecallAssertionDetail = AssertionDetail | RecallCompositeAssertion;
@@ -35,6 +36,7 @@ export interface RecallAssertionArtifact extends RunnerArtifact {
   readonly compositions?: readonly RecallComposition[];
   readonly repeats?: readonly RecallRepeatSnapshot[];
   readonly rawScore?: number;
+  readonly scoreSummary?: RecallRepeatScoreSummary;
 }
 
 interface RecallTurnAssertionMetadata {

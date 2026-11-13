@@ -21,13 +21,17 @@ import {
   type RecallAssertionArtifact,
 } from "./assertion-results.ts";
 import {
+  summarizeRecallRepeatScores,
+  type RecallRepeatScoreInput,
+} from "./score-summary.ts";
+import {
   writeRecallReports,
   writeRecallErrorDiagnostic,
   RecallDiagnosticError,
 } from "./composition-report.ts";
 import { createRecallDriver } from "./driver.ts";
 import type { RecallResolvedExecution } from "./execution.ts";
-import { hasFirstOf } from "./first-of-dsl.ts";
+import { hasCompositions } from "./first-of-dsl.ts";
 import {
   RecallCompositionJournal,
   bindCompositionJournal,
@@ -53,6 +57,7 @@ interface CaseContext {
   outDir: string;
   listener: RecallRunListener | undefined;
   redactors: Redactor[];
+  repeatScores: RecallRepeatScoreInput[];
   journal?: RecallCompositionJournal;
 }
 function composeRedactors(
@@ -74,7 +79,7 @@ function currentRedactor(context: CaseContext): Redactor | undefined {
     : composeRedactors(context.redactors);
 }
 function makeContext(context: CaseContext): CaseContext {
-  if (!hasFirstOf(context.spec)) return context;
+  if (!hasCompositions(context.spec)) return context;
   context.journal = new RecallCompositionJournal(
     context.spec,
     context.loaded.repeat,
@@ -86,6 +91,7 @@ function makeContext(context: CaseContext): CaseContext {
         ),
       );
     },
+    context.execution,
   );
   bindCompositionJournal(context.execution, context.spec, context.journal);
   return context;
@@ -127,20 +133,25 @@ function handleRunnerEvent(
 ): void {
   const journal = context.journal;
   if (event.type === "repeat-started") journal?.start(event.repeatIndex);
-  if (journal && event.type === "repeat-completed") {
+  if (event.type === "repeat-completed") {
     const { artifact, hardPass } = adaptRecallAssertionResult(
       context.spec,
       event.result,
       context.execution,
     );
-    journal.repeats.push({
-      index: event.repeatIndex,
+    context.repeatScores.push({
       hardPass,
-      outcomes: artifact.outcomes,
-      assertions: artifact.assertions ?? [],
-      rawScore: artifact.rawScore!,
-      compositions: artifact.compositions ?? [],
+      rawScore: artifact.rawScore ?? null,
     });
+    if (journal)
+      journal.repeats.push({
+        index: event.repeatIndex,
+        hardPass,
+        outcomes: artifact.outcomes,
+        assertions: artifact.assertions ?? [],
+        rawScore: artifact.rawScore!,
+        compositions: artifact.compositions ?? [],
+      });
   }
   if (!context.listener) return;
   context.listener({
@@ -179,6 +190,10 @@ async function completedCase(
   executed: RepeatRun,
 ): Promise<ExecutedRecallCase> {
   const { spec, execution, loaded, journal } = context;
+  const score = summarizeRecallRepeatScores(
+    loaded.repeat,
+    context.repeatScores,
+  );
   const last = adaptRecallAssertionResult(
     spec,
     executed.results.at(-1)!,
@@ -186,9 +201,11 @@ async function completedCase(
   );
   const result = {
     ...last,
-    ...(journal
-      ? { artifact: { ...last.artifact, repeats: journal.repeats } }
-      : {}),
+    artifact: {
+      ...last.artifact,
+      scoreSummary: score,
+      ...(journal ? { repeats: journal.repeats } : {}),
+    },
     observation: {
       ...last.observation,
       metadata: { ...last.observation.metadata, recall: spec.metadata?.recall },
@@ -214,6 +231,7 @@ async function completedCase(
   const run = {
     scenarioId: spec.id,
     hardPass: last.hardPass,
+    score,
     reports,
     carrier: execution.target.carrier,
     mode: execution.mode,
@@ -226,26 +244,41 @@ async function raiseCaseFailure(
   cause: unknown,
 ): Promise<never> {
   const redact = currentRedactor(context);
-  if (!context.journal) throw redact ? redactLiveError(cause, redact) : cause;
   const error = redact
     ? redactLiveError(cause, redact)
     : cause instanceof Error
       ? cause
       : new Error(String(cause));
+  const invalid = context.repeatScores.length < context.loaded.repeat ? 1 : 0;
+  const scoreSummary = summarizeRecallRepeatScores(
+    context.loaded.repeat,
+    context.repeatScores,
+    {
+      invalid,
+      skipped: context.loaded.repeat - context.repeatScores.length - invalid,
+    },
+  );
+  if (!context.journal)
+    throw new RecallDiagnosticError(error, undefined, scoreSummary);
   let reports;
   try {
-    reports = await writeRecallErrorDiagnostic(context.journal, cause, {
-      scenarioId: context.spec.id,
-      outDir: context.outDir,
-      ...(redact ? { redact } : {}),
-    });
+    reports = await writeRecallErrorDiagnostic(
+      context.journal,
+      cause,
+      {
+        scenarioId: context.spec.id,
+        outDir: context.outDir,
+        ...(redact ? { redact } : {}),
+      },
+      scoreSummary,
+    );
   } catch (writeError) {
     throw new AggregateError(
       [error, redact ? redactLiveError(writeError, redact) : writeError],
       "Recall 执行与错误诊断写盘失败",
     );
   }
-  throw new RecallDiagnosticError(error, reports);
+  throw new RecallDiagnosticError(error, reports, scoreSummary);
 }
 /** 调用原 Runner 并保存一个 case，所有错误沿既有基础设施通道上抛。 */
 export async function runRecallCase(
@@ -265,6 +298,7 @@ export async function runRecallCase(
     listener,
     outDir,
     redactors: [],
+    repeatScores: [],
   });
   try {
     return await completedCase(

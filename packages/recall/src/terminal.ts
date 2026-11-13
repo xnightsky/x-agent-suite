@@ -122,7 +122,9 @@ export function createRecallTerminal(
     const total = event.result.runs.length + errors;
     const status = `✓ ${passed} passed  ✗ ${failed} failed  ⚠ ${errors} errors`;
     const meta = `${total} cases · ${durationText(event.durationMs)}`;
-    const innerWidth = Math.max(status.length, meta.length) + 2;
+    const summary = event.result.summary;
+    const scoring = `coverage=${summary.coverage} passRate=${summary.passRate} rawScore=${summary.rawScore} pass@k=${summary.passAtK} pass^k=${summary.passAllK}`;
+    const innerWidth = Math.max(status.length, meta.length, scoring.length) + 2;
     const border = "─".repeat(innerWidth + 2);
     output.stdout(paint(output, `╭${border}╮`, "2"));
     output.stdout(
@@ -133,6 +135,7 @@ export function createRecallTerminal(
       ),
     );
     output.stdout(paint(output, `│ ${meta.padEnd(innerWidth)} │`, "2"));
+    output.stdout(paint(output, `│ ${scoring.padEnd(innerWidth)} │`, "2"));
     output.stdout(paint(output, `╰${border}╯`, "2"));
   };
 

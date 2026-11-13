@@ -13,24 +13,29 @@ import {
 import type { CriterionOutcome, ScenarioSpec } from "@x-agent-suite/contracts";
 import type { JudgeOutcome } from "@x-agent-suite/judge";
 import type { RecallResolvedExecution } from "./execution.ts";
+import { recallCompositionBranchMiss } from "./assertion-score.ts";
 import {
-  FIRST_OF_PREFIX,
-  isFirstOfKey,
-  type RecallFirstOfBranch,
+  COMPOSITION_PREFIXES,
+  compositionKindOfKey,
+  type RecallCompositionBranch,
+  type RecallCompositionKind,
 } from "./first-of-dsl.ts";
-/** 档内原始诊断，没有独立有效贡献。 */
+/** 分支原始诊断，没有独立有效贡献。 */
 export interface RecallFirstOfBranchTrace extends FirstOfBranchTrace {
   readonly conditions?: readonly CriterionOutcome[];
+  readonly cleanup?: readonly RecallJudgeCleanup[];
   readonly judge?: JudgeOutcome;
 }
 /** 一个评价点的完整诊断；通过 assertionName 引用唯一有效明细。 */
 export interface RecallComposition {
+  readonly kind: RecallCompositionKind;
   readonly assertionName: string;
   readonly scope: "turn" | "session";
   readonly turnIndex?: number;
   readonly status:
     "pending" | "running" | "passed" | "failed" | "error" | "skipped";
   readonly accepted: string | null;
+  readonly commonMiss?: number;
   readonly branches: readonly RecallFirstOfBranchTrace[];
 }
 /** Recall 本地阶段事件，不扩 Runner 公共事件。 */
@@ -91,17 +96,58 @@ export function compositionIdentity(
   key: string,
   scope: "turn" | "session",
   turnIndex?: number,
-): Pick<RecallComposition, "assertionName" | "scope" | "turnIndex"> {
-  const name = "firstOf." + key.slice(FIRST_OF_PREFIX.length);
+): Pick<RecallComposition, "kind" | "assertionName" | "scope" | "turnIndex"> {
+  const kind = compositionKindOfKey(key);
+  if (!kind) throw new Error("Recall 组合编译键无效：" + key);
+  const name = kind + "." + key.slice(COMPOSITION_PREFIXES[kind].length);
   return scope === "turn"
     ? {
+        kind,
         assertionName: `turn.${turnIndex}.${name}`,
         scope,
         turnIndex: turnIndex!,
       }
-    : { assertionName: name, scope };
+    : { kind, assertionName: name, scope };
 }
-function initialCompositions(spec: ScenarioSpec): RecallComposition[] {
+function initialComposition(
+  spec: ScenarioSpec,
+  execution: RecallResolvedExecution | undefined,
+  key: string,
+  value: unknown,
+  scope: "turn" | "session",
+  turnIndex?: number,
+): RecallComposition {
+  const identity = compositionIdentity(key, scope, turnIndex);
+  const branches = value as readonly RecallCompositionBranch[];
+  const commonMiss =
+    identity.kind !== "allOf" && execution
+      ? recallCompositionBranchMiss(
+          execution,
+          spec,
+          scope,
+          turnIndex,
+          key,
+          branches[0]!,
+          0,
+        )
+      : undefined;
+  return {
+    ...identity,
+    status: "pending",
+    accepted: null,
+    ...(commonMiss === undefined ? {} : { commonMiss }),
+    branches: branches.map((branch, index) => ({
+      index,
+      name: branch.name,
+      status: "pending",
+    })),
+  };
+}
+
+function initialCompositions(
+  spec: ScenarioSpec,
+  execution?: RecallResolvedExecution,
+): RecallComposition[] {
   return [
     { scope: "session" as const, block: spec.expect },
     ...spec.turns.map((turn, turnIndex) => ({
@@ -111,23 +157,17 @@ function initialCompositions(spec: ScenarioSpec): RecallComposition[] {
     })),
   ].flatMap((location) =>
     Object.entries(location.block ?? {})
-      .filter(([key]) => isFirstOfKey(key))
-      .map(([key, value]) => ({
-        ...compositionIdentity(
+      .filter(([key]) => compositionKindOfKey(key) !== undefined)
+      .map(([key, value]) =>
+        initialComposition(
+          spec,
+          execution,
           key,
+          value,
           location.scope,
           "turnIndex" in location ? location.turnIndex : undefined,
         ),
-        status: "pending" as const,
-        accepted: null,
-        branches: (value as readonly RecallFirstOfBranch[]).map(
-          (branch, index) => ({
-            index,
-            name: branch.name,
-            status: "pending" as const,
-          }),
-        ),
-      })),
+      ),
   );
 }
 /** 每个 case 的无 listener 依赖账本。 */
@@ -148,14 +188,15 @@ export class RecallCompositionJournal {
     private readonly spec: ScenarioSpec,
     count = 1,
     private readonly notify?: (event: RecallCompositionEvent) => void,
+    private readonly execution?: RecallResolvedExecution,
   ) {
     this.repeatCount = count;
-    this.compositions = initialCompositions(spec);
+    this.compositions = initialCompositions(spec, execution);
   }
   /** 开始 repeat 时重置当前树，不抹除已完成历史。 */
   start(index: number): void {
     this.repeatIndex = index;
-    this.compositions = initialCompositions(this.spec);
+    this.compositions = initialCompositions(this.spec, this.execution);
   }
   /** 记录当前阶段并发布不可变副本。 */
   record(

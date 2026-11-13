@@ -7,7 +7,7 @@ tags: [spec, recall, assertions, scoring, composition]
 
 # Recall 组合断言与计分
 
-> 状态：设计已确认，文档先行；运行时尚未按本文完成迁移。实施完成后必须将本文状态、相关规格、可运行考卷和验收回执一并收口。
+> 状态：组合原语、Recall DSL、诊断报告、repeat/suite 汇总和零 token 考卷已实现，完整 `pnpm check` 已通过；真实 token 验收待完成。实施与验收证据按第 10 节持续收口。
 >
 > 本文是 `allOf/anyOf/firstOf` 组合计分的唯一规格来源。旧 [有序择档文档](./recall-first-of.md) 仅保留迁移入口；普通平铺断言仍见 [Recall 断言计分](./recall-scoring.md)。
 
@@ -333,6 +333,8 @@ suiteInvalidRate = invalid case 数 / 计划 case 数
 - 没有可用行为或分数统计时对应 suite 值为 null；coverage 与 invalidRate 仍必须披露。
 - `pass@k`、`pass^k` 同时保留 case 级布尔与 suite 级宏平均比例，不能用总 rawScore 推断。
 - 不同评分配置、rubric 或断言集合的 rawScore 尺度仍不可直接横比。
+
+实现公开字段与本文名称对应如下：`artifact.scoreSummary` 与 `RecallCaseRun.score` 使用 `RecallRepeatScoreSummary`；`RecallRunResult.summary` 使用 `RecallSuiteScoreSummary`，其中 `rawScore` 是各有效 case 的 `rawScore.mean` 的宏平均值或 null，而不是再包一层统计对象。含 ERROR 的 case 整体记为 invalid，不进入 suite 行为或分数宏平均；`RecallInfraFailure.scoreSummary` 只披露已完成 repeat 的局部统计与 invalid/skipped 计数。
 
 ## 8. 公开 seam 与实施分工
 

@@ -100,6 +100,8 @@ AI 断言完整场景以 [`docs/spec/recall/recall-judge-dsl.md`](./recall/recal
 
 执行前须取得本次目标、数据/权限范围、主执行及 Judge 最大调用数、repeat/重试与费用上限授权，并遵守下方 token 级安全门；本验收要求本身不构成真实调用授权。未获授权、缺少条件或 skip 时保持“真实验收待完成”，即使实现和默认回归已通过也不得宣称功能完整验收。token 调用继续只走精确的显式入口，不加入 `pnpm test`、`pnpm ittest` 或 `pnpm check`。
 
+组合计分的默认配置回归为 `pnpm exec tsx --test scripts/tests/recall-composition-config.test.ts`，公开考卷位于 `integrations/itrepos/recall-scoring/composition/`；精确真实验收入口为 `pnpm ittest:token:recall-composition-scoring`。repeat=2 的合成预期路径最多 4 次主 send + 32 次 Judge、零重试，执行前须单独批准该 36 次逻辑调用预算及费用；当前真实验收待完成。
+
 真实 token 接线验证只证明已覆盖的目标、模式和路径工作，不自动证明 Judge 语义准确率或模型稳定性；质量校准与重复采样须另列目标、验收指标和成本。仅文档、注释、不改变行为的修改及仅设计阶段不强制真实调用；设计交付须列清后续实现所需的 token 验收与场景产物。
 
 ## token 级安全门
